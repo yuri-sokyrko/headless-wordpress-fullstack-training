@@ -133,8 +133,8 @@ you guard the module with `import 'server-only'` — Lesson 10.1 does exactly th
 | `UPSTASH_REDIS_REST_URL` | **yes** | `__CHANGE_ME__` | Rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | **yes** | `__CHANGE_ME__` | |
 | `RESEND_API_KEY` | **yes** | `__CHANGE_ME__` | Optional lead notification |
-| `E2E_MODE` | no | unset | `1` only in the test stack — gates the test-only revalidate hook |
-| `E2E_SECRET` | **yes** | `__CHANGE_ME__` | Required header for that hook |
+| `E2E_MODE` | no | unset | `1` only in the test stack — gates the test-only revalidate hook. **Playwright does not read `.env.local`**: `playwright.config.ts` and `e2e/global-setup.ts` see this only from the invoking shell (`E2E_MODE=1 npx playwright test`). Deliberate — Lesson 12.4. |
+| `E2E_SECRET` | **yes** | `__CHANGE_ME__` | Required header for that hook. Read from this file inside the Next runtime (Module 18); read from the shell by the test harness (Lesson 12.4). |
 | `SENTRY_DSN` | **yes** | — | Module 24 |
 
 ### 3.2 Public (`NEXT_PUBLIC_*`) — all four of them
@@ -269,6 +269,11 @@ Never `echo` a secret in a workflow. Use `::add-mask::` for anything derived, an
 
 Sectioned, every variable present, secrets as `__CHANGE_ME__`, with a header that states the
 rule.
+
+**This is the file's *final* shape, not its first.** Lesson 09.1 creates it holding only the
+variables Module 09 introduces; Modules 10, 12, 15, 16, 17, 18 and 24 each append their own as
+they arrive. §9 says which module adds what. A learner at the end of Module 09 whose
+`.env.example` is six lines long has not made a mistake.
 
 ```dotenv
 # next-app/.env.example

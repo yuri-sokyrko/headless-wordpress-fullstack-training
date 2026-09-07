@@ -297,8 +297,9 @@ you get back is a typed data structure and no walker; whether that is a good tra
 entirely on how many hours of your life `Walker_Nav_Menu` has already taken.
 
 Two preconditions, and both are silent when missing. `MenuLocationEnum`'s values come from
-`register_nav_menus()` in the theme — no registration, no `PRIMARY` value, and the query fails
-**validation**. And a menu is only visible to anonymous callers when it is **assigned to a
+`register_nav_menus()` in the theme, which the `btt-headless` theme calls in Lesson 02.4 — no
+registration, no `PRIMARY` value, and the query fails **validation** rather than returning
+empty. And a menu is only visible to anonymous callers when it is **assigned to a
 location**; an unassigned menu returns an empty connection with no error at all.
 
 **`nodeByUri` replaces `url_to_postid()`**, and generalises it: it resolves any front-end path to
@@ -337,10 +338,11 @@ docker compose run --rm wpcli wp menu location list
 
 **Verify §1a:**
 
-- [ ] A location with slug `primary` is listed. If it is not, your theme is not calling
-      `register_nav_menus( [ 'primary' => 'Primary' ] )` — add it to the theme's `functions.php`
-      before continuing, because `MenuLocationEnum` will have no `PRIMARY` value and every menu
-      query in this lesson will fail validation.
+- [ ] A location with slug `primary` is listed. Lesson 02.4's `after_setup_theme` callback
+      registers it. If the list is empty, `btt-headless` is not the active theme, or that
+      `register_nav_menus()` call is missing — fix it there before continuing, because
+      `MenuLocationEnum` will have no `PRIMARY` value and every menu query in this lesson will
+      fail validation rather than return empty.
 
 ```bash
 docker compose run --rm wpcli wp menu create "Primary"

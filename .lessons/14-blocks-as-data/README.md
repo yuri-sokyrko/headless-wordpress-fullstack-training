@@ -25,8 +25,9 @@ docker compose run --rm wpcli wp plugin list --status=active --format=csv
 # Expected: includes blame-the-tech-blocks
 
 # 2. The front end still renders the body as one opaque string
-cd ../next-app && grep -rn "dangerouslySetInnerHTML" src/app/
-# Expected: hits in blog/[slug]/page.tsx and incidents/[slug]/page.tsx — the blob you remove
+cd ../next-app && grep -rln "dangerouslySetInnerHTML" src/app/ | sort
+# Expected: three files — incidents/[slug], blog/[slug] and reviews/[slug] page.tsx.
+#           That is the blob you remove, three times over.
 ```
 
 ```

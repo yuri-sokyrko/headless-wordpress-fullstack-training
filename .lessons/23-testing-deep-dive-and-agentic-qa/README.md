@@ -30,7 +30,7 @@ npx playwright test --project=a11y
 # Expected: 0 critical, 0 serious across the six routes × three locales
 
 # 3. The seeder is deterministic — same data, twice
-docker compose -f ../wordpress-headless/docker-compose.yml run --rm wpcli wp blame seed --fresh
+docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli wp blame seed --fresh --yes
 # Expected: identical slugs and post dates as the previous run
 ```
 

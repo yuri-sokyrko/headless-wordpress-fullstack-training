@@ -28,7 +28,7 @@ cd next-app && grep -r '@faustwp' package.json src/ || echo "clean"
 # Expected: clean
 
 # 2. Suites green before you touch caching
-npm test && npx playwright test
+npm test -- --run && npx playwright test
 # Expected: 0 failures
 ```
 

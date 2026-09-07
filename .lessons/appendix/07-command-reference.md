@@ -82,9 +82,15 @@ wpx cache flush
 wpx transient delete --all
 
 # The course's own commands (Module 04 onward)
-wpx blame seed --fresh
+wpx blame seed --fresh --yes         # --yes is required with no TTY (CI)
 wpx blame reset
 wpx blame ensure-languages
+wpx blame fixture status             # (Module 12, dev/CI only) the seeder digest
+
+# The fixture cache crosses the container boundary on stdin/stdout, so the file
+# lives on the HOST and the container never touches it. -T is mandatory.
+docker compose run --rm -T wpcli wp blame fixture export > ../fixtures/seeded.sql
+docker compose run --rm -T wpcli wp blame fixture load  < ../fixtures/seeded.sql
 
 # GraphQL schema snapshot (Module 06 / 23)
 wpx graphql generate-static-schema
@@ -156,9 +162,10 @@ npm run build && grep -r "$REVALIDATE_SECRET" .next/static/
 ```bash
 # Unit — Vitest (Module 12, 23)
 npm test                       # watch mode
+npm run test:watch             # the explicit spelling of `npm test`
 npm run test:run               # single pass
 npm run test:coverage
-npx vitest run src/lib/incidents.test.ts   # one file
+npx vitest run src/lib/graphql/tags.test.ts   # one file
 npx vitest run -t "rejects anonymous"      # one test by name
 
 # E2E — Playwright (Module 12, 23)
@@ -170,9 +177,10 @@ npx playwright test e2e/auth.spec.ts
 npx playwright test --project=mutations
 npx playwright show-report
 npx playwright show-trace test-results/**/trace.zip
-npx playwright codegen http://localhost:3000
+npx playwright codegen http://127.0.0.1:3000   # 127.0.0.1, not localhost — Lesson 12.3
 
-# Update visual baselines — review the diff before committing
+# Update visual baselines — only if you add them. This course does NOT: Lesson 12.1
+# rules out snapshotting rendered markup, and nothing here calls toHaveScreenshot().
 npx playwright test --update-snapshots
 
 # Reset the DB and warm caches before an E2E run

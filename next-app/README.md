@@ -2,9 +2,12 @@
 
 **This directory is empty on purpose. You build it.**
 
-> **Do not run `create-next-app` yet.** That happens in Lesson 09.1, with specific flags. If
-> you scaffold now you will get a different structure than the lessons assume, and Module 09
-> will fight you for five lessons.
+> **There is no `create-next-app` step in this course.** It cannot run in a non-empty
+> directory, and by Lesson 09.1 this one holds your Module 07 toolchain and your Module 08
+> components. Lesson 09.1 installs `next` into the project you already have and hand-writes the
+> four files the scaffold would have generated. If you scaffold this directory yourself you will
+> get a different structure than the lessons assume, and Module 09 will fight you for five
+> lessons.
 
 Everything is inlined in the lessons. Go to
 [`../.lessons/README.md`](../.lessons/README.md) and start at Module 01.
@@ -15,10 +18,10 @@ Everything is inlined in the lessons. Go to
 |---|---|
 | 07 | `package.json`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc`, `src/types/`, `scripts/blame.mjs` |
 | 08 | `src/components/incidents/` — `IncidentCard`, `IncidentList`, the filter island (on fixtures) |
-| 09 | The `create-next-app` scaffold, `src/app/[locale]/` route shells, `middleware.ts`, `src/app/api/health/route.ts` |
+| 09 | `next` itself, `next.config.ts`, `src/app/[locale]/` route shells, `middleware.ts`, `src/app/api/health/route.ts` |
 | 10 | `src/lib/graphql/{client,errors,tags}.ts`, `codegen.ts`, `src/graphql/` documents, `src/gql/` generated output, `error.tsx` / `loading.tsx` |
 | 11 | `tailwind.config.ts`, `components.json`, `src/components/ui/` (shadcn), `src/components/layout/`, the `/hobt` shell |
-| 12 | `vitest.config.ts`, `playwright.config.ts`, `src/lib/**/*.test.ts`, `e2e/smoke.spec.ts` |
+| 12 | `vitest.config.ts`, `playwright.config.ts`, colocated `src/**/*.test.ts`, `e2e/smoke.spec.ts`, `e2e/global-setup.ts` |
 | 14 | `src/components/blocks/` — `BlockRenderer.tsx`, `registry.ts`, one component per block, `RichText.tsx` |
 | 15 | `src/lib/auth/{session,cookies,guards}.ts`, `src/actions/auth.ts`, `src/app/api/auth/refresh/route.ts` |
 | 16 | `src/lib/validation/schemas.ts`, `src/actions/{incidents,leads}.ts`, `src/lib/rate-limit.ts`, the forms and dialogs |
@@ -110,7 +113,7 @@ insurance in the whole course.
 | No token readable by JavaScript | Sessions are httpOnly cookies set by route handlers. Never `localStorage`. |
 | `dangerouslySetInnerHTML` in exactly one file | `src/components/blocks/RichText.tsx`, sanitized with a strict allowlist |
 | Every route handler and Server Action authenticated | The entry-point matrix in Lesson 15.5 |
-| Server-only modules cannot be imported client-side | `import 'server-only'` in `src/lib/graphql/` and `src/lib/auth/` |
+| Server-only modules cannot be imported client-side | `import 'server-only'` in `src/lib/graphql/client.ts` and the credential-handling modules under `src/lib/auth/`. The pure helpers beside them — `tags.ts`, `errors.ts` — deliberately omit it so Module 12 can unit-test them in plain Node. |
 
 See [the env reference](../.lessons/appendix/04-env-reference.md) for the full inventory.
 

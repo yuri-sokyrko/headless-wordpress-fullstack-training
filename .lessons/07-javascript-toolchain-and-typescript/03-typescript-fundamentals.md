@@ -416,7 +416,7 @@ non-default setting has a reason on the line next to it.
   "compilerOptions": {
     /* ── Language and libraries ─────────────────────────────────────── */
     "target": "ES2023", // Node 22 runs all of it; nothing is downlevelled
-    "lib": ["ES2023"], // no "DOM" — this module has no browser. Module 09 adds it.
+    "lib": ["ES2023"], // no "DOM" — this module has no browser. Lesson 08.1 adds it.
     "types": ["node"], // @types/node: process, Buffer, the node: modules
 
     /* ── Modules ────────────────────────────────────────────────────── */
@@ -446,7 +446,8 @@ non-default setting has a reason on the line next to it.
 ```
 
 Two absences worth naming. There is no `"jsx"` setting and no `"DOM"` library, because there is
-no React and no browser in this module — Lesson 09.1 adds both. And `allowJs` is off, so
+no React and no browser in this module — Lesson 08.1 adds both, for the React harness. And
+`allowJs` is off, so
 `scripts/blame.mjs` is **invisible to `tsc`**: it is checked by ESLint in Lesson 07.5 and
 replaced by a typed version in Lesson 07.4.
 
@@ -481,9 +482,11 @@ mkdir -p src/types
 ```ts
 // next-app/src/types/content.ts
 // The Blame The Tech content model, by hand, from the contract in appendix 03.
-// Module 10 generates all of this from wordpress-headless/schema.graphql and deletes this
-// file. Writing it once by hand is what makes that generated output readable — and Module 09
-// deliberately shows you what happens when a hand-written type drifts from the schema.
+// Module 10 generates MOST of this from wordpress-headless/schema.graphql and deletes what it
+// replaces. What survives is the part codegen cannot produce: the severity term slugs, which
+// are taxonomy DATA rather than schema enums. Writing the rest once by hand is what makes that
+// generated output readable — and Module 09 deliberately shows you what happens when a
+// hand-written type drifts from the schema.
 
 /* ── Registered GraphQL enums (appendix 03 §3) ────────────────────────────
    SCREAMING_SNAKE on the wire; the underlying ACF select values are kebab-case and

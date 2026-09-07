@@ -3,7 +3,7 @@ title: 'Rendering Strategies'
 module: 18
 lesson: 1
 teaches: [static-vs-isr-vs-dynamic, generate-static-params, force-dynamic, next-cache-layers, per-route-strategy]
-produces: ['next-app/src/app/[locale]/hobt/page.tsx', 'next-app/src/app/[locale]/incidents/page.tsx', 'next-app/src/app/[locale]/incidents/[slug]/page.tsx']
+produces: ['next-app/src/app/[locale]/hobt/page.tsx', 'next-app/src/app/[locale]/incidents/page.tsx', 'next-app/src/app/[locale]/incidents/[slug]/page.tsx', 'next-app/src/app/[locale]/scapegoats/[slug]/page.tsx']
 requires: [10.1, 14.2]
 ---
 

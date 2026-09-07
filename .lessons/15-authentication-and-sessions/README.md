@@ -31,7 +31,7 @@ curl -s http://localhost:3000/en/hobt | grep -c 'data-block'
 # Expected: a number greater than 0
 
 # 3. Both suites are green before you add auth
-cd next-app && npm test && npx playwright test
+cd next-app && npm test -- --run && npx playwright test
 # Expected: 0 failures
 ```
 

@@ -193,7 +193,7 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
 | 03 | `plugins/blame-the-tech-core/` — post types, taxonomies, custom statuses, roles and capabilities |
 | 04 | `includes/acf-json/` field groups, the `wp blame seed` WP-CLI command, the migration runner |
 | 06 | `includes/graphql/` — enums, `blameScore`, `createIncident`, `registerDeveloper`, `submitHobtLead` |
-| 12 | `mu-plugins/blame-seeder/` refinements — determinism, `wp blame reset` |
+| 12 | `mu-plugins/blame-seeder/` — determinism refinements to the seeder, plus the `wp blame fixture` cache |
 | 13 | `plugins/blame-the-tech-blocks/` — six blocks, `block.json`, `@wordpress/scripts` build |
 | 15 | JWT config and the `incident_reporter` role hardening |
 | 17 | `includes/Preview.php` — preview token issue and verify |
@@ -206,7 +206,7 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
 
 | Module | What lands |
 |---|---|
-| 09 | `create-next-app` scaffold, `app/[locale]/` route shells, `middleware.ts`, `/api/health` |
+| 09 | `next` + `next.config.ts`, `app/[locale]/` route shells, `middleware.ts`, `/api/health` |
 | 10 | `src/lib/graphql/` client, `codegen.ts`, `src/gql/`, `src/graphql/` documents, error boundaries |
 | 11 | `tailwind.config.ts`, `components.json`, `src/components/ui/`, the app shell |
 | 12 | `vitest.config.ts`, `playwright.config.ts`, first specs |

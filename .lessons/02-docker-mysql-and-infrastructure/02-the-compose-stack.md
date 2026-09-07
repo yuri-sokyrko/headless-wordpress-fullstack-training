@@ -143,12 +143,13 @@ BIND MOUNT — a path on your disk, projected into the container
 NAMED VOLUME — storage Docker manages, opaque to you
    btt-db-data           ─────▶  /var/lib/mysql
    btt-uploads           ─────▶  /var/www/html/wp-content/uploads
+   btt-wp-core           ─────▶  /var/www/html      SHARED: wordpress + wpcli
    survives `down` · destroyed by `down -v` · never in git
 ```
 
 | | Bind mount | Named volume |
 |---|---|---|
-| Use for | plugins, themes, mu-plugins, config files | the MySQL data directory, `wp-content/uploads` |
+| Use for | plugins, themes, mu-plugins, config files | the MySQL data directory, `wp-content/uploads`, **WordPress core** |
 | You edit it | yes, in your editor | no |
 | In git | yes | never |
 | Survives `docker compose down` | it is your disk | yes |
@@ -160,6 +161,33 @@ tutorials do that. This course uses a named volume for three reasons: binary med
 business in git; thousands of small files bind-mounted on macOS is measurably slow; and in
 production uploads go to S3/R2 anyway (Module 24), so treating them as container-owned data
 locally matches where they end up.
+
+**The core volume is the one you would never think to add, and everything depends on it.**
+`btt-wp-core` is mounted at `/var/www/html` in **both** the `wordpress` and the `wpcli`
+service, and it exists for one reason: the official `wordpress` image populates
+`/var/www/html` from `/usr/src/wordpress` at container start, and if nothing is mounted there
+the copy lands in that container's own writable layer — where `wpcli`, a completely separate
+container, cannot see it. The `wordpress:cli` image ships the WP-CLI binary and **no WordPress
+at all**, so `wp` would have nothing to bootstrap and every command in this course would fail
+with `Error: This does not seem to be a WordPress installation.`
+
+```
+WITHOUT btt-wp-core                        WITH btt-wp-core
+────────────────────────────────────       ────────────────────────────────────
+wordpress container                        wordpress container
+  /var/www/html  ← core, private   ✅        /var/www/html  ← core ─┐
+                                                                    │ shared
+wpcli container                            wpcli container          │
+  /var/www/html  ← wp-content only ❌         /var/www/html  ←───────┘   ✅
+  `wp` → "not a WordPress installation"     `wp core version` → 6.8.x
+```
+
+Two consequences worth knowing now rather than discovering later. `docker compose down -v`
+destroys core along with the database — harmless, because the next `up` re-copies it from the
+image, and it is why this course never treats `down -v` as dangerous to *code*. And
+`wp-config.php`, which Lesson 02.4 bind-mounts read-only at
+`/var/www/html/wp-config.php`, still wins over the volume: the longer target path always
+mounts on top.
 
 ### 4. `depends_on` alone does not wait for MySQL
 
@@ -408,7 +436,13 @@ services:
       WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?required}
       WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX:-wp_}
     volumes:
-      # Bind mounts — code you edit, in git
+      # WordPress CORE, in a named volume SHARED with wpcli. The `wordpress:cli`
+      # image ships the WP-CLI binary and no WordPress, so without this `wp` has
+      # nothing to bootstrap and every command in Modules 03-24 fails with
+      # "This does not seem to be a WordPress installation." Key Concept 3.
+      - btt-wp-core:/var/www/html
+      # Bind mounts — code you edit, in git. A LONGER target path mounts on top
+      # of the volume above, so these still win for wp-content.
       - ./wp-content/plugins:/var/www/html/wp-content/plugins
       - ./wp-content/themes:/var/www/html/wp-content/themes
       - ./wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins
@@ -490,7 +524,19 @@ services:
       WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:?required}
       WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?required}
       WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX:-wp_}
+      # A pinned numeric uid has no home directory in this image, and WP-CLI
+      # warns on every run when it cannot create its cache.
+      WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
+    # uid 33 is www-data in the Debian `wordpress` image and uid 82 in the
+    # Alpine-based `wordpress:cli` image. Two containers sharing a volume while
+    # disagreeing about who www-data is means wpcli cannot write what the web
+    # container owns — `wp media import` in Lesson 04.5 is the first command
+    # that would fail. Pin the numeric uid instead of hoping.
+    user: '33:33'
     volumes:
+      # The SAME core volume as the web container. This is what gives `wp`
+      # something to bootstrap.
+      - btt-wp-core:/var/www/html
       # Must see exactly what the web container sees
       - ./wp-content/plugins:/var/www/html/wp-content/plugins
       - ./wp-content/themes:/var/www/html/wp-content/themes
@@ -504,6 +550,7 @@ services:
 volumes:
   btt-db-data:
   btt-uploads:
+  btt-wp-core:
 
 networks:
   btt-net:
@@ -517,6 +564,11 @@ networks:
 - [ ] In that output, the `db` healthcheck test still contains the literal string
       `$MYSQL_ROOT_PASSWORD` — **not** your actual password. If you see the password, you wrote
       `$` where you needed `$$`.
+- [ ] `docker compose config --volumes` lists **three** volumes: `btt-db-data`, `btt-uploads`
+      and `btt-wp-core`.
+- [ ] `btt-wp-core:/var/www/html` appears **twice** in the file — once under `wordpress`, once
+      under `wpcli`. Once is worse than never: the two containers would then disagree about
+      what WordPress is.
 
 ### Step 6: Write the development overlay
 
@@ -609,9 +661,21 @@ docker compose ps
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/
 # Expected: 200
 
-# 3. WordPress can actually reach the database (this is what a healthcheck cannot prove)
+# 3. WP-CLI can see WordPress at all. This is the check that fails if btt-wp-core
+#    is missing from either service, and it fails before anything else does.
+docker compose run --rm wpcli wp core version
+# Expected: 6.8.x
+#           "This does not seem to be a WordPress installation" means the core
+#           volume is absent from one of the two services. Key Concept 3.
+
+# 3b. WordPress can actually reach the database (a healthcheck cannot prove this)
 docker compose run --rm wpcli wp option get siteurl
 # Expected: http://localhost:8080
+
+# 3c. NEGATIVE — wpcli is not quietly running as a different user than Apache
+docker compose run --rm wpcli id -u
+# Expected: 33. An 82 means the `user:` pin is missing and `wp media import`
+#           will fail in Lesson 04.5 with a permission error, not a clear one.
 
 # 4. Service-name DNS works from inside the wordpress container
 docker compose exec wordpress getent hosts db

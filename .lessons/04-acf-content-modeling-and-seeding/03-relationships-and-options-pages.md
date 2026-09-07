@@ -1046,7 +1046,7 @@ foreach ( get_terms( array( "taxonomy" => "scapegoat", "hide_empty" => false, "o
 docker compose run --rm wpcli wp eval '
 update_field( "site_tagline", "Every outage has a scapegoat.", "option" );
 update_field( "primary_cta_label", "Report an incident", "option" );
-update_field( "primary_cta_url", "/incidents/new", "option" );
+update_field( "primary_cta_url", "/incidents/submit", "option" );
 update_field( "footer_blurb", "Blame The Tech is satire. The outages are real.", "option" );
 update_field( "incident_submission_open", 1, "option" );
 update_field( "social_links", array(

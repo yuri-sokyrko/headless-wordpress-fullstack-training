@@ -269,10 +269,12 @@ before changing anything.
 | `wordpress` restarts in a loop | `depends_on` without `condition: service_healthy`, so it started before MySQL was ready | `docker compose logs db \| tail -30` | Add the healthcheck condition. Lesson 02.2 §4. |
 | `bind: address already in use` | Another process or container owns the port | `lsof -nP -iTCP:8080 -sTCP:LISTEN` | Key Concept 5. |
 | Plugin edits do nothing | Bind mount missing, or the container predates it | `docker compose exec wordpress ls /var/www/html/wp-content/plugins` | Key Concept 6, then `up -d --force-recreate`. |
-| `wp: command not found`, or "This does not seem to be a WordPress installation" | You ran `wp` on the host, or via `exec wordpress`, which has no `wp` | `docker compose exec wordpress sh -c 'command -v wp'` | `docker compose run --rm wpcli wp …`. Key Concept 2. |
+| `wp: command not found` | You ran `wp` on the host, or via `exec wordpress`, which has no `wp` binary | `docker compose exec wordpress sh -c 'command -v wp'` | `docker compose run --rm wpcli wp …`. Key Concept 2. |
+| "This does not seem to be a WordPress installation" **from `wpcli`** | The `btt-wp-core` volume is missing from one of the two services, so WP-CLI has core nowhere to bootstrap from | `docker compose config \| grep -c 'btt-wp-core:/var/www/html'` — must be `2` | Add it to whichever service lacks it, then `up -d --force-recreate`. Lesson 02.2 Key Concept 3. |
 | White screen, empty 500, after editing config | PHP syntax error. `WP_DEBUG_DISPLAY` is `false`, so the browser shows nothing | `docker compose logs --tail=30 wordpress` | Fix the file and line the log names. |
-| All content gone | `docker compose down -v` destroyed `btt-db-data` | `docker volume ls \| grep btt` | Reinstall, then Module 04's seeder. Key Concept 3. |
+| All content gone | `docker compose down -v` destroyed `btt-db-data` (and `btt-wp-core`, which the next `up` re-copies from the image — code in bind mounts is untouched) | `docker volume ls \| grep btt` | Reinstall, then Module 04's seeder. Key Concept 3. |
 | "Permission denied" writing into a bind-mounted directory | The container runs as `www-data`; your host user owns the files | `docker compose exec wordpress ls -la /var/www/html/wp-content/plugins` | `sudo chown -R $(id -u):$(id -g) wp-content/` on Linux. |
+| "Permission denied" from `wpcli` only, while the browser writes fine | `www-data` is uid 33 in the `wordpress` image and uid 82 in `wordpress:cli`, so the two containers disagree about who owns a shared volume | `docker compose run --rm wpcli id -u` — must be `33` | The `user: '33:33'` pin on the `wpcli` service. Lesson 02.2 Key Concept 3. |
 
 That last row is platform-dependent and worth knowing before it happens. On **Docker Desktop**
 (macOS, Windows) the file-sharing layer maps ownership for you, so files WP-CLI creates inside a

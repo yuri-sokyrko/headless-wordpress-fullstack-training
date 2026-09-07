@@ -8,10 +8,11 @@ Before starting this module you should have completed:
 - **Module 05** — every read query the front end needs is answerable in GraphiQL
 - **Module 04** — `wp blame seed` has populated the site, so this module's fixtures mirror real content
 
-> ⚠️ **Do not run `create-next-app` in this module.** React and Next.js are two different
-> things, and conflating them is the single most common reason a WordPress developer stalls
-> here. This module is React only, rendered by a throwaway Vite harness. Next.js arrives in
-> Lesson 09.1, with specific flags.
+> ⚠️ **Do not install Next.js in this module.** React and Next.js are two different things,
+> and conflating them is the single most common reason a WordPress developer stalls here. This
+> module is React only, rendered by a throwaway Vite harness. Next.js arrives in Lesson 09.1 —
+> installed into this same project by hand, because `create-next-app` cannot run in a directory
+> that already has your toolchain in it.
 
 ## Starting State
 

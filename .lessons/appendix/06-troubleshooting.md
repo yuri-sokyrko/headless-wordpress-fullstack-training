@@ -248,8 +248,10 @@ data from the ISR cache**. `globalSetup` must call the test-only revalidate hook
 restoring the database. Lesson 23.6.
 
 **Playwright cannot find an element that is clearly there**
-You used a CSS chain. Use `getByRole` / `getByLabel` / `getByTestId` — CSS chains are banned by
-an ESLint rule in `e2e/` precisely because Tailwind class churn breaks them weekly.
+You used a CSS chain. Use `getByRole` / `getByLabel` / `getByText` — CSS chains are banned by
+an ESLint rule in `e2e/` (Lesson 23.7) precisely because Tailwind class churn breaks them
+weekly. `getByTestId` is not the escape hatch either: Lesson 12.3 rules it out, because a
+`data-testid` passes while the control is invisible or unreachable.
 
 **E2E results differ between runs**
 Non-deterministic seed data. Fixed slugs, explicit `post_date`, no `wp_rand`/`time()`. Lesson

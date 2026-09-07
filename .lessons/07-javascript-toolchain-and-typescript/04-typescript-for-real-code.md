@@ -3,7 +3,7 @@ title: 'TypeScript for Real Code'
 module: 7
 lesson: 4
 teaches: [generics, discriminated-unions, utility-types, unknown-vs-any, type-narrowing]
-produces: ['next-app/src/types/content.ts']
+produces: ['next-app/src/types/content.ts', 'next-app/scripts/blame.ts']
 requires: [7.3]
 ---
 

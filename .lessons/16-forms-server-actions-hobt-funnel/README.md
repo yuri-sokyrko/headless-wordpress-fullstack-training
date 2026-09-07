@@ -31,7 +31,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:3000/api/auth/
 # Expected: 401
 
 # 3. Suites green before you add mutations
-cd next-app && npm test && npx playwright test
+cd next-app && npm test -- --run && npx playwright test
 # Expected: 0 failures
 ```
 

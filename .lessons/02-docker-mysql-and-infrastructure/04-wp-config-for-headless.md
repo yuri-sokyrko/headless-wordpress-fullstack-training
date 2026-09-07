@@ -619,9 +619,22 @@ add_action(
 	static function (): void {
 		add_theme_support( 'title-tag' );
 		add_theme_support( 'editor-styles' );
+
+		// The second — and last — thing this theme does. Menu LOCATIONS are theme-scoped
+		// in WordPress core: switch themes and they disappear, which is why this cannot
+		// live in the plugin even though everything else does. WPGraphQL builds
+		// `MenuLocationEnum` from exactly this call, so without it
+		// `menuItems(where: { location: PRIMARY })` fails GraphQL VALIDATION rather than
+		// returning empty — Lessons 05.4 and 11.3 both depend on it.
+		register_nav_menus( array( 'primary' => 'Primary Navigation' ) );
 	}
 );
 ```
+
+> **Only `primary`, and only because something queries it.** A Classic theme would register
+> three or four locations on the assumption that a designer will want them. Here every location
+> is a value in a public GraphQL enum, so an unused one is API surface you have to keep
+> answering for. Register the second location in the lesson that renders it, not now.
 
 **Verify §5:**
 
@@ -629,6 +642,9 @@ add_action(
       three files. Nothing listed means the `themes` bind mount is missing — Lesson 02.2 Step 5.
 - [ ] `docker compose exec wordpress php -l /var/www/html/wp-content/themes/btt-headless/functions.php`
       prints `No syntax errors detected`.
+- [ ] `docker compose run --rm wpcli wp menu location list --format=csv` lists `primary`. An
+      empty list means `register_nav_menus()` did not run — usually because the theme is not
+      the active one. Lesson 05.4 queries this location and Lesson 11.3 renders it.
 
 ### Step 6: Activate the theme
 

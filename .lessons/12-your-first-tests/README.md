@@ -53,8 +53,8 @@ There is no `vitest.config.ts`, no `playwright.config.ts`, no `e2e/` and no `*.t
 `vitest.config.ts` with unit tests next to the code they test; `playwright.config.ts` with a
 `webServer` block that boots Next for you; `e2e/smoke.spec.ts` walking every route from the
 Module 09 inventory; `e2e/global-setup.ts` that resets WordPress to a known state; and the
-determinism work in `wp-content/mu-plugins/blame-seeder/`, including `wp blame reset` and a
-fixture export.
+determinism work in `wp-content/mu-plugins/blame-seeder/` — `wp blame fixture export` and
+`wp blame fixture load`, beside the `wp blame reset` Lesson 04.5 already gave you.
 
 After this module `npm test` and `npx playwright test` are green against data that is byte-for-byte
 the same on your laptop and in CI. Module 23 deepens both suites; this module makes them exist.
@@ -66,7 +66,7 @@ the same on your laptop and in CI. Module 23 deepens both suites; this module ma
 | 01 | [Why Tests When You Have a Staging Site](01-why-tests-when-you-have-a-staging-site.md) | The test pyramid, applied to headless WordPress | A written scope table: what is tested where, and what is deliberately not |
 | 02 | [Your First Vitest Test](02-your-first-vitest-test.md) | Vitest, `expect`, `describe`, coverage | `vitest.config.ts` and unit tests for `src/lib/graphql/` |
 | 03 | [Your First Playwright Test](03-your-first-playwright-test.md) | Playwright, `webServer`, role-based locators | `playwright.config.ts` and `e2e/smoke.spec.ts` |
-| 04 | [Deterministic Test Data](04-deterministic-test-data.md) | `wp blame reset`, fixture export, `global-setup` | A reproducible database and a two-second CI restore |
+| 04 | [Deterministic Test Data](04-deterministic-test-data.md) | `wp blame fixture`, a digest-checked SQL dump, `global-setup` | A reproducible database and a two-second CI restore |
 
 ## What each suite is responsible for
 

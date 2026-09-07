@@ -79,6 +79,8 @@ headless-wordpress-fullstack-training/
 ├── next-app/               ← EMPTY. You build it. See its README.
 ├── docs/                       YOURS — the architecture notes, ADRs and runbooks that
 │                            lessons ask you to write. Created by Lesson 01.1.
+├── fixtures/                   GITIGNORED — the seeded SQL dump Module 12 exports. A cache,
+│                            never a source: the seeder in wordpress-headless/ is the truth.
 ├── .github/                    pull_request_template.md ships; workflows/ you add in M24
 ├── .vscode/                    editor settings you add in M07 (format on save, PHPCS)
 ├── .gitignore .nvmrc .editorconfig LICENSE
