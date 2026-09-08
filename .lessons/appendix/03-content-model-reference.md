@@ -231,6 +231,7 @@ the **root query** so it can be fetched once in the root layout.
 | `primary_cta_url` | URL | `primaryCtaUrl` | |
 | `footer_blurb` | Textarea | `footerBlurb` | |
 | `social_links` | Repeater → `network` (Select), `url` (URL) | `socialLinks` | |
+| `btt_redirects` | Repeater → `from` (Text), `to` (Text), `permanent` (True/False) | `bttRedirects` | Read at **build** time by `next.config.ts` (Lesson 19.4), never by a page. Keep it to a few dozen rows — past that, middleware is the right home. |
 | `incident_submission_open` | True/False | `incidentSubmissionOpen` | **a kill switch the Server Action must honour** |
 
 Navigation is **not** in Site Settings — it comes from core WordPress menus via
@@ -347,7 +348,7 @@ exists to gate.
 | WPGraphQL Polylang | no | `language`, `translations`, locale filtering |
 | Advanced Custom Fields | no | The field groups in §4 |
 | Yoast SEO | no | Editor-controlled metadata |
-| Polylang | no | Multilingual content |
+| Polylang | no | Multilingual content. **Free edition** — it translates post slugs but *not* CPT rewrite slugs, which is what decides Lesson 20.3's routing model |
 | **`blame-the-tech-core`** | **yes** | §1–§7 — everything above |
 | **`blame-the-tech-blocks`** | **yes** | The six Gutenberg blocks (Modules 13–14) |
 
@@ -365,10 +366,10 @@ states it explicitly.
 
 | Content | Count | Notes |
 |---|---|---|
-| Incidents | 40 | fixed slugs, fixed `post_date`, spread across all 4 severities and all 10 scapegoats |
+| Incidents | 40 en + 10 de + 5 uk = **55** | fixed slugs, fixed `post_date`, spread across all 4 severities and all 10 scapegoats. Translations are added by Lesson 20.1's final seeder phase — German slugs are `incident-NN-de`, Ukrainian are Cyrillic (`відмова-NN`). Before Module 20 the count is 40 |
 | Tech reviews | 8 | one per verdict × 2 |
-| Blog posts | 10 | two use every custom block, for the block-rendering E2E spec |
-| Pages | 3 | Home, About, HOBT (with `templates/hobt.php`) |
+| Blog posts | 10 en + 2 de = **12** | two use every custom block, for the block-rendering E2E spec |
+| Pages | 3 × 3 locales = **9** | Home, About, HOBT (with `templates/hobt.php`). German `startseite`/`ueber-uns`/`hobt-de`, Ukrainian `holovna`/`pro-nas`/`hobt-uk` |
 | Users | 3 | `editor`, `reporter`, `e2e_agent` — **passwords from the environment, never literals in the seeder** |
 | Scapegoat terms | 10 | §2 |
 | Severity terms | 4 | §2 |
@@ -378,6 +379,11 @@ Determinism rules (Lesson 12.4 covers all of them): fixed slugs never IDs, expli
 `post_date` and `post_date_gmt`, no `wp_rand`/`time()`/unseeded Faker, one fixed `WP_HOME` for
 both seed and run, and Polylang translations linked **last** with
 `pll_save_post_translations()`.
+
+Taxonomy terms and media are deliberately **not** translated (Lesson 20.1), so the term counts
+above are totals across all three languages and no attachment carries a language at all. The
+cost, stated plainly: a German page shows English severity badges and scapegoat names, and the
+leaderboard counts a translation as its own incident.
 
 ---
 

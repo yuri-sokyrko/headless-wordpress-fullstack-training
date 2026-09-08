@@ -536,6 +536,8 @@ Two anchored edits to `Plugin.php`:
 		'includes/graphql/mutation-create-incident.php',    // Lesson 06.2
 		'includes/graphql/mutation-register-developer.php', // Lesson 06.2
 		'includes/graphql/mutation-submit-hobt-lead.php',   // Lesson 06.2
+		'includes/graphql/performance.php',                 // Lesson 06.4
+		'includes/graphql/mutation-verify-developer.php',   // Lesson 15.3
 	);
 ```
 

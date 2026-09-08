@@ -569,8 +569,9 @@ import type { ReactNode } from 'react';
 export const metadata: Metadata = {
   title: 'Blame The Tech',
   description: 'Incident reports, blame assignment, and reviews nobody asked for.',
-  // Makes relative URLs in Open Graph tags absolute. Module 19 replaces this whole
-  // export with `generateMetadata`, reading Yoast's output per route.
+  // Makes relative URLs in Open Graph tags absolute. Module 19 KEEPS this export —
+  // it is the parent every route's generateMetadata merges into — and adds
+  // generateMetadata to the ROUTE files, reading Yoast's output per node.
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
 };
 

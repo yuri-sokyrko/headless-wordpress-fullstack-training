@@ -72,6 +72,7 @@ Loaded by Docker Compose via `env_file:`, read in `wp-config.php` with `getenv()
 | `GRAPHQL_JWT_AUTH_SECRET_KEY` | **yes** | 64+ random chars | **Must differ from `AUTH_KEY`** — see §5 |
 | `GRAPHQL_JWT_AUTH_CORS_ENABLE` | no | `false` | Set explicitly, and explicitly **off**. When on, WPGraphQL JWT Authentication emits CORS headers and returns the refresh token in an `X-JWT-Refresh` response header — both of which only help a *browser* client, and the browser never reaches `/graphql` in this app. Lesson 15.2. |
 | `BTT_APP_TOKEN` | **yes** | 48+ random chars | Shared with Next. Server-to-server only. §4 |
+| `BTT_PREVIEW_SHARED_SECRET` | **yes** | 32+ random chars | Mirrors `PREVIEW_SHARED_SECRET`. WordPress mints a preview token as `<random>.<HMAC>` so Next can reject a forged one **before** spending a WordPress round trip. It is a pre-check, not the authority — the single-use transient is. Lesson 17.2. |
 | `BTT_REVALIDATE_SECRET` | **yes** | 48+ random chars | HMAC key for the revalidation webhook |
 | `BTT_LEAD_IP_HMAC_KEY` | **yes** | 32+ random chars | Pseudonymises lead IPs — the raw IP is never stored |
 | `BTT_FRONTEND_URL` | no | `http://host.docker.internal:3000` | Where WordPress posts revalidations and redirects previews |
@@ -129,7 +130,7 @@ you guard the module with `import 'server-only'` — Lesson 10.1 does exactly th
 | `WP_REST_BASE` | no | `http://localhost:8080/wp-json` | For `/btt/v1/preview/verify` |
 | `WP_APP_TOKEN` | **yes** | `__CHANGE_ME__` | Mirrors `BTT_APP_TOKEN` |
 | `REVALIDATE_SECRET` | **yes** | `__CHANGE_ME__` | Mirrors `BTT_REVALIDATE_SECRET` |
-| `PREVIEW_SHARED_SECRET` | **yes** | `__CHANGE_ME__` | |
+| `PREVIEW_SHARED_SECRET` | **yes** | `__CHANGE_ME__` | Mirrors `BTT_PREVIEW_SHARED_SECRET`. Verifies the HMAC on a preview token locally, so an unauthenticated caller cannot force one WordPress round trip per request. Lesson 17.2 |
 | `TURNSTILE_SECRET_KEY` | **yes** | `__CHANGE_ME__` | Cloudflare Turnstile server key |
 | `UPSTASH_REDIS_REST_URL` | **yes** | `__CHANGE_ME__` | Rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | **yes** | `__CHANGE_ME__` | |
@@ -310,6 +311,7 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en
 | 12 | `E2E_MODE`, `E2E_SECRET` |
 | 15 | `GRAPHQL_JWT_AUTH_CORS_ENABLE`, `WP_APP_TOKEN`, and the cookie table in §4. `GRAPHQL_JWT_AUTH_SECRET_KEY` and `BTT_APP_TOKEN` already exist — Lesson 02.5 wrote them into `wordpress-headless/.env`, and Lesson 15.2 *verifies* them rather than creating them. |
 | 16 | `TURNSTILE_*`, `UPSTASH_*`, `BTT_LEAD_IP_HMAC_KEY`, `RESEND_API_KEY` |
-| 17 | `PREVIEW_SHARED_SECRET` |
-| 18 | `REVALIDATE_SECRET`, `BTT_REVALIDATE_SECRET`, `BTT_FRONTEND_URL` |
+| 17 | `PREVIEW_SHARED_SECRET`, `BTT_PREVIEW_SHARED_SECRET` |
+| 18 | `REVALIDATE_SECRET`. `BTT_REVALIDATE_SECRET` and `BTT_FRONTEND_URL` already exist — Lesson 02.5 wrote both into `wordpress-headless/.env` and `.env.example`, and Lesson 18.3 *verifies* them rather than creating them. |
+| 19–21 | none. Modules 19, 20 and 21 introduce no new variables — recorded explicitly, because a missing row reads as "not yet audited" |
 | 24 | `BTT_S3_*`, `SENTRY_DSN`, `DISALLOW_FILE_*`, and all of §7 |

@@ -720,7 +720,12 @@ export type Credential =
   | { readonly kind: 'user'; readonly jwt: string }
   | { readonly kind: 'app' };
 
-/** The only place in this application that reads WP_APP_TOKEN. */
+/**
+ * The only place in this application that reads WP_APP_TOKEN **for a GraphQL
+ * call**. Lesson 17.2 adds a second reader for the REST preview exchange, and
+ * replaces this invariant with a checkable one: `grep -rn 'WP_APP_TOKEN' src/`
+ * must name exactly two files.
+ */
 function credentialHeaders(credential: Credential): Record<string, string> {
   if (credential.kind === 'user') {
     return { Authorization: `Bearer ${credential.jwt}` };

@@ -605,7 +605,9 @@ export async function readRefreshToken(): Promise<string | null> {
 
 **Verify §1:**
 
-- [ ] `grep -c 'httpOnly: true' src/lib/auth/cookies.ts` is `2` — one per attribute set, which is
+- [ ] `grep -c 'httpOnly: true' src/lib/auth/cookies.ts` is `2` **today** — Lesson 17.2 adds
+      `btt_preview_jwt` and makes it `3`, and noticing that is what this grep is for. One per
+      attribute set, which is
       what makes that grep meaningful.
 - [ ] `grep -c "import 'server-only'" src/lib/auth/jwt.ts` is `0`; on `cookies.ts` it is `1`.
 - [ ] `grep -rn "'btt_at'\|'btt_rt'" src/` names **only** `src/lib/auth/jwt.ts`, and
@@ -997,28 +999,36 @@ function safeNextPath(raw: string | null): string {
  * mutation VARIABLES, not in a header, so there is no `Credential` to
  * discriminate. No `options`, so nothing is cached.
  */
-async function rotateAccessToken(): Promise<boolean> {
+async function rotateAccessToken(): Promise<'ok' | 'refused' | 'unavailable'> {
   const refreshToken = await readRefreshToken();
 
+  // No cookie at all: nothing was refused, there was simply nothing to present.
   if (refreshToken === null) {
-    return false;
+    return 'unavailable';
   }
 
   try {
     const data = await fetchGraphQL(RefreshTokenDocument, { refreshToken });
     const authToken = data.refreshJwtAuthToken?.authToken;
 
+    // WordPress answered and declined. The refresh token is spent or revoked.
     if (authToken === null || authToken === undefined || authToken === '') {
-      return false;
+      return 'refused';
     }
 
     await setAccessCookie(authToken);
 
-    return true;
+    return 'ok';
   } catch (error) {
     console.error('[btt] refresh: WordPress refused or was unreachable', error);
 
-    return false;
+    // THREE states, not two, and this is the branch that needs the third.
+    // A transport failure is not a refusal: WordPress being briefly
+    // unreachable must not delete a refresh token that is still perfectly
+    // valid. `POST` clears on any failure because a programmatic caller has
+    // nowhere to put the distinction; `GET` clears only on 'refused', so a
+    // network blip costs the editor a redirect rather than their session.
+    return 'unavailable';
   }
 }
 
@@ -1031,7 +1041,7 @@ async function rotateAccessToken(): Promise<boolean> {
  * leak into.
  */
 export async function POST(): Promise<Response> {
-  if (!(await rotateAccessToken())) {
+  if ((await rotateAccessToken()) !== 'ok') {
     // Clear BOTH cookies on ANY failure, whatever the cause. Two reasons, and
     // the second is the one that matters. The browser should stop presenting a
     // credential nothing will accept — and Lesson 15.5's middleware hands off

@@ -285,8 +285,8 @@ would make these two files **untestable in plain Node**, because a Vitest worker
 > **The house rule names files, not directories.** "Everything in `src/lib/` is server-only"
 > would be tidier and would cost you the two most valuable unit tests in the repo. The guard
 > belongs on the modules that hold a secret or perform I/O, and `tags.ts` holds neither: it is
-> pure string manipulation whose output is a **contract with PHP**, and a contract you cannot
-> assert cheaply is a contract that drifts.
+> pure string manipulation whose output is a **contract between the code that attaches a tag and
+> the code that expires it**, and a contract you cannot assert cheaply is a contract that drifts.
 
 ### 8. Test the throw, not just the return
 
@@ -296,12 +296,12 @@ if they do not:
 | Input | Without the throw | With the throw |
 |---|---|---|
 | `''` | the tag `incident:` — attaches to the entry, matches nothing on invalidation, reports success | an exception at the call site, in your build output |
-| `'incident:01'` | the tag `incident:incident:01`, which PHP will never reproduce | an exception naming the offending slug |
+| `'incident:01'` | the tag `incident:incident:01`, which nothing will ever expire | an exception naming the offending slug |
 
 Both failures are silent, permanent and look exactly like a caching bug from the outside. So the
 tests that pin them are not "edge cases" — they are the two most important assertions in
-`tags.test.ts`, because Module 18 builds the same strings in PHP and *these two* are the paths
-where the two implementations are most likely to disagree.
+`tags.test.ts`, because Module 18 adds a second caller — the revalidation route — and *these two*
+are the paths where the attaching side and the expiring side are most likely to disagree.
 
 `expect(() => fn()).toThrow('substring')` is the shape. The callback matters: `expect(fn())`
 would call the function while building the argument, the exception would escape `expect`
@@ -483,7 +483,7 @@ every `## Verification` block in this course use — a watching runner in CI nev
 - [ ] `npm run type-check` is silent. `vitest.config.ts` is inside `tsconfig.json`'s `include`
       (Lesson 09.1 widened it to `**/*.ts`), so it is type-checked like any other file.
 
-### Step 3: Write `tags.test.ts` — the strings Module 18 has to reproduce in PHP
+### Step 3: Write `tags.test.ts` — the strings Module 18's webhook has to expire
 
 ```ts
 // next-app/src/lib/graphql/tags.test.ts
@@ -497,6 +497,7 @@ import {
   postTag,
   reviewTag,
   siteTag,
+  taxonomyListTag,
   termTag,
 } from '@/lib/graphql/tags';
 
@@ -559,6 +560,28 @@ describe('listTag', () => {
     // you get `undefined`, which stringifies into the tag "undefined" and matches
     // nothing. The type system is the only thing standing between you and that.
     expect(wrong).toBeUndefined();
+  });
+});
+
+describe('taxonomyListTag', () => {
+  it('pluralises a taxonomy without inventing a word', () => {
+    // `severities`, not `severitys` — which is why the map is spelled out
+    // rather than derived by appending an `s`.
+    expect(taxonomyListTag('scapegoat')).toBe('scapegoats');
+    expect(taxonomyListTag('severity')).toBe('severities');
+    expect(taxonomyListTag('stack')).toBe('stacks');
+  });
+
+  it('appends the locale, like listTag and unlike a node tag', () => {
+    expect(taxonomyListTag('scapegoat', 'de')).toBe('scapegoats:de');
+  });
+
+  it('does not accept a ContentType, and listTag does not accept a taxonomy', () => {
+    // @ts-expect-error taxonomyListTag takes a TaxonomyName, not a ContentType.
+    taxonomyListTag('incident');
+    // @ts-expect-error and the mirror image — this is the pair that caught a
+    // real type error in Lesson 16.2's termAllowlist().
+    listTag('scapegoat');
   });
 });
 

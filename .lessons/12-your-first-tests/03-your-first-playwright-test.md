@@ -675,7 +675,7 @@ import type { Page } from '@playwright/test';
  */
 const CONSOLE_ALLOWLIST: readonly RegExp[] = [
   // Chromium reports a missing subresource as a console error. There is no
-  // favicon until Lesson 19.4 adds the icon set, and middleware already excludes
+  // favicon until Lesson 19.4 adds `src/app/icon.svg`, and middleware already excludes
   // the path from the locale redirect. Delete this entry in Module 19.
   /favicon\.ico/,
 ];

@@ -389,6 +389,11 @@ is the rule set — but both halves apply at once.
 | `BTT_EDITOR_PASSWORD`, `BTT_REPORTER_PASSWORD`, `BTT_E2E_PASSWORD` | the seeder, only when *creating* an account | `getenv()`, fail loudly if absent, never in `.env`, never in a file. Passed in per-invocation with `-e VAR="$VAR"` |
 | `E2E_SECRET` | Module 18's test-only revalidation hook, inside Next | exported into the session that runs the suite. `global-setup` only checks it is present, and fails with one sentence if it is not |
 
+> **The incident count is a fixture assertion, not a content fact.** Every check below expects
+> **40**, and that is correct until Lesson 20.1 adds a translation phase to the seeder and the
+> total becomes 55. When it does, 20.1 edits these assertions rather than leaving them to rot —
+> which is the whole reason the count lives in one place.
+
 `E2E_SECRET` is checked here and used later on purpose: finding a half-configured environment now
 costs a second, where finding it in Module 18 costs an afternoon. And the dump inherits the whole
 rule set — it holds `wp_users` rows, so password **hashes** and email addresses. That is why

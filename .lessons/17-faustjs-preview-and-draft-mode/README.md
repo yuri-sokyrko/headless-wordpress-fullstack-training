@@ -47,8 +47,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/en/incidents/a-dr
 
 ## What You'll Build
 
-- A `/faust` spike: Faust installed **beside** the existing app in its own route group, sharing the
-  same WordPress, touching none of your routes
+- `faust-spike/` — Faust installed **beside** the existing app as its own sibling application on
+  port 3001, sharing the same WordPress, touching none of your routes and none of your lockfile
 - `src/app/api/preview/route.ts` and `preview/exit/route.ts` — token exchange, `draftMode().enable()`
 - `includes/Preview.php` — issue and verify endpoints, with a 120-second single-use transient
 - `PreviewBanner.tsx` — an unmissable indicator with a working exit link
@@ -61,7 +61,7 @@ Next.js, with your components, your styles and your block registry.
 
 | #  | Lesson | New Technology | What You Build |
 |----|--------|----------------|----------------|
-| 01 | [What Faust Actually Gives You](01-what-faust-actually-gives-you.md) | Faust.js, `faustjs` templates | The `/faust` spike, running beside your app |
+| 01 | [What Faust Actually Gives You](01-what-faust-actually-gives-you.md) | Faust.js, `faustjs` templates | `faust-spike/`, running beside your app |
 | 02 | [Preview & Draft Mode](02-preview-and-draft-mode.md) | `draftMode()`, `preview_post_link` | **The lesson that ships** — working editor preview |
 | 03 | [Faust Auth & Templates](03-faust-auth-and-templates.md) | Faust auth, Apollo, WP-controlled routing | The same page twice, measured against each other |
 | 04 | [When Not to Use Faust](04-when-not-to-use-faust.md) | ADRs, decision tables | The written verdict, and the spike removed |
@@ -77,7 +77,8 @@ Editor in wp-admin                 WordPress                    Next.js (:3000)
         │                              │  set_transient(              │
         │                              │    'btt_pv_' . hash(token),  │
         │                              │    [post_id, user_id], 120 )  │
-        │◀── 302 to BTT_FRONTEND_URL ──┤                              │
+        │◀── Preview link now points ──┤                              │
+        │    at BTT_FRONTEND_URL       │                              │
         │    /api/preview?token=…&id=… │                              │
         │                              │                              │
         ├──────────────── GET /api/preview?token=… ───────────────────▶│

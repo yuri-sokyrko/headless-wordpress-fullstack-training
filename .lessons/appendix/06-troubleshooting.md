@@ -156,7 +156,9 @@ Add the WordPress host to `images.remotePatterns` in `next.config.ts`. Lesson 14
 **A page shows stale content after publishing in WordPress**
 Work down this list:
 
-1. Did the webhook fire? `docker compose logs wordpress | grep revalidate`
+1. Did the webhook fire? `WP_DEBUG_LOG` sends `error_log()` to a **file**, not to Apache's
+   stdout, so `docker compose logs` will not show it:
+   `docker compose exec wordpress tail -n 20 /var/www/html/wp-content/debug.log | grep revalidate`
 2. **Is `BTT_FRONTEND_URL` set to `host.docker.internal:3000`?** Next runs on the host;
    WordPress inside the container cannot reach `localhost:3000`. On Linux you also need
    `extra_hosts: ["host.docker.internal:host-gateway"]`. **This is the single most common
@@ -190,6 +192,10 @@ Missing `asPreview: true`. For an already-published post the draft lives in `wp_
 **Preview says 404 or 401**
 Preview tokens are **single-use with a 120-second TTL**. Reloading the preview URL consumes an
 already-consumed token. Click Preview in wp-admin again.
+
+**Preview says 400**
+The `?next=` parameter is not a same-origin path, so the open-redirect guard rejected it before
+the token was spent. Something rewrote the preview link in transit. Click Preview again. Lesson 17.2.
 
 ---
 

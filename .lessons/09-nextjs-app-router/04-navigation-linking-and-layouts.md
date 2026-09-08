@@ -912,7 +912,9 @@ export async function generateStaticParams(): Promise<Array<{ locale: string; sl
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     // 40 seeded incidents (appendix 03 §9). `first: 100` leaves room for the ones
-    // Module 16 lets visitors submit, without another edit here.
+    // Module 16 lets visitors submit, without another edit here — but note that
+    // Lesson 06.4 caps every connection at 50 nodes, so this is a CEILING and
+    // not a page size. Lesson 18.1 adds the cursor loop that makes it reachable.
     body: JSON.stringify({ query: INCIDENT_SLUGS, variables: { first: 100 } }),
   });
   if (!res.ok) throw new Error(`WPGraphQL transport failure: HTTP ${res.status}`);

@@ -213,7 +213,7 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
 | 14 | `src/components/blocks/` — `BlockRenderer`, the registry, one component per block, `RichText.tsx` |
 | 15 | `src/lib/auth/`, `src/actions/auth.ts`, `/api/auth/refresh`, route guards |
 | 16 | `src/lib/validation/schemas.ts`, `src/actions/incidents.ts`, `src/actions/leads.ts`, the forms |
-| 17 | `/api/preview`, `/api/preview/exit`, `PreviewBanner`, the `/faust` spike |
+| 17 | `/api/preview`, `/api/preview/exit`, `PreviewBanner` (the `faust-spike/` sibling app is deleted in Lesson 17.4) |
 | 18 | `/api/revalidate`, per-route rendering config (`tags.ts` itself lands in Lesson 10.3) |
 | 19 | `generateMetadata`, `src/lib/seo/`, `app/sitemap.ts`, `app/robots.ts`, `opengraph-image.tsx` |
 | 20 | `src/lib/i18n/`, `src/messages/{en,uk,de}.json`, the locale switcher |

@@ -274,6 +274,25 @@ query GetPageBlocks($uri: String!) {
   }
 }
 
+# Locale-filtered list — every localised CONNECTION in this app takes this variable.
+# A by-slug query does NOT: GraphQL rejects a declared-but-unused variable, so those
+# select `language { code }` and compare it against the URL segment instead.
+query GetGermanIncidents($language: LanguageCodeEnum!) {
+  incidents(first: 10, where: { status: PUBLISH, language: $language }) {
+    nodes { slug language { code } }
+  }
+}
+
+# Sibling lookup for the switcher and the hreflang cluster.
+# `translations` returns SIBLINGS ONLY — never the node itself, so a three-language
+# cluster gives two entries and you have to add the current node yourself.
+query GetTranslations($slug: ID!) {
+  incident(id: $slug, idType: SLUG) {
+    language { code }
+    translations { language { code } slug uri }
+  }
+}
+
 # SEO, on every content query
 fragment SeoFields on NodeWithSeo {
   seo {
@@ -281,7 +300,10 @@ fragment SeoFields on NodeWithSeo {
     metaDesc
     canonical
     metaRobotsNoindex
-    opengraphImage { sourceUrl }
+    metaRobotsNofollow
+    opengraphTitle
+    opengraphDescription
+    opengraphImage { ...MediaFields }
   }
 }
 ```

@@ -4,7 +4,7 @@ module: 23
 lesson: 6
 teaches: [playwright-projects, storage-state, mutation-isolation, cache-coherency, test-only-hooks, e2e-preview, e2e-locale-routing]
 produces: ['next-app/playwright.config.ts', 'next-app/e2e/auth.setup.ts', 'next-app/e2e/moderation.spec.ts', 'next-app/e2e/preview.spec.ts', 'next-app/e2e/i18n.spec.ts']
-requires: [23.5, 18.4, 17.3, 20.3]
+requires: [23.5, 18.4, 17.2, 20.3]
 ---
 
 # Lesson 23.6 — E2E Depth: Auth, Preview & i18n
@@ -32,12 +32,13 @@ the database changed — the cache entry is still fresh and the tag was never pu
 passes alone and fails in the suite, or passes locally and fails in CI, which is the worst
 possible failure signature. The fix is a test-only route handler that purges the cache after a
 reset — and the fix is itself the lesson, because **a test hook is an unauthenticated endpoint
-unless you make it not one.** It 404s unless `E2E_MODE=1` **and** an `x-e2e-secret` header matches,
+unless you make it not one.** It 404s unless `E2E_MODE=1` **and** an `X-BTT-E2E-Secret` header matches,
 per [appendix 04 §3.1](../appendix/04-env-reference.md#31-server-only-no-prefix).
 
 By the end of this lesson you will have:
 
-- `playwright.config.ts` with `setup`, `read`, `mutate` and `a11y` projects, dependencies declared,
+- `playwright.config.ts` with the `setup` project plus `smoke`, `mutations` and `a11y`,
+  dependencies declared,
   and mutation isolation configured
 - `e2e/auth.setup.ts` — one login per role, `storageState` per role, credentials from the
   environment and never from a literal

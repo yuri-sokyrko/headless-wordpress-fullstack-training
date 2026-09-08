@@ -25,8 +25,8 @@ Everything is inlined in the lessons. Go to
 | 14 | `src/components/blocks/` — `BlockRenderer.tsx`, `registry.ts`, one component per block, `RichText.tsx` |
 | 15 | `src/lib/auth/{session,cookies,guards}.ts`, `src/actions/auth.ts`, `src/app/api/auth/refresh/route.ts` |
 | 16 | `src/lib/validation/schemas.ts`, `src/actions/{incidents,leads}.ts`, `src/lib/rate-limit.ts`, the forms and dialogs |
-| 17 | `src/app/api/preview/route.ts`, `preview/exit/route.ts`, `PreviewBanner`, the `/faust` spike |
-| 18 | `src/app/api/revalidate/route.ts`, per-route rendering config |
+| 17 | `src/app/api/preview/route.ts`, `preview/exit/route.ts`, `PreviewBanner` — the Faust spike lives in its own `faust-spike/` app and is deleted in Lesson 17.4 |
+| 18 | `src/app/api/revalidate/route.ts`, per-route rendering config, `src/app/api/auth/session/route.ts` + `SessionMenu` (the session read moves out of the root layout so routes can be static again) |
 | 19 | `generateMetadata` on every route, `src/lib/seo/yoastToMetadata.ts`, `app/sitemap.ts`, `app/robots.ts`, `opengraph-image.tsx` |
 | 20 | `src/lib/i18n/{routing,request,navigation}.ts`, `src/messages/{en,uk,de}.json`, `LocaleSwitcher` |
 | 21 | `lighthouserc.json`, `src/app/api/vitals/route.ts`, bundle-analyzer wiring |
@@ -60,6 +60,9 @@ next-app/
 │   │   │   ├── hobt/page.tsx
 │   │   │   ├── (auth)/{login,register,verify}/page.tsx
 │   │   │   ├── account/{layout.tsx,page.tsx}
+│   │   │   ├── opengraph-image.tsx                    (M19) inside the segment: no
+│   │   │   │                                          extension, so middleware would
+│   │   │   │                                          307 a root-level one
 │   │   │   └── [...slug]/page.tsx                     WP pages catch-all
 │   │   ├── api/
 │   │   │   ├── revalidate/route.ts                    (M18) HMAC-verified
@@ -67,7 +70,7 @@ next-app/
 │   │   │   ├── auth/refresh/route.ts                  (M15)
 │   │   │   ├── vitals/route.ts                        (M21)
 │   │   │   └── health/route.ts                        (M09)
-│   │   ├── sitemap.ts  robots.ts  opengraph-image.tsx (M19)
+│   │   ├── sitemap.ts  robots.ts  icon.svg            (M19) .xml/.txt/.svg bypass it
 │   │   └── global-error.tsx
 │   ├── actions/{auth,incidents,leads}.ts              'use server'
 │   ├── components/

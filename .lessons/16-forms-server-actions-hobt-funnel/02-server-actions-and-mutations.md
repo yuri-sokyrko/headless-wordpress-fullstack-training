@@ -726,7 +726,7 @@ import { readAccessToken } from '@/lib/auth/cookies';
 import { getSession } from '@/lib/auth/session';
 import { fetchGraphQL, fetchGraphQLAuthed } from '@/lib/graphql/client';
 import { formatGraphQLErrors, isGraphQLRequestError } from '@/lib/graphql/errors';
-import { listTag } from '@/lib/graphql/tags';
+import { listTag, taxonomyListTag } from '@/lib/graphql/tags';
 import { limit } from '@/lib/rate-limit';
 import { refineTerms, type IncidentInput, type IncidentTermAllowlist } from '@/lib/validation/schemas';
 
@@ -790,7 +790,7 @@ async function clientIp(): Promise<string> {
 async function termAllowlist(): Promise<IncidentTermAllowlist> {
   const data = await fetchGraphQL(IncidentTermOptionsDocument, undefined, {
     revalidate: 60,
-    tags: [listTag('scapegoat'), listTag('severity')],
+    tags: [taxonomyListTag('scapegoat'), taxonomyListTag('severity')],
   });
 
   return {
@@ -1319,7 +1319,7 @@ import { IncidentTermOptionsDocument } from '@/gql/graphql';
 import { requireCapability } from '@/lib/auth/guards';
 import { IncidentSubmitForm } from '@/components/incidents/IncidentSubmitForm';
 import { fetchGraphQL } from '@/lib/graphql/client';
-import { listTag } from '@/lib/graphql/tags';
+import { taxonomyListTag } from '@/lib/graphql/tags';
 
 export default async function SubmitIncidentPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -1329,7 +1329,7 @@ export default async function SubmitIncidentPage({ params }: { params: Promise<{
 
   const terms = await fetchGraphQL(IncidentTermOptionsDocument, undefined, {
     revalidate: 60,
-    tags: [listTag('scapegoat'), listTag('severity')],
+    tags: [taxonomyListTag('scapegoat'), taxonomyListTag('severity')],
   });
 
   const options = (nodes: ReadonlyArray<{ slug?: string | null; name?: string | null } | null> | null | undefined) =>

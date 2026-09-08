@@ -81,6 +81,9 @@ headless-wordpress-fullstack-training/
 │                            lessons ask you to write. Created by Lesson 01.1.
 ├── fixtures/                   GITIGNORED — the seeded SQL dump Module 12 exports. A cache,
 │                            never a source: the seeder in wordpress-headless/ is the truth.
+├── faust-spike/                CREATED in Lesson 17.1, DELETED in Lesson 17.4 — the Faust
+│                            evaluation runs as its own app on :3001 so it can never break
+│                            next-app/'s lockfile. It is not in the final tree, on purpose.
 ├── .github/                    pull_request_template.md ships; workflows/ you add in M24
 ├── .vscode/                    editor settings you add in M07 (format on save, PHPCS)
 ├── .gitignore .nvmrc .editorconfig LICENSE

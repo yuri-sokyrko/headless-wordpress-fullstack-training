@@ -408,8 +408,13 @@ export function IncidentBrowser({ incidents }: { readonly incidents: readonly In
 > live in the URL (`?severity=s1-catastrophic`) rather than in React state. That version is
 > genuinely better, it is what a production build of this page should do, and it needs
 > `searchParams` plus a cache policy to avoid re-querying WordPress on every keystroke. Lesson
-> 18.1 builds it — its per-route table already commits `/[locale]/incidents` to "dynamic, reads
-> `searchParams` for facets". This lesson keeps the Module 08 components working unchanged, because "the components
+> 18.1 builds **the mechanism** — its per-route table commits `/[locale]/incidents` to "dynamic,
+> reads `searchParams`", and it moves the text search into the URL so the page is dynamic while
+> the query inside it is still cached per variable-set. It deliberately stops there and leaves
+> the two taxonomy facets in client state, with the three remaining steps enumerated: once you
+> have seen the pattern on one parameter, extending it is repetition rather than learning, and
+> the cost of doing it here would be deleting the components this lesson exists to teach.
+> This lesson keeps the Module 08 components working unchanged, because "the components
 > you wrote last module still work" is worth more right now than one fewer kilobyte.
 
 ### Step 3: Build `/[locale]/incidents` as a Server Component
