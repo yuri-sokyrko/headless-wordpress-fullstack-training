@@ -70,6 +70,7 @@ Loaded by Docker Compose via `env_file:`, read in `wp-config.php` with `getenv()
 | `LOGGED_IN_SALT` | **yes** | 64+ random chars | |
 | `NONCE_SALT` | **yes** | 64+ random chars | |
 | `GRAPHQL_JWT_AUTH_SECRET_KEY` | **yes** | 64+ random chars | **Must differ from `AUTH_KEY`** — see §5 |
+| `GRAPHQL_JWT_AUTH_CORS_ENABLE` | no | `false` | Set explicitly, and explicitly **off**. When on, WPGraphQL JWT Authentication emits CORS headers and returns the refresh token in an `X-JWT-Refresh` response header — both of which only help a *browser* client, and the browser never reaches `/graphql` in this app. Lesson 15.2. |
 | `BTT_APP_TOKEN` | **yes** | 48+ random chars | Shared with Next. Server-to-server only. §4 |
 | `BTT_REVALIDATE_SECRET` | **yes** | 48+ random chars | HMAC key for the revalidation webhook |
 | `BTT_LEAD_IP_HMAC_KEY` | **yes** | 32+ random chars | Pseudonymises lead IPs — the raw IP is never stored |
@@ -185,7 +186,7 @@ WordPress compares the app token with `hash_equals()`, not `==`, to avoid a timi
 | Cookie | Contents | httpOnly | Secure | SameSite | Path | Max-Age |
 |---|---|---|---|---|---|---|
 | `btt_at` | WP auth JWT | ✓ | ✓ (prod) | `Lax` | `/` | 300 s |
-| `btt_rt` | WP refresh token | ✓ | ✓ | **`Strict`** | **`/api/auth`** | 30 d |
+| `btt_rt` | WP refresh token | ✓ | ✓ (prod) | **`Strict`** | **`/api/auth`** | 30 d |
 | `btt_preview_jwt` | short-lived preview JWT | ✓ | ✓ | `Lax` | `/` | 300 s |
 | `__prerender_bypass`, `__next_preview_data` | Next `draftMode` | ✓ | ✓ | Next-managed | `/` | session |
 | `NEXT_LOCALE` | `en` \| `uk` \| `de` | ✗ | ✓ | `Lax` | `/` | 1 y |
@@ -307,7 +308,7 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en
 | 09 | `WP_GRAPHQL_ENDPOINT`, `NEXT_PUBLIC_SITE_URL`, the `NEXT_PUBLIC_` boundary lesson |
 | 10 | `WP_REST_BASE` |
 | 12 | `E2E_MODE`, `E2E_SECRET` |
-| 15 | `GRAPHQL_JWT_AUTH_SECRET_KEY`, `WP_APP_TOKEN`, `BTT_APP_TOKEN`, the cookie table in §4 |
+| 15 | `GRAPHQL_JWT_AUTH_CORS_ENABLE`, `WP_APP_TOKEN`, and the cookie table in §4. `GRAPHQL_JWT_AUTH_SECRET_KEY` and `BTT_APP_TOKEN` already exist — Lesson 02.5 wrote them into `wordpress-headless/.env`, and Lesson 15.2 *verifies* them rather than creating them. |
 | 16 | `TURNSTILE_*`, `UPSTASH_*`, `BTT_LEAD_IP_HMAC_KEY`, `RESEND_API_KEY` |
 | 17 | `PREVIEW_SHARED_SECRET` |
 | 18 | `REVALIDATE_SECRET`, `BTT_REVALIDATE_SECRET`, `BTT_FRONTEND_URL` |

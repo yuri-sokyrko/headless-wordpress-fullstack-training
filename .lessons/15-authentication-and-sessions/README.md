@@ -90,7 +90,7 @@ Browser                Next.js (:3000)                    WordPress (:8080)
    │ POST /en/login  (form)   │                                   │
    ├─────────────────────────▶│ Server Action 'login'             │
    │                          │  1. rate limit (fail closed)      │
-   │                          │  2. Zod.safeParse                 │
+   │                          │  2. validate (Zod in 16.1)        │
    │                          ├── mutation login ────────────────▶│
    │                          │   server-to-server only           │ authenticate
    │                          │◀── { authToken, refreshToken } ───┤ sign with

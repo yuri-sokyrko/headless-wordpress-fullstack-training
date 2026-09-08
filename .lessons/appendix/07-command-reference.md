@@ -204,6 +204,7 @@ docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/phpstan an
 # Blocks (Module 13) — from the blocks plugin dir
 npm run start                  # watch build
 npm run build
+npm run lint:js                # wp-scripts lint-js
 npm test                       # wp-scripts test-unit-js
 ```
 

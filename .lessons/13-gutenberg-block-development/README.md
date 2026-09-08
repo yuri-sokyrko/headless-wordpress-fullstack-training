@@ -24,7 +24,9 @@ cd next-app && npm test -- --run && npx playwright test
 # 2. WordPress is up, seeded, and the editor works
 cd ../wordpress-headless
 docker compose run --rm wpcli wp plugin list --status=active --format=csv
-# Expected: includes blame-the-tech-core, wp-graphql, advanced-custom-fields
+# Expected: includes blame-the-tech-core, wp-graphql, advanced-custom-fields-pro
+#           (PRO, not free ACF — Lesson 04.2 swapped them, and the free plugin's
+#            slug is gone from the active list)
 open http://localhost:8080/wp-admin/post-new.php?post_type=incident
 # Expected: the block editor loads with core blocks only
 ```
@@ -83,6 +85,13 @@ Each one exists because it teaches a mechanism the others do not. None of them i
 | `btt/incident-ticker` | 13.4 | Dynamic rendering: `render: file:./render.php`, `save: () => null` | Nothing in `post_content` but the comment |
 | `btt/hobt-cta` | 13.4 | Attribute design for a typed consumer — becomes a client island in Lesson 14.4 | Static — attributes only |
 | `btt/tech-verdict-card` | 13.5 | `usesContext` and Block Bindings reading ACF — **optional / stretch** | Static — bindings resolve at render |
+
+> **The sixth block is optional, and the seed data does not know that.** `wp blame seed`
+> writes `btt/tech-verdict-card` into `blog-01`, `blog-02` and the HOBT page, so a learner who
+> skips Lesson 13.5's stretch step has three posts containing a block WordPress has never heard
+> of — wp-admin says "your site does not include support for this block", and Module 14 renders
+> it through `UnknownBlock`. That is a designed outcome, not a mistake: it is the only place in
+> the course where you get to see what an unregistered block actually does to real content.
 
 > **`btt/scapegoat-picker` is the one place this course consumes REST.** The block editor is a
 > REST client by construction, so `useSelect(select => select('core').getEntityRecords(...))`

@@ -235,8 +235,12 @@ blocks.
 Re-run codegen after adding the inline fragment. `npm run codegen`.
 
 **`npm run start` in the blocks plugin does not pick up changes**
-`@wordpress/scripts` writes to `build/`, and `block.json` must point at `file:./build/...`
-paths, not `src/`.
+`@wordpress/scripts` compiles `src/<block>/` into `build/<block>/` and copies `block.json`
+across as it goes. The plugin must therefore register from the **built** directory —
+`register_block_type( PLUGIN_DIR . '/build/incident-callout' )`, never `/src/...`. The
+`file:./index.js` paths inside `block.json` are relative to that built copy, so they need no
+`build/` prefix. Registering `src/` is the usual cause: the block appears, and every change
+you make is invisible.
 
 ---
 

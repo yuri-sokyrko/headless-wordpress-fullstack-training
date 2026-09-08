@@ -371,7 +371,7 @@ define( 'SECURE_AUTH_SALT', btt_env_opt( 'SECURE_AUTH_SALT' ) );
 define( 'LOGGED_IN_SALT',   btt_env_opt( 'LOGGED_IN_SALT' ) );
 define( 'NONCE_SALT',       btt_env_opt( 'NONCE_SALT' ) );
 
-// Read by WPGraphQL JWT Authentication, installed in Module 05 and configured in
+// Read by WPGraphQL JWT Authentication, installed and configured in Lesson 15.2 and
 // Module 15. Defined here so the environment is the only place it ever lives.
 define( 'GRAPHQL_JWT_AUTH_SECRET_KEY', btt_env_opt( 'GRAPHQL_JWT_AUTH_SECRET_KEY' ) );
 

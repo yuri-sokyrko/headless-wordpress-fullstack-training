@@ -245,18 +245,18 @@ activation. Not a CPT.
 
 ```sql
 CREATE TABLE {$wpdb->prefix}btt_leads (
-  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  created_at   DATETIME        NOT NULL,
-  email        VARCHAR(190)    NOT NULL,   -- 190, not 255: utf8mb4 is 4 bytes/char and the
-  full_name    VARCHAR(190)    NOT NULL,   -- legacy InnoDB index prefix limit is 767 bytes.
-  company      VARCHAR(190)        NULL,   -- This is why WP core uses 191 everywhere.
-  team_size    VARCHAR(32)         NULL,
-  source       VARCHAR(64)     NOT NULL,   -- 'hobt-hero' | 'hobt-cta-block' | ...
-  locale       VARCHAR(10)     NOT NULL,
-  consent      TINYINT(1)      NOT NULL DEFAULT 0,
-  ip_hash      CHAR(64)            NULL,   -- HMAC-SHA256(ip, BTT_LEAD_IP_HMAC_KEY)
-  user_agent   VARCHAR(255)        NULL,   -- never the raw IP: PII minimisation
-  PRIMARY KEY (id),
+  id           bigint(20) unsigned NOT NULL auto_increment,
+  created_at   datetime            NOT NULL,
+  email        varchar(190)        NOT NULL,  -- 190, not 255: utf8mb4 is 4 bytes/char and the
+  full_name    varchar(190)        NOT NULL,  -- legacy InnoDB index prefix limit is 767 bytes.
+  company      varchar(190)            NULL,  -- This is why WP core uses 191 everywhere.
+  team_size    varchar(32)             NULL,
+  source       varchar(64)         NOT NULL,  -- 'hobt-hero' | 'hobt-cta-block' | ...
+  locale       varchar(10)         NOT NULL,
+  consent      tinyint(1)          NOT NULL DEFAULT 0,
+  ip_hash      char(64)                NULL,  -- HMAC-SHA256(ip, BTT_LEAD_IP_HMAC_KEY)
+  user_agent   varchar(255)            NULL,  -- never the raw IP: PII minimisation
+  PRIMARY KEY  (id),
   UNIQUE KEY uniq_email_source (email, source),
   KEY idx_created_at (created_at)
 ) {$charset_collate};
@@ -270,6 +270,12 @@ Why a custom table rather than a `hobt_lead` CPT:
 | No `wp_postmeta` bloat | 8 fields × N leads = 8N postmeta rows, all EAV, none indexed by value. |
 | Real `$wpdb` practice | `dbDelta()`, `$wpdb->prepare()` with format specifiers, `$wpdb->insert()`, index design, `VARCHAR(190)`. This is the one place in the course you write actual SQL. |
 | Correct uniqueness | `UNIQUE KEY (email, source)` is enforced by the database. There is no equivalent for a CPT. |
+
+Lowercase types, `KEY` rather than `INDEX`, and **two spaces** after `PRIMARY KEY` are not
+cosmetic: `dbDelta()` parses this string with regular expressions and compares the result to
+what MySQL reports, and the two-space rule in particular is the one that silently breaks a
+migration. Core's own `wp_get_db_schema()` is written in exactly this style, and Lesson 16.3
+reproduces it.
 
 Writes happen **only** through the custom WPGraphQL mutation `submitHobtLead`, which requires
 the `X-BTT-App-Token` header (see [appendix 04](04-env-reference.md)) and re-validates every
@@ -317,10 +323,15 @@ Registered in Module 06.
 | `blameScore` | field → `Float` | `Incident` | public | Computed from severity weight × `blameConfidence` × `downtimeMinutes`. Teaches `register_graphql_field` and resolver caching. |
 | `createIncident` | mutation | — | **user JWT**, `create_incidents` | Forces `post_status = 'pending'` and `post_author = get_current_user_id()`. Ignores `is_verified`. |
 | `registerDeveloper` | mutation | — | **app token** (server-to-server) | Creates a user with role `incident_reporter`, `btt_verified = 0`, sends a verification mail. |
+| `verifyDeveloper` | mutation | — | **app token** (server-to-server) | Module **15**, not 06. Consumes the single-use code `registerDeveloper` mailed, **sets the account password** — `registerDeveloper` generates one and never discloses it, so this is where the user first gets a usable credential — sets `btt_verified = 1`, and returns the same generic payload for a bad, expired or already-used code. |
 | `submitHobtLead` | mutation | — | **app token** (server-to-server) | Inserts into `wp_btt_leads`. Honeypot + timing + Turnstile checked on the Next side, fields re-validated here. |
 
 The two credentials are different things and must never be confused — see
 [appendix 04 §4](04-env-reference.md#4-the-two-credentials).
+
+Everything above except `verifyDeveloper` is registered in Module 06. `verifyDeveloper` is the
+one addition Module 15 makes, because verification only becomes meaningful once a session
+exists to gate.
 
 ---
 

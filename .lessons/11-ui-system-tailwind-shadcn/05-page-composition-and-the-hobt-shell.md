@@ -226,9 +226,9 @@ Here the correct implementation needs all of this:
 | A Server Action with `'use server'` | Lesson 16.2 |
 | A Zod schema validating at the boundary | Lesson 16.1 |
 | The `submitHobtLead` mutation and the `X-BTT-App-Token` credential | Module 06 built it; Lesson 16.3 calls it |
-| A rate limiter, because a public write endpoint is a public write endpoint | Lesson 16.3 |
+| A rate limiter, because a public write endpoint is a public write endpoint | Lesson 16.2 builds it; 16.3 uses it |
 | A bot check | Lesson 16.3 |
-| The `wp_btt_leads` table, PII-minimised, `ip_hash` as an HMAC | appendix 03 §5 |
+| The `wp_btt_leads` table, PII-minimised, `ip_hash` as an HMAC | specified in appendix 03 §5; created by Lesson 16.3 |
 
 | | Ship an unvalidated form now | Render an inert button now |
 |---|---|---|
@@ -779,7 +779,7 @@ of naming a debt is that someone can find it later:
 
 ```markdown
 <!-- docs/accessibility.md — append to "Known gaps, owned by a later module" -->
-| `/hobt` section order is hard-coded in `page.tsx`; editors cannot reorder | Module 14 (Lesson 14.4) |
+| `/hobt` body order is hard-coded in `page.tsx`; editors cannot reorder it | Module 14 (Lesson 14.4) |
 | Both `/hobt` CTAs are inert; no lead capture exists | Module 16 (Lessons 16.1–16.3) |
 ```
 
@@ -787,8 +787,8 @@ Exactly what changes later, so there is no ambiguity when you get there:
 
 | Module 14 changes | Module 16 changes |
 |---|---|
-| `page.tsx` stops naming sections; `BlockRenderer` walks `editorBlocks` | "Get Demo" opens a `Dialog` with a validated form |
-| Each `Hobt*` component gains a registry entry keyed on `__typename` | `aria-disabled` and the explanatory sentence are deleted |
+| `page.tsx` stops naming the BODY sections; `BlockRenderer` walks `editorBlocks` | "Get Demo" opens a `Dialog` with a validated form |
+| `HobtCtaBand` gains a registry entry via the `btt/hobt-cta` block; `HobtHero`, `HobtModules` and `HobtTestimonials` stay page-mounted, because `priceUsd`, `seatsLeft` and the two repeaters are field-group data with no block representation | `aria-disabled` and the explanatory sentence are deleted |
 | `heroImage` and testimonial avatars start rendering, via `next/image` | `src/actions/leads.ts` writes to `wp_btt_leads` |
 | The `hobtPromo` field group becomes one source among several | `revalidateTag(pageTag('hobt'))` fires after a successful submit |
 

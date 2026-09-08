@@ -330,7 +330,7 @@ function ensure_reporter_role(): void {
 
 	add_role(
 		REPORTER_ROLE,
-		__( 'Incident Reporter', 'blame-the-tech' ),
+		__( 'Incident Reporter', 'blame-the-tech-core' ),
 		REPORTER_CAPS
 	);
 

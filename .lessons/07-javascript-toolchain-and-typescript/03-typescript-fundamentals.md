@@ -153,7 +153,7 @@ The extra flags this project adds, and why:
 |---|---|---|
 | `noUncheckedIndexedAccess` | `arr[0]` is `T \| undefined` | See below. The one that will surprise you. |
 | `exactOptionalPropertyTypes` | `field?: string` means **absent**, not "may be `undefined`" | GraphQL distinguishes "not selected" from "null". So should the type. |
-| `noFallthroughCasesInSwitch` | A `case` without `break`/`return` is an error | The `BlockRenderer` in Module 14 is one big `switch` |
+| `noFallthroughCasesInSwitch` | A `case` without `break`/`return` is an error | Lesson 07.4's `blockSummary` and `renderLine` are both exhaustive `switch`es, and Module 14's block components narrow the same way |
 | `noImplicitReturns` | Some code paths returning a value and some not | Catches a missing branch in exactly those switches |
 | `noUnusedLocals` / `noUnusedParameters` | Dead bindings fail the build | Keeps deleted code deleted |
 | `erasableSyntaxOnly` | Bans `enum`, `namespace`, parameter properties | Key Concept 8. No type position may emit runtime code. |

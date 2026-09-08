@@ -936,6 +936,16 @@ function seed_users(): array {
 		$ids[ $login ] = (int) $id;
 	}
 
+	// Every seeded account is a verified account. `registerDeveloper` (Lesson
+	// 06.2) sets btt_verified = 0 on a self-registered developer, and Module 15
+	// refuses `create_incidents` while that meta says '0'. A CLI-created account
+	// has no such meta at all, and `'' == 0` is true in PHP — so writing 1 here
+	// states the intent in the fixture rather than relying on the filter reading
+	// an absent value the way you hoped. Idempotent: same value on every seed.
+	foreach ( $ids as $id ) {
+		update_user_meta( $id, 'btt_verified', 1 );
+	}
+
 	return $ids;
 }
 
@@ -1136,6 +1146,19 @@ function seed_reviews( array $media ): int {
  *
  * `btt/scapegoat-picker` stores a TERM ID, so the id is resolved from the slug
  * here. A literal would be a fixture that works on exactly one machine.
+ *
+ * Every string below is byte-for-byte what the block's `save()` produces in
+ * Module 13. That is not a coincidence and it is not optional: the block
+ * validator re-runs `save()` on load and compares its output to what is
+ * stored, so a fixture that merely looks right makes every seeded post open
+ * with "this block contains unexpected content". Three of the six blocks
+ * serialise to a self-closing comment because their `save()` returns `null`
+ * — they store data and no markup, which is the right shape when a React
+ * front end does the rendering.
+ *
+ * These two posts are also the "already published" content that Lesson 13.5's
+ * `deprecated` entry exists for. When 13.5 changes `btt/incident-callout`'s
+ * markup, this is the old markup it has to keep loading.
  */
 function block_showcase( int $scapegoat_term_id ): string {
 	return implode(
@@ -1143,7 +1166,7 @@ function block_showcase( int $scapegoat_term_id ): string {
 		array(
 			'<!-- wp:heading --><h2 class="wp-block-heading">What happened</h2><!-- /wp:heading -->',
 			'<!-- wp:paragraph --><p>A short, entirely fictional description of a very real feeling.</p><!-- /wp:paragraph -->',
-			'<!-- wp:btt/incident-callout {"incidentSlug":"incident-01","severity":"s1-catastrophic"} --><div class="wp-block-btt-incident-callout">Production is a smoking crater.</div><!-- /wp:btt/incident-callout -->',
+			'<!-- wp:btt/incident-callout {"incidentSlug":"incident-01","severity":"s1-catastrophic"} --><div class="wp-block-btt-incident-callout"><h3>Production is a smoking crater</h3><p>The DNS change was fine in staging.</p></div><!-- /wp:btt/incident-callout -->',
 			'<!-- wp:btt/blame-quote {"attribution":"The on-call engineer"} --><blockquote class="wp-block-btt-blame-quote"><!-- wp:paragraph --><p>It worked on my machine.</p><!-- /wp:paragraph --></blockquote><!-- /wp:btt/blame-quote -->',
 			sprintf( '<!-- wp:btt/scapegoat-picker {"termId":%d} /-->', $scapegoat_term_id ),
 			'<!-- wp:btt/incident-ticker {"count":5,"severities":["s1-catastrophic","s2-major"]} /-->',

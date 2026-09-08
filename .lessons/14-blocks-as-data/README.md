@@ -42,10 +42,10 @@ There is no `src/components/blocks/` and no `[...slug]` catch-all route.
 
 ## What You'll Learn
 
-- **WPGraphQL Content Blocks** — `editorBlocks` as a flat, typed, ordered list with `attributes`, `clientId`, `parentClientId` and `renderedHtml`
+- **WPGraphQL Content Blocks** — `editorBlocks` as a flat, typed, ordered list with `attributes`, `clientId`, `parentClientId` — and a `renderedHtml` this course never selects
 - **Why `renderedHtml` is never rendered** — five concrete failures, from `<a>` instead of `<Link>` to a `dangerouslySetInnerHTML` surface fed by anyone with `edit_posts`
 - **Discriminated unions in practice** — `switch` on `__typename`, never on `name`
-- **Exhaustiveness checking** — a `never`-typed `default` arm, so an unmapped block fails the **build**, not the page
+- **Exhaustiveness checking** — a `satisfies` check against a mapped type derived from the `editorBlocks` fragment, plus a residual-type assertion in the dispatch, so an unmapped block fails the **build**, by name, not the page
 - **Recursion owned by the renderer** — flat list to tree, and why block components never render their own children
 - **Sanitized rich text** — one component, `isomorphic-dompurify`, a strict allowlist, and the only `dangerouslySetInnerHTML` in the entire codebase
 - **Client islands from block attributes** — typed props crossing the server/client boundary inside an RSC tree
@@ -59,16 +59,17 @@ paragraph, heading, list, quote, code and image, plus the five `btt/*` blocks fr
 Then the `[...slug]` catch-all that renders any WordPress page through the same renderer, and
 `next.config.ts` configured for WordPress-hosted media.
 
-After this module editor-composed pages render as a real React tree. `/en/hobt` changes when
-marketing edits the page, with no deploy and no code change — which was the whole point of
-composing it from blocks.
+After this module editor-composed pages render as a real React tree. `/en/hobt`'s body changes
+when marketing edits it, and an ordinary WordPress page rendered through `[...slug]` is
+editor-composed end to end — both with no deploy and no code change, which was the whole point
+of composing them from blocks.
 
 ## Lessons
 
 | #  | Lesson | New Technology | What You Build |
 |----|--------|----------------|----------------|
 | 01 | [WPGraphQL Content Blocks](01-wpgraphql-content-blocks.md) | `editorBlocks`, `flat: true`, generated block types | The `editorBlocks` fragment, refreshed schema and `src/gql/` |
-| 02 | [The BlockRenderer](02-the-block-renderer.md) | Discriminated unions, `never` exhaustiveness, recursion | `BlockRenderer.tsx`, `registry.ts`, `UnknownBlock.tsx` |
+| 02 | [The BlockRenderer](02-the-block-renderer.md) | Discriminated unions, mapped-type completeness, recursion | `BlockRenderer.tsx`, `registry.ts`, `UnknownBlock.tsx` |
 | 03 | [Mapping Core Blocks & Safe HTML](03-mapping-core-blocks-and-safe-html.md) | `isomorphic-dompurify`, a strict allowlist | `RichText.tsx` and six core-block components |
 | 04 | [Mapping Custom Blocks & the HOBT Funnel](04-mapping-custom-blocks-and-the-hobt-funnel.md) | Typed attributes, client islands in an RSC tree | The five `btt/*` components, `/hobt`, `[...slug]` |
 | 05 | [Media, Images & next/image](05-media-images-and-next-image.md) | `next/image`, `remotePatterns`, `sizes` | `CoreImage.tsx` and image config |
@@ -101,7 +102,7 @@ its PHP output.
 
 ## How to Work
 
-1. **Read the module README** and confirm Starting State, including the two `dangerouslySetInnerHTML` hits. You are about to delete both.
+1. **Read the module README** and confirm Starting State, including the three `dangerouslySetInnerHTML` hits. You are about to delete all three.
 2. **Work the lessons in order.** 14.2 is unusable without 14.1's generated types, and 14.3 through 14.5 all plug into 14.2's registry.
 3. **Break the exhaustiveness check on purpose.** Delete one entry from `registry.ts` and run `npm run type-check`. The build should fail, by name. That failure is the feature.
 4. **Run `## Verification` before moving on**, then commit: `git commit -m "feat(next): render editor blocks as a typed react tree"`.
