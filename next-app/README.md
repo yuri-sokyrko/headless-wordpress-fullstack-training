@@ -29,10 +29,10 @@ Everything is inlined in the lessons. Go to
 | 18 | `src/app/api/revalidate/route.ts`, per-route rendering config, `src/app/api/auth/session/route.ts` + `SessionMenu` (the session read moves out of the root layout so routes can be static again) |
 | 19 | `generateMetadata` on every route, `src/lib/seo/yoastToMetadata.ts`, `app/sitemap.ts`, `app/robots.ts`, `opengraph-image.tsx` |
 | 20 | `src/lib/i18n/{routing,request,navigation}.ts`, `src/messages/{en,uk,de}.json`, `LocaleSwitcher` |
-| 21 | `lighthouserc.json`, `src/app/api/vitals/route.ts`, bundle-analyzer wiring |
-| 22 | Accessibility fixes across `src/components/`, `e2e/a11y.spec.ts` |
+| 21 | `lighthouserc.json`, `src/app/api/vitals/route.ts`, `src/components/layout/WebVitals.tsx`, `scripts/check-bundle-budget.mjs`, `next/font`, bundle-analyzer wiring nested inside `withNextIntl` |
+| 22 | Accessibility fixes across `src/components/`, the severity-badge ink tokens and `--ring` in `src/app/[locale]/globals.css`, `FormErrorSummary`, `RouteFocus.tsx`, `e2e/a11y.spec.ts` and the `a11y` project |
 | 23 | `tests/mocks/handlers.ts`, component tests, the full `e2e/` suite, `.mcp.json` |
-| 24 | `next.config.ts` security headers, Sentry config, `vercel.json` |
+| 24 | `next.config.ts` security headers and the CSP in `middleware.ts`, `src/lib/logger.ts`, `instrumentation.ts`, `vercel.json`, `scripts/check-patch-coverage.mjs` |
 
 ## Expected final tree
 
@@ -44,7 +44,9 @@ next-app/
 ├── codegen.ts                                         (M10) reads ../wordpress-headless/schema.graphql
 ├── vitest.config.ts  playwright.config.ts             (M12)
 ├── lighthouserc.json                                  (M21)
-├── .mcp.json                                          (M23)
+├── instrumentation.ts  instrumentation-client.ts      (M24) Sentry, server/edge and client
+├── vercel.json                                        (M24)
+├── .mcp.json                                          (M23) read when the workspace root is next-app/
 ├── .env.example                                       (M09) ← the ONLY env file in git
 ├── src/
 │   ├── middleware.ts                                  locale + auth gate + token refresh
@@ -84,8 +86,13 @@ next-app/
 │   ├── gql/                                           codegen output — COMMITTED
 │   ├── messages/{en,uk,de}.json                       (M20)
 │   └── types/                                         (M07) hand-written, replaced in M10
-├── e2e/                                               specs, fixtures, global-setup
-└── tests/mocks/                                       MSW handlers
+├── scripts/                                           blame.mjs (M07), check-tag-literals.mjs (M18),
+│                                                      check-bundle-budget.mjs + bundle-baseline.json (M21),
+│                                                      check-patch-coverage.mjs (M24)
+├── e2e/                                               specs, fixtures, global-setup. Projects, in order:
+│                                                      setup, smoke, mutations (M23), a11y (M22)
+└── tests/mocks/                                       MSW handlers, the server harness, and the
+                                                       `server-only` stub vitest.config.ts aliases (M23)
 ```
 
 > **This tree lists every directory, but not every file.** Where a directory is named without

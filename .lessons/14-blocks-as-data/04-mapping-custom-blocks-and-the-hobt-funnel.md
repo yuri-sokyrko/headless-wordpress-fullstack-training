@@ -1328,7 +1328,11 @@ grep -rn 'dangerouslySetInnerHTML' src/app/ | wc -l
 grep -rl 'dangerouslySetInnerHTML' src/ | wc -l
 # Expected: 1 — still only RichText.tsx.
 
-# 9. NEGATIVE — exactly ONE client component under blocks/, and it is HobtCta
+# 9. NEGATIVE — exactly ONE client component under blocks/, and it is HobtCta.
+#    True as of THIS lesson. Lesson 21.3's client-component audit deletes the
+#    directive and makes this 0, because the interaction it was added for landed
+#    in GetDemoDialog instead (mounted from HobtCtaBand, not from the block).
+#    A count of 0 after Module 21 is correct; a count of 2 is a real regression.
 grep -rl "'use client'" src/components/blocks/ | wc -l
 # Expected: 1
 grep -rl "'use client'" src/components/blocks/

@@ -173,7 +173,7 @@ that renders in a compact and a full variant without maintaining two queries.
 ## 7. Mutations
 
 ```graphql
-mutation SubmitIncident($input: CreateIncidentInput!) {
+mutation CreateIncident($input: CreateIncidentInput!) {
   createIncident(input: $input) {
     clientMutationId
     incident {

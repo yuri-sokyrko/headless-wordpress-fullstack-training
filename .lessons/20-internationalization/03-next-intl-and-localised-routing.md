@@ -269,8 +269,12 @@ page needs six, times however long your catalogues grow, forever.
 
 The discipline: **server by default**, and the provider receives an explicit object listing the
 namespaces client islands genuinely use. In this application that is `nav`, `incidents`,
-`incidentForm`, `hobt`, `auth` and `common` — and it excludes `home`, `blog`, `reviews`,
-`scapegoats` and `seo`, which only ever render on the server.
+`incidentForm`, `hobt`, `auth` and `common` — and it excludes `home`, `blog`, `reviews` and
+`scapegoats`, which only ever render on the server, **and `locale`**, which is the sharpest case:
+`Header` resolves its three strings with `getTranslations()` and passes finished props, so
+`LocaleSwitcher` calls no `t()` at all. Verify §6 below proves that with a grep, and it is why
+`locale` never enters the provider even though the switcher is the most obviously
+locale-shaped component in the app.
 
 The cost, stated plainly: adding a `t()` call to a client component now sometimes requires
 editing the layout, and forgetting produces a runtime `MISSING_MESSAGE` rather than a compile
@@ -837,10 +841,10 @@ export function generateStaticParams(): Array<{ locale: string }> {
 //   const messages = await getMessages();
 //
 //   // ONLY the namespaces a client island genuinely needs. Passing `messages`
-//   // wholesale ships `home`, `blog`, `reviews`, `scapegoats` and `seo` to every
+//   // wholesale ships `home`, `blog`, `reviews` and `scapegoats` to every
 //   // visitor of every page, for strings that only ever render on the server.
 //   // Key Concept 7; Lesson 21.3 measures it.
-//   const { nav, locale: localeMessages, incidents, incidentForm, hobt, auth, common } = messages;
+//   const { nav, incidents, incidentForm, hobt, auth, common } = messages;
 ```
 
 ```tsx
@@ -848,7 +852,7 @@ export function generateStaticParams(): Array<{ locale: string }> {
     <html lang={locale} dir={dirOf(locale)}>
       <body className="min-h-dvh bg-background text-foreground">
         <NextIntlClientProvider
-          messages={{ nav, locale: localeMessages, incidents, incidentForm, hobt, auth, common }}
+          messages={{ nav, incidents, incidentForm, hobt, auth, common }}
         >
           {/* SkipLink, Header, main, Footer — unchanged from Lesson 11.4 */}
         </NextIntlClientProvider>
@@ -879,7 +883,11 @@ not depend on anything, and one Lesson 20.4 records in `docs/accessibility.md`.
 
 ### Step 7: Move every UI string into the catalogues, then lint for the next one
 
-Sweep four directories. The rule is mechanical — a literal a user can read becomes `t(key)`,
+Sweep four directories, copying each value rather than retyping it. **Two exceptions, the only
+two:** `search` is `Search incidents` (08.4's `Search titles` predates the filter searching more
+than titles) and `scapegoat` is `Scapegoat` (08.3's `Blamed on` is a sentence fragment). Module
+23's tests query by accessible name, so the catalogue is now the contract. Otherwise the rule is
+mechanical — a literal a user can read becomes `t(key)`,
 and the English value in the catalogue is **copied, not retyped**.
 
 | File | Strings | API |
@@ -1293,7 +1301,7 @@ E2E_MODE=1 npx playwright test --project=smoke
 1. `setRequestLocale(locale)` is one line in the root layout and Key Concept 3 calls it the line
    that keeps your pages static. Explain the mechanism, and say which lesson's work it silently
    undoes when it is missing.
-2. `NextIntlClientProvider` receives seven named namespaces rather than `await getMessages()`.
+2. `NextIntlClientProvider` receives six named namespaces rather than `await getMessages()`.
    Name two namespaces that are deliberately excluded, say what makes them excludable, and
    describe the runtime error a developer sees when they add a `t()` call that needs one of them.
 3. `localeDetection: false` means a German visitor typing the bare domain gets English. Give the

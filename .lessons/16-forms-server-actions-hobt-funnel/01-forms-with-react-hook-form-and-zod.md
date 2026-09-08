@@ -981,9 +981,9 @@ describe('refineTerms', () => {
 Two appends, both to files earlier lessons created.
 
 ```markdown
-<!-- docs/accessibility.md — append to the table Lesson 11.4 started -->
-| Attribute | Where | Why | Could a native element have done this? |
-|---|---|---|---|
+<!-- docs/accessibility.md — append to the table Lesson 11.4 started.
+     FOUR ROWS ONLY. Do not re-print the header: 11.4 wrote it, and a second
+     header line renders as a literal row in the middle of the table. -->
 | `role="alert"` | `ui/form.tsx` `FormMessage` | announces a validation message when it appears, without stealing focus | no — there is no element whose insertion is announced |
 | `aria-invalid` | `ui/form.tsx` `FormControl` | the field is announced as invalid independently of its message | no |
 | `aria-describedby` | `ui/form.tsx` `FormControl` | ties the hint **and** the error to the input | partly — `<label>` names it, nothing describes it |

@@ -22,9 +22,14 @@ Module 23 complete: five green suites, plus an agent that finds bugs you didn't 
 ```bash
 # 1. Every suite is green
 cd next-app && npm test -- --run && npx playwright test
-docker compose -f ../wordpress-headless/docker-compose.yml exec -T wordpress \
-  composer test:unit && composer test:integration
-# Expected: all four commands exit 0
+cd ../wordpress-headless
+docker compose run --rm composer run test:unit
+docker compose exec -T -w /var/www/html/wp-content/plugins/blame-the-tech-core \
+  wordpress php vendor/bin/pest --testsuite=integration
+# Expected: all four commands exit 0. The two PHP suites are invoked differently on
+#           purpose — Lesson 23.4 explains why. Unit tests mock WordPress out, so they
+#           run in the `composer` service; integration tests need a real WordPress and a
+#           real database, and that container has PHP but no Composer binary.
 
 # 2. The schema contract holds, and no secret reached the client bundle
 npm run codegen:check && git diff --exit-code -- ../wordpress-headless/schema.graphql src/gql

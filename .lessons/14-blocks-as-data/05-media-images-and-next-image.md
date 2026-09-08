@@ -809,9 +809,12 @@ npm run verify
 
 **Verify §6:**
 
-- [ ] `grep -c 'priority' src/components/hobt/HobtHero.tsx` is `1`. Exactly one image on this
-      route asks to jump the queue.
-- [ ] `grep -rc 'priority' src/components/blocks/CoreImage.tsx` is `0`.
+- [ ] `grep -cE '^[[:space:]]+priority$' src/components/hobt/HobtHero.tsx` is `1`. Exactly one
+      image on this route asks to jump the queue. **Anchor on the bare prop**, not on the word:
+      the comment above the `<Image>` says `priority` too, so a loose `grep -c 'priority'`
+      returns `2` and reads like you broke Key Concept 5.
+- [ ] `grep -cE '^[[:space:]]+priority$' src/components/blocks/CoreImage.tsx` is `0` — and a
+      loose grep there returns `1`, for the comment that explains the absence.
 - [ ] `/en/hobt` shows the hero image and the testimonial avatars, and DevTools → Network → Img
       shows the hero requested **before** the avatars.
 - [ ] The page still has exactly one `<h1>` and both CTA bands. Adding an image did not move a
@@ -921,8 +924,9 @@ curl -sI -H 'Accept: image/avif,image/webp,*/*' \
   "http://localhost:3000/_next/image?url=$ENC&w=640&q=75" | grep -iE '^content-type'
 # Expected: image/avif — the `formats` preference list, choosing per request.
 
-# 4. `priority` is on exactly one image, and it is the hero
-grep -c 'priority' src/components/hobt/HobtHero.tsx
+# 4. `priority` is on exactly one image, and it is the hero. Anchored on the bare
+#    JSX prop: the explanatory comment above the <Image> contains the word too.
+grep -cE '^[[:space:]]+priority$' src/components/hobt/HobtHero.tsx
 # Expected: 1
 curl -s http://localhost:3000/en/hobt | grep -o 'rel="preload"[^>]*as="image"' | wc -l
 # Expected: 1 — one preload in the document head. Six would be none.
@@ -958,8 +962,9 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 
 # 9. NEGATIVE — CoreImage does NOT take a priority prop. LCP priority is a
 #    route-level decision, because a block does not know where on the page it is.
-grep -c 'priority' src/components/blocks/CoreImage.tsx
-# Expected: 0
+grep -cE '^[[:space:]]+priority$' src/components/blocks/CoreImage.tsx
+# Expected: 0 — the file mentions `priority` once, in the comment saying why it
+#           has none, which is why this grep is anchored on the prop
 
 # 10. NEGATIVE — no source file writes a raw <img>. next/image emits one at
 #     runtime; nothing in src/ does. @next/next/no-img-element (Lesson 09.1) is

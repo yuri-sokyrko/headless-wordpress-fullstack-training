@@ -367,8 +367,8 @@ states it explicitly.
 | Content | Count | Notes |
 |---|---|---|
 | Incidents | 40 en + 10 de + 5 uk = **55** | fixed slugs, fixed `post_date`, spread across all 4 severities and all 10 scapegoats. Translations are added by Lesson 20.1's final seeder phase — German slugs are `incident-NN-de`, Ukrainian are Cyrillic (`відмова-NN`). Before Module 20 the count is 40 |
-| Tech reviews | 8 | one per verdict × 2 |
-| Blog posts | 10 en + 2 de = **12** | two use every custom block, for the block-rendering E2E spec |
+| Tech reviews | 8 | one per verdict × 2. Slugs `review-01`…`review-08`, **`en` only** — reviews are not translated, so `/de/reviews/review-01` is the one path in the app that exercises Lesson 20.4's untranslated-content 307 |
+| Blog posts | 10 en + 2 de = **12** | slugs `blog-01`…`blog-10` plus `blog-01-de`/`blog-02-de`. Two use every custom block, for the block-rendering E2E spec |
 | Pages | 3 × 3 locales = **9** | Home, About, HOBT (with `templates/hobt.php`). German `startseite`/`ueber-uns`/`hobt-de`, Ukrainian `holovna`/`pro-nas`/`hobt-uk` |
 | Users | 3 | `editor`, `reporter`, `e2e_agent` — **passwords from the environment, never literals in the seeder** |
 | Scapegoat terms | 10 | §2 |

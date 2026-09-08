@@ -779,7 +779,10 @@ Then the polite branch in the page, so a closed form is not a form at all:
 - [ ] `npm run type-check` is silent. If `incidentSubmissionOpen` is unknown, `SiteChrome` in
       `src/graphql/siteSettings.graphql` never selected it — Lesson 10.5 did, so check the document
       before you edit it.
-- [ ] `grep -c '=== false' src/actions/incidents.ts` returns `1`. A `!== true` there is the outage
+- [ ] `grep -c '=== false' src/actions/incidents.ts` returns `1` — **today**. Lesson 23.3 lifts
+      the predicate into `src/lib/incidents/submission.ts` to satisfy the RSC testing rule, after
+      which this returns `0` with the behaviour unchanged and the assertion moves with it. A
+      `!== true` there is the outage
       described in Key Concept 5.
 
 ### Step 4: Write the Start Now button

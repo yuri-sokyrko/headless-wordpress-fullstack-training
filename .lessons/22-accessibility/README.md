@@ -79,7 +79,10 @@ serious axe violations, and a regression in any of those fails a check.
 
 ## The Six Routes Under Audit
 
-The same six routes as the performance budgets in Module 21, so one Playwright project covers both.
+Five of these are Module 21's budgeted routes. `/[locale]/incidents/submit` replaces
+`/[locale]/blog/[slug]`, because a form is where the hard accessibility problems live and a long
+blog post is where the hard performance ones do — so the two modules audit an overlapping set
+rather than an identical one, and one Playwright project still covers the overlap.
 
 | Route | The hard part | Lesson |
 |---|---|---|
@@ -88,7 +91,7 @@ The same six routes as the performance budgets in Module 21, so one Playwright p
 | `/[locale]/incidents/[slug]` | Editor HTML from `RichText`; heading order you do not control | 22.1 |
 | `/[locale]/incidents/submit` | Labels, required state, error association, error summary focus | 22.1, 22.2 |
 | `/[locale]/hobt` | Get Demo dialog: focus trap, `Escape`, focus restoration | 22.2 |
-| `/[locale]/reviews/[slug]` | Rating semantics — a visual star row that says nothing to a screen reader | 22.1 |
+| `/[locale]/reviews/[slug]` | Rating semantics — an unnamed `<dl>` of four numbers, announced as "8.5 slash 10" | 22.1 |
 
 ## How to Work
 

@@ -33,6 +33,8 @@ fixtures/seeded.sql
 vendor/
 .phpunit.result.cache
 .phpcs-cache
+# The LOCAL override PHPCS reads before phpcs.xml.dist — Lesson 07.5
+phpcs.xml
 composer.phar
 
 # =============================================================================

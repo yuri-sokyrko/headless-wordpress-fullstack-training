@@ -272,8 +272,13 @@ Nothing can. The rule: if a component is `async` or reads `cookies()`/`headers()
 the `lib/` function it awaits and cover the rendered output in Playwright.
 
 **Visual snapshots fail on my machine but pass in CI**
-Baselines are font- and platform-dependent. Generate them in the Playwright Docker image, not
-on macOS.
+You added snapshot tests of rendered markup, and **this course deliberately has none** — Lesson
+12.1 writes the rule into `docs/testing-strategy.md` as a do-not-test line, and nothing here
+calls `toHaveScreenshot()`. The reason is this failure: a baseline is font-, platform- and
+GPU-dependent, so it fails for reasons unrelated to your change and the fastest fix is always
+`--update-snapshots`, which is a test that asserts whatever it currently does. If you add them
+anyway, generate every baseline inside the Playwright Docker image rather than on macOS, and
+accept that you now own a second artifact per assertion.
 
 ---
 

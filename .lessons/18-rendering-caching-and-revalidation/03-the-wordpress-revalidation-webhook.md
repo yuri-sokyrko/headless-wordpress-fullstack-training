@@ -1177,7 +1177,7 @@ Lesson 15.5 Step 6 left `POST /api/revalidate` as a row of `STUB`s. Replace it.
 Add one line to that file's "Known gaps" list:
 
 ```markdown
-5. **The revalidation endpoint has no rate limit.** An attacker who obtained
+7. **The revalidation endpoint has no rate limit.** An attacker who obtained
    `BTT_REVALIDATE_SECRET` could invalidate the cache in a loop and turn every request into a
    WordPress query — a load amplifier, not a disclosure. Mitigation today is that the secret is
    server-to-server only and rotatable; the runbook entry is in Lesson 18.4.

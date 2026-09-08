@@ -173,7 +173,7 @@ npx playwright install --with-deps         # once
 npx playwright test
 npx playwright test --headed
 npx playwright test --ui                   # the best debugging tool in the course
-npx playwright test e2e/auth.spec.ts
+npx playwright test --project=setup        # the auth setup project (e2e/auth.setup.ts)
 npx playwright test --project=mutations
 npx playwright show-report
 npx playwright show-trace test-results/**/trace.zip
@@ -195,11 +195,21 @@ PLUGIN=wp-content/plugins/blame-the-tech-core
 
 docker compose run --rm composer install                 # writes $PLUGIN/vendor/
 
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest --filter=ScapegoatStats
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/phpcs
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/phpcbf     # auto-fix
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/phpstan analyse
+# Unit (Pest + Brain Monkey) — no WordPress needed, so the `composer` service.
+docker compose run --rm composer run test:unit
+docker compose run --rm composer exec -- pest --filter=BlameScore    # one class
+
+# Integration (wp-phpunit) — needs a real WordPress and a real MySQL, so the
+# `wordpress` container, which has PHP and no Composer. `-T` is mandatory on a
+# runner with no TTY.
+docker compose exec -T -w /var/www/html/$PLUGIN wordpress \
+  php vendor/bin/pest --testsuite=integration
+
+# Style and static analysis — no WordPress needed either, and phpcs.xml.dist and
+# phpstan.neon both sit beside composer.json, so neither needs a --standard flag.
+docker compose run --rm composer run phpcs
+docker compose run --rm composer run phpcbf     # auto-fix
+docker compose run --rm composer run phpstan
 
 # Blocks (Module 13) — from the blocks plugin dir
 npm run start                  # watch build
@@ -216,7 +226,11 @@ npx lhci autorun
 npx lhci autorun --collect.url=http://localhost:3000/en/incidents
 
 # Accessibility
-npx playwright test e2e/a11y.spec.ts
+npx playwright test --project=a11y        # the gate: 0 critical, 0 serious
+npx playwright test e2e/a11y.spec.ts      # the same specs, outside the project
+
+# Bundle budget (Module 21) — absolute ceiling and delta vs `main`
+node scripts/check-bundle-budget.mjs
 
 # Secrets
 npx gitleaks detect --no-git --redact
@@ -297,8 +311,13 @@ gh pr checks
 ```bash
 git add -A
 git commit -m "feat(wp): register the incident post type"
-# Conventional commits. Types: feat fix docs style refactor test chore ci perf
-# Scopes: wp block graphql web auth i18n e2e ci docker seed deps
+# Conventional commits, enforced by commitlint from Lesson 24.8.
+# Types, measured from every example in this course: feat fix docs refactor perf
+#   test chore ci spike — plus revert. `spike` is Module 17's (a timeboxed
+#   evaluation you intend to delete), and it is why the list is not the default nine.
+# Scopes are NOT enumerated: 18 appear across the course and a closed list would
+#   reject the next honest one. Common ones: next web wp auth cache graphql
+#   blocks docker seo seed ci. Header limit is 100 (the longest here is 97).
 
 git commit -m "feat(graphql)!: rename Incident.scapegoats to Incident.blamedOn"   # breaking
 

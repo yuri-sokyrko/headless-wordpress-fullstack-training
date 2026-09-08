@@ -332,7 +332,7 @@ Lesson 11.1 emitted four severity colours from a **plain `@theme` block** — pl
 `@theme inline`, so the custom properties are really emitted and readable:
 
 ```css
-/* next-app/src/app/globals.css — (illustration; Lesson 11.1 already wrote this) */
+/* next-app/src/app/[locale]/globals.css — (illustration; Lesson 11.1 already wrote this) */
 @theme {
   --color-severity-s1: oklch(0.52 0.19 25);  /* s1-catastrophic — red */
   --color-severity-s2: oklch(0.66 0.16 55);  /* s2-major        — orange */
@@ -1155,7 +1155,7 @@ foreach ( array( array( "color", "custom" ), array( "color", "defaultPalette" ),
 
 # 16. The four severity values are byte-identical to Lesson 11.1's tokens
 grep -o 'oklch([^)]*)' wp-content/themes/btt-headless/theme.json | head -4
-cd ../next-app && grep -o 'oklch([^)]*)' src/app/globals.css | grep -E '0\.52 0\.19 25|0\.66 0\.16 55|0\.75 0\.13 90|0\.62 0\.05 250'
+cd ../next-app && grep -o 'oklch([^)]*)' 'src/app/[locale]/globals.css' | grep -E '0\.52 0\.19 25|0\.66 0\.16 55|0\.75 0\.13 90|0\.62 0\.05 250'
 # Expected: the same four values from both files. A mismatch means somebody
 #           tweaked one design system and not the other, which is the exact
 #           failure token parity exists to prevent.

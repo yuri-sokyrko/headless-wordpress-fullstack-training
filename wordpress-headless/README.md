@@ -14,10 +14,12 @@ Module 01.
 | 03 | `wp-content/plugins/blame-the-tech-core/` — plugin header, Composer PSR-4 autoload, post types, taxonomies, custom statuses, roles and capabilities |
 | 04 | `includes/acf-json/` field groups, `includes/cli/` with the `wp blame seed` command, the option-based migration runner |
 | 06 | `includes/graphql/` — registered enums, the `blameScore` field, `createIncident`, `registerDeveloper`, `submitHobtLead`, and the committed `schema.graphql` contract |
-| 07 | `phpcs.xml.dist` — WordPress Coding Standards |
+| 07 | `blame-the-tech-core/phpcs.xml.dist` — WordPress Coding Standards, beside the code it describes |
 | 12 | `wp-content/mu-plugins/blame-seeder/` — determinism fixes to the Module 04 seeder, plus `wp blame fixture export|load|status` (dev/CI only, never in the production image) |
 | 13 | `wp-content/plugins/blame-the-tech-blocks/` — six blocks, `block.json` each, `@wordpress/scripts` build, `theme.json` |
 | 15 | JWT configuration and `incident_reporter` hardening |
+| 23 | `tests/` — Pest + Brain Monkey unit tests run in the `composer` service, `wp-phpunit` integration tests in the `wordpress` container, `phpunit.xml.dist`, and a `wp_test` database created by one idempotent `exec` rather than a Compose edit |
+| 24 | `Dockerfile` (multi-stage, non-root, opcache; **WP-CLI stays**, because `release_command` is four `wp` invocations), `.dockerignore`, `fly.toml`, `railway.json`, `phpstan.neon`, `includes/health.php`, `includes/observability.php`, `mu-plugins/000-btt-hardening.php` |
 | 17 | `includes/Preview.php` — preview token issue and the `/wp-json/btt/v1/preview/verify` endpoint |
 | 18 | `includes/Revalidate.php` — the HMAC-signed revalidation webhook |
 | 20 | Polylang bootstrap and the idempotent `wp blame ensure-languages` command |
@@ -39,23 +41,27 @@ wordpress-headless/
 ├── fly.toml                      (M24)
 ├── railway.json                  (M24)
 ├── php.ini  uploads.ini          (M02)
-├── composer.json                 (M03)
-├── phpcs.xml.dist                (M07)
 ├── schema.graphql                (M06)   ← the committed GraphQL contract
-├── phpstan.neon                  (M23)
 ├── README.md                     ← this file, replaced by your own runbook in M02
 └── wp-content/
     ├── plugins/
     │   ├── blame-the-tech-core/           (M03, M04, M06, M15, M18, M20, M24)
     │   │   ├── blame-the-tech-core.php
-    │   │   ├── composer.json
+    │   │   ├── composer.json                  (M03, M07, M23)
+    │   │   ├── phpcs.xml.dist                 (M07)   ← beside the code it describes
+    │   │   ├── phpstan.neon  phpstan-baseline.neon  (M24)
+    │   │   ├── phpunit.xml.dist                (M23)   ← two suites: unit, integration
     │   │   ├── includes/
     │   │   │   ├── post-types.php  taxonomies.php  roles.php  statuses.php
     │   │   │   ├── acf-json/*.json
     │   │   │   ├── graphql/  cli/
     │   │   │   ├── Revalidate.php  Preview.php  Leads.php
+    │   │   │   ├── health.php  observability.php   (M24)
     │   │   │   └── admin/
-    │   │   └── tests/{Unit,Integration}/  (M23)
+    │   │   └── tests/                          (M23)
+    │   │       ├── Pest.php  bootstrap.php  wp-tests-config.php
+    │   │       ├── Unit/         Pest + Brain Monkey — the `composer` service
+    │   │       └── Integration/  wp-phpunit — the `wordpress` container
     │   └── blame-the-tech-blocks/         (M13, M14)
     │       ├── blame-the-tech-blocks.php
     │       ├── package.json
@@ -69,7 +75,7 @@ wordpress-headless/
     ├── mu-plugins/
     │   ├── blame-seeder/                  (M12 — dev/CI only, never in the prod image)
     │   ├── blame-seeder-loader.php        (M12 — mu-plugins does not recurse)
-    │   └── 000-btt-hardening.php          (M24)
+    │   └── 000-btt-hardening.php          (M24 — branches on WP_ENVIRONMENT_TYPE)
     └── themes/
         └── btt-headless/                  (M02, M13, M17)
             ├── style.css  functions.php  index.php

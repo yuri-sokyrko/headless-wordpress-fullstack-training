@@ -66,7 +66,8 @@ ls next-app/
 - `next-app/src/types/content.ts` — the content model from
   [appendix 03](../appendix/03-content-model-reference.md) as hand-written TypeScript
 - `next-app/eslint.config.mjs`, `next-app/.prettierrc` — flat ESLint config and formatting
-- `wordpress-headless/phpcs.xml.dist` — WordPress Coding Standards over your plugin
+- `blame-the-tech-core/phpcs.xml.dist` — WordPress Coding Standards over your plugin, beside
+  the code it describes so both containers and a CI runner find it by auto-discovery
 
 After this module `npm run lint`, `npm run type-check` and `composer phpcs` all pass, and
 `node scripts/blame.mjs` prints real incidents out of your own WordPress install.

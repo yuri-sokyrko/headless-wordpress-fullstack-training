@@ -308,6 +308,14 @@ git check-ignore -v ../wordpress-headless/wp-config.php
 - [ ] **No output means the file is not ignored. Stop and fix the root `.gitignore` first** —
       writing the file and "fixing it afterwards" is how a password enters git history.
 
+> **This rule has an expiry date, and it is Lesson 24.6.** Ignoring the file protects you *now*,
+> while you are about to type a config that might contain a literal. By the end of Step 2 it
+> contains nothing but `getenv()` calls, and check 6 below proves it — at which point the file
+> stops being a secrets risk and becomes a **build input**, because the production `Dockerfile`
+> has to copy it into the image. A gitignored build input means the image builds on your laptop
+> and fails in CI, which is the exact failure Module 24 exists to remove. So Lesson 24.6 deletes
+> the rule, and the thing that licenses the deletion is re-running check 6.
+
 ### Step 2: Write `wp-config.php`
 
 Every value comes from the environment; the inline comments are the lesson.

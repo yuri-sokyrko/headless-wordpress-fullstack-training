@@ -313,5 +313,8 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en
 | 16 | `TURNSTILE_*`, `UPSTASH_*`, `BTT_LEAD_IP_HMAC_KEY`, `RESEND_API_KEY` |
 | 17 | `PREVIEW_SHARED_SECRET`, `BTT_PREVIEW_SHARED_SECRET` |
 | 18 | `REVALIDATE_SECRET`. `BTT_REVALIDATE_SECRET` and `BTT_FRONTEND_URL` already exist — Lesson 02.5 wrote both into `wordpress-headless/.env` and `.env.example`, and Lesson 18.3 *verifies* them rather than creating them. |
-| 19–21 | none. Modules 19, 20 and 21 introduce no new variables — recorded explicitly, because a missing row reads as "not yet audited" |
-| 24 | `BTT_S3_*`, `SENTRY_DSN`, `DISALLOW_FILE_*`, and all of §7 |
+| 19–20 | none. Recorded explicitly, because a missing row reads as "not yet audited" |
+| 21 | `ANALYZE` only, and it is **not** an env-file variable: `ANALYZE=true npm run build`, one command, from the invoking shell — the same discipline as `E2E_MODE` in §3.1. `/api/vitals` needs nothing new because it reuses `src/lib/rate-limit.ts` from Lesson 16.2 |
+| 22 | none |
+| 23 | none new. `E2E_MODE` and `E2E_SECRET` are Module 12's; the `e2e_agent` password is a session variable like the three `BTT_*_PASSWORD` rows in §2, injected at run time and never written to a file |
+| 24 | `BTT_S3_*`, `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `BTT_RELEASE` / `NEXT_PUBLIC_RELEASE`, `BTT_PERSISTED_QUERIES_ENFORCED`, and all of §7. `DISALLOW_FILE_EDIT` and `DISALLOW_FILE_MODS` already exist — Lesson 02.4 defines both from the environment and 02.5 wrote them into `.env.example`, so Lesson 24.1 sets **values** and must not add a second `define()`. The Sentry client DSN carries `NEXT_PUBLIC_` **on purpose**: a DSN is a write-only ingest key, not a secret, and Lesson 24.3 argues it as the counterpoint to Lesson 24.8's review point 5. `SENTRY_AUTH_TOKEN` is build-time only and must never reach the bundle. |

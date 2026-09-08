@@ -199,8 +199,8 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
 | 17 | `includes/Preview.php` — preview token issue and verify |
 | 18 | `includes/Revalidate.php` — the signed webhook |
 | 20 | Polylang bootstrap, `wp blame ensure-languages` |
-| 23 | `tests/Unit/` (Pest + Brain Monkey), `tests/Integration/` (`wp-phpunit`), `phpcs.xml.dist`, `phpstan.neon` |
-| 24 | `Dockerfile` (multi-stage, non-root, opcache), `.dockerignore`, `fly.toml`, `mu-plugins/000-btt-hardening.php` |
+| 23 | `tests/Unit/` (Pest + Brain Monkey), `tests/Integration/` (`wp-phpunit`), `tests/bootstrap.php`, `phpunit.xml.dist` — all inside the plugin, beside the `phpcs.xml.dist` Module 07 already put there |
+| 24 | `Dockerfile` (multi-stage, non-root, opcache), `.dockerignore`, `fly.toml`, `railway.json`, `phpstan.neon`, `includes/health.php`, `includes/observability.php`, `mu-plugins/000-btt-hardening.php` |
 
 ### `next-app/`
 

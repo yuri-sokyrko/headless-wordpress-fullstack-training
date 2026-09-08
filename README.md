@@ -84,10 +84,13 @@ headless-wordpress-fullstack-training/
 ├── faust-spike/                CREATED in Lesson 17.1, DELETED in Lesson 17.4 — the Faust
 │                            evaluation runs as its own app on :3001 so it can never break
 │                            next-app/'s lockfile. It is not in the final tree, on purpose.
-├── .github/                    pull_request_template.md ships; workflows/ you add in M24
+├── .github/                    pull_request_template.md ships as the REFERENCE version of the
+│                            Lesson 24.8 deliverable — write yours first, then diff. The first
+│                            workflow arrives in Lesson 23.9; the pipeline itself in M24.
 ├── .vscode/                    editor settings you add in M07 (format on save, PHPCS)
 ├── .gitignore .nvmrc .editorconfig LICENSE
-└── commitlint.config.mjs .husky/   ← you add these in M24 (conventional commits, hooks)
+└── package.json commitlint.config.mjs .husky/   ← you add these in M24 (root dev
+                            tooling, conventional commits, git hooks)
 ```
 
 Every line of code is inlined in the lessons. There are no `examples/` folders to copy from

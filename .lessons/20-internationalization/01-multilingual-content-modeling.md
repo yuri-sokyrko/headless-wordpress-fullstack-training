@@ -553,12 +553,8 @@ Load it beside the other declarations:
 ```php
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/Plugin.php
 	private const INCLUDES = array(
-		'includes/post-types.php',   // Lesson 03.2
-		'includes/taxonomies.php',   // Lesson 03.3
-		'includes/statuses.php',     // Lesson 03.4
-		'includes/roles.php',        // Lesson 03.5
-		'includes/app-token.php',    // Lesson 06.2
-		'includes/polylang.php',     // Lesson 20.1
+		// …every entry Modules 03 to 18 added, unchanged…
+		'includes/polylang.php',                            // Lesson 20.1
 	);
 ```
 
