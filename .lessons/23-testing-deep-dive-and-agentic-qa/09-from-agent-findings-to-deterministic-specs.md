@@ -949,7 +949,7 @@ for the bad outcome, make it unreachable.
 
 **Verify §8:**
 
-- [ ] `npx jq -e . /dev/null` is not the check — YAML has no `jq`. Use
+- [ ] `jq -e . /dev/null` is not the check — YAML has no `jq`. Use
       `npx yaml-lint .github/workflows/agentic-qa.yml`, or push the branch and read the Actions
       tab, which is the only validator that counts.
 - [ ] `grep -c 'pull_request_target' .github/workflows/agentic-qa.yml` is `0`.

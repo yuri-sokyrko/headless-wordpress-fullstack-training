@@ -2,7 +2,7 @@
 title: 'Agent-Driven Exploratory Testing'
 module: 23
 lesson: 8
-teaches: [exploratory-testing, test-charters, agent-traces, finding-triage, agentic-qa]
+teaches: [exploratory-testing, test-charters, agent-session-logs, finding-triage, agentic-qa]
 produces: ['docs/agentic-qa.md']
 requires: [23.7]
 ---
@@ -31,7 +31,7 @@ incident leaking into the scapegoat term count, because
 focus after a styling change, which Lesson 22.2 fixed and a later refactor can silently undo. The
 locale switcher dropping `?scapegoat=` so a filtered German list resets. None of those are exotic;
 all three are the kind of thing that ships. The job in this lesson is to run the exploration
-under the guardrails from Lesson 23.7, read the traces, and **triage** — because an agent report
+under the guardrails from Lesson 23.7, read the session logs, and **triage** — because a report
 is raw material, not a bug list. Some findings are real bugs, some are misread intent, some are
 duplicates of the same underlying cause, and separating them is human work.
 
@@ -39,12 +39,12 @@ By the end of this lesson you will have:
 
 - Four to six written charters covering submission, moderation, auth, i18n and the HOBT funnel,
   each with an explicit boundary
-- A completed exploration run against the local seeded stack, with traces in `.agent-artifacts/`
+- A completed exploration run against the local seeded stack, logged to `.agent-artifacts/`
 - `docs/agentic-qa.md` — the charters, the raw findings, and the triage decision for each
 - At least three triaged findings with a reproduction, a severity and a verdict: real bug,
   misread intent, or duplicate
-- A Playwright trace opened and read for one finding, so you have confirmed the behaviour yourself
-  rather than trusting a summary
+- One finding checked against the session log line by line, so you have confirmed the behaviour
+  yourself rather than trusting a summary
 - A written note on what the agent did *not* find, and why that is the more interesting half of
   the report
 
@@ -76,7 +76,7 @@ Where the analogy breaks hardest is **trust**. A human tester who says "I could 
 approval" is reporting an observation. An agent that says the same thing is producing text that
 is *consistent with* an observation, and it may have misread a page, conflated a pending incident
 with a published one, or been looking at a stale cache. So every finding gets reproduced by hand
-before it becomes a bug — the trace exists precisely so you can check. That verification step has
+before it becomes a bug — the session log exists precisely so you can check. That step has
 no Classic counterpart because you never had to ask whether your tester's report was a
 hallucination, and building it into the workflow from the first run is what keeps agentic QA
 useful rather than noisy.
@@ -180,22 +180,28 @@ to avoid learning it is a number in the charter.
         └─▶ your notes                 ← what you decided, which is the deliverable
 ```
 
-The trace is the artefact that makes the whole practice defensible, and reading one is a Task
-step rather than an optional extra. `npx playwright show-trace <file>` gives you the filmstrip,
-the DOM at every action, the network log and the console log — the same viewer Lesson 12.3
-introduced for CI failures, pointed at an agent session instead.
+The **session log** is the artefact that makes the whole practice defensible, and reading one is a
+Task step rather than an optional extra. `--save-session` writes
+`.agent-artifacts/session-<timestamp>/session.md`: every tool call the agent made, in order, with
+its arguments and its result as JSON. It is a transcript of actions, not a Playwright trace —
+there is no filmstrip and no network waterfall, because the MCP server has no trace flag. Read it
+in any editor.
 
 | Artefact | Trustworthy? | Use it for |
 |---|---|---|
 | The narrative summary | **no** | generating hypotheses |
-| The trace's action list | yes | what was actually clicked, in order |
-| The trace's DOM snapshots | yes | what the page actually said at that moment |
-| The trace's network tab | yes | which origins were reached — the Lesson 23.7 guardrail check |
-| The trace's console tab | yes | an error the agent did not mention because it was not visible |
+| `session.md`'s tool calls | yes | what was actually clicked, in order |
+| The snapshots inside those results | yes | what the page actually said at that moment |
+| Console messages in those results | yes | an error the agent did not mention because it was not visible on the page. Requires `--console-level error` or lower |
+| **A network log** | **does not exist** | nothing. Key Concept 6 below, and Lesson 23.7 Key Concept 6 |
 
-That network row is the highest-value check in this lesson and it is easy to skip. It is the only
-place you can see whether `--allowed-origins` actually held under real navigation, redirects
-included, rather than under the two probes Lesson 23.7 ran by hand.
+That last row replaced the highest-value check an earlier draft of this lesson claimed to have:
+reading origins out of a trace's network entries, to see whether `--allowed-origins` held under
+real navigation with redirects included. Two things killed it. There is no trace to read, and the
+flag's own help text says an origin list "does not affect redirects" — so the check could not have
+proved what it claimed even with the artefact. Lesson 23.7's live permit-and-deny probe is where
+that flag is exercised, and the thing that actually bounds this agent is the target rule: a local,
+disposable, seeded stack. Keep the honest control and drop the reassuring one.
 
 ### 5. An agent report is raw material, and triage is the deliverable
 
@@ -221,7 +227,7 @@ A fourth outcome exists and needs a name because it will be your most common one
 report. Record it, because a pattern of them tells you a charter is too broad.
 
 And the asymmetry that makes triage cheap: **a finding you cannot reproduce costs you ten
-minutes; a finding you file without reproducing costs somebody else a day.** The trace exists so
+minutes; a finding you file without reproducing costs somebody else a day.** The log exists so
 the ten minutes is spent on evidence rather than on guessing.
 
 ### 6. The three findings this run produces, and the one whose mechanism is wrong
@@ -310,7 +316,7 @@ Stating this stops the practice being oversold, and it is also what a manager wi
    write the charter                        10 min   ← the skill
    run it                                    4 min   ← the automation
    read the narrative                        3 min
-   open and read one trace                   8 min   ← the evidence
+   read the session log for one            8 min   ← the evidence
    reproduce two findings by hand           25 min   ← the judgement
    write the triage entries                 12 min   ← the deliverable
    ───────────────────────────────────────────────────────────
@@ -318,10 +324,10 @@ Stating this stops the practice being oversold, and it is also what a manager wi
 ```
 
 **The agent is the cheapest part of agentic QA.** Roughly nine tenths of the elapsed time is a
-person writing a charter, reading a trace, reproducing a behaviour and recording a verdict — and
+person writing a charter, reading a log, reproducing a behaviour and recording a verdict — and
 every one of those is work that produces something durable. Compare it honestly with the
 alternative: an hour of a human clicking around staging produces nothing you can point at next
-month. An hour of this produces six charters you can rerun, three triaged findings and a trace.
+month. An hour produces six charters you can rerun, three triaged findings and a session log.
 
 The cost that is genuinely new is the *verification* step, and it has no Classic counterpart
 because you never had to ask whether your tester's report was a hallucination. Building it into
@@ -341,10 +347,10 @@ your code.
 cd next-app
 npm run e2e:reset
 
-# The guardrails from Lesson 23.7 are still all five. This is the check that
+# The guardrails from Lesson 23.7 are still all four. This is the check that
 # notices a "tidy up the config" commit, and it costs a second.
-for flag in --isolated --allowed-origins --blocked-origins --save-trace --storage-state; do
-  npx jq -e --arg f "$flag" '.mcpServers.playwright.args | index($f) != null' \
+for flag in --isolated --allowed-origins --save-session --storage-state; do
+  jq -e --arg f "$flag" '.mcpServers.playwright.args | index($f) != null' \
     .mcp.json > /dev/null && echo "$flag present" || echo "$flag MISSING — stop"
 done
 
@@ -422,41 +428,49 @@ add "look at the switcher". Every hint you add is a finding you have taken credi
 
 **Verify §3:**
 
-- [ ] `ls -1 ../.agent-artifacts/` lists one trace per session. If it is empty, `--save-trace` or
-      `--output-dir` is wrong — the path is relative to `next-app/`, hence the `../`.
+- [ ] `ls -1 ../.agent-artifacts/` lists one `session-<timestamp>/` directory per session, each
+      holding a `session.md`. If it is empty, `--save-session` or `--output-dir` is wrong — the
+      path is relative to `next-app/`, hence the `../`.
 - [ ] Each run ended because it hit its boundary, not because it ran out of things to do. A run
       that stopped after ninety seconds means the boundary was the wrong shape.
 - [ ] `git status --short | grep -cE 'agent-artifacts'` returns `0`.
 
-### Step 4: Open a trace and read it, before you believe anything
+### Step 4: Read the session log, before you believe anything
 
-This is the step that separates a QA practice from a transcript. Pick the C7 run.
+This is the step that separates a QA practice from a transcript. Pick the C7 run. The log is
+markdown, so read it with anything — `less` is fine and an editor's outline view is better.
 
 ```bash
 cd /Users/you/path/to/blame-the-tech
 ls -1 .agent-artifacts/
-npx playwright show-trace .agent-artifacts/<the C7 trace>.zip
+# One session-<timestamp>/ per run. Take the C7 one.
+grep -c '^### Tool call:' .agent-artifacts/session-*/session.md
+less .agent-artifacts/session-<the C7 run>/session.md
 ```
 
-Four tabs, in the order that matters:
+Three things to read, in the order that matters:
 
-1. **Actions.** The list of what was actually clicked, in order. Compare it against the
-   narrative. A step the narrative describes and the action list does not contain is a
-   hallucination, and finding one here is the best possible use of this step.
-2. **DOM snapshots.** Click the action where the agent claims the count was 7. Read the rendered
-   number in the snapshot. This is the moment the finding becomes evidence.
-3. **Network.** Every request the session made, with its origin.
-4. **Console.** Errors the agent did not mention because they were not visible on the page.
+1. **The tool calls.** `### Tool call:` headings, in order, each with its arguments. This is what
+   was actually clicked. Compare it against the narrative. A step the narrative describes and the
+   log does not contain is a hallucination, and finding one here is the best possible use of this
+   step.
+2. **The results.** Each call's result block holds the accessibility snapshot the agent was
+   actually looking at. Find the call where it claims the count was 7 and read the number in the
+   snapshot underneath. This is the moment the finding becomes evidence.
+3. **Console messages**, if you started the server with `--console-level error` — errors the agent
+   did not mention because they were never visible on the page.
+
+What is **not** in there is a network log; there is no trace and no network waterfall. Key
+Concept 4 says what that costs and why the replacement is honest rather than weaker.
 
 **Verify §4:**
 
-- [ ] Every step in the narrative has a corresponding entry in the Actions list. Note any that
-      does not — that is a finding about the *report*, and it is worth recording.
-- [ ] **Every request in the Network tab is to `localhost:3000` or `localhost:8080`.** This is
-      the single most valuable check in the lesson: it is the only place the Lesson 23.7 origin
-      guardrail is tested under real navigation, redirects included, rather than by a hand probe.
-- [ ] The DOM snapshot at the claimed moment shows the number the narrative claims. If it shows
-      something else, the verdict is **not reproducible** and the finding stops here.
+- [ ] Every step in the narrative has a corresponding `### Tool call:` entry. Note any that does
+      not — that is a finding about the *report*, and it is worth recording.
+- [ ] The snapshot in the result at the claimed moment shows the number the narrative claims. If
+      it shows something else, the verdict is **not reproducible** and the finding stops here.
+- [ ] You can name one thing the log cannot tell you. "Which origins were requested" is the
+      answer, and knowing it is why the guardrail is checked live in Lesson 23.7 instead.
 
 ### Step 5: Triage F1, including the part where the agent is wrong
 
@@ -621,9 +635,9 @@ rediscovering a fixed bug is evidence the guard is in the right place.
 
 ### Not reproducible
 
-Findings whose narrative had no corresponding entry in the trace's action list, or
+Findings whose narrative had no corresponding tool call in the session log, or
 whose DOM snapshot showed a different value from the one claimed, are recorded here
-with the trace filename and no verdict about the application. A pattern of them
+with the session-log path and no verdict about the application. A pattern of them
 means a charter is too broad, not that the app is fine.
 
 ## What the agent did NOT find (Lesson 23.8)
@@ -658,7 +672,7 @@ nothing about the attempt was written by the person who built the guard.
 ```bash
 cd /Users/you/path/to/blame-the-tech
 
-# Traces hold request headers. Keep the ones your findings cite; delete the rest.
+# Session logs quote request arguments. Keep the ones your findings cite; delete the rest.
 ls -1 .agent-artifacts/
 # then remove what no finding references
 
@@ -671,8 +685,8 @@ git commit -m "docs(qa): charters, triaged findings and the coverage gaps from t
 
 - [ ] `git show --stat HEAD` lists `docs/agentic-qa.md` and nothing else.
 - [ ] Nothing under `.agent-artifacts/` is tracked, staged, or mentioned in the commit.
-- [ ] Every trace you kept is referenced by a finding, and every finding that cites a trace still
-      has the trace. An unreferenced trace is a request log nobody will ever open.
+- [ ] Every session log you kept is referenced by a finding, and every finding that cites a log
+      still has it. An unreferenced log is a transcript nobody will ever open.
 
 ---
 
@@ -748,29 +762,25 @@ docker compose run --rm -T wpcli wp eval '
 cd ..
 git status --short | grep -cE '\.agent-artifacts|\.auth/'
 # Expected: 0
-git check-ignore -v .agent-artifacts/trace.zip
-# Expected: .gitignore:28:.agent-artifacts/	.agent-artifacts/trace.zip
+git check-ignore -v .agent-artifacts/session-1/session.md
+# Expected: .gitignore:28:.agent-artifacts/	.agent-artifacts/session-1/session.md
 
-# 10. NEGATIVE, AND THE MOST VALUABLE ONE — the agent reached no origin outside
-#     the allowlist. Read it out of the TRACE's network entries rather than
-#     trusting the narrative: this is the only place Lesson 23.7's guardrail is
-#     tested under real navigation, redirects included.
-#
-#     A trace is a zip; network entries live in the .network file inside it.
-for z in .agent-artifacts/*.zip; do
-  unzip -p "$z" '*.network' 2>/dev/null \
-    | grep -oE '"url":"https?://[^/"]+' \
-    | sed 's/.*:\/\///' | sort -u
-done
-# Expected: only 127.0.0.1:3000, localhost:3000 and localhost:8080.
-#           ANY other host means --allowed-origins did not hold and every
-#           finding from that session is suspect until you know why.
+# 10. NEGATIVE — no URL outside the allowlist appears anywhere in the session log.
+#     This is WEAKER than the trace-network check an earlier draft claimed, and the
+#     honest framing matters: the log records the URLs the agent ASKED for, not
+#     every request the browser made. It catches a charter that wandered. It does
+#     NOT prove the origin guardrail held, because there is no network log to read
+#     and because --allowed-origins does not affect redirects at all (23.7 KC 6).
+grep -ohE 'https?://[^/"]+' .agent-artifacts/session-*/session.md \
+  | sed 's|.*://||' | sort -u
+# Expected: only 127.0.0.1:3000, localhost:3000 and localhost:8080. Any other host
+#           means a charter named an origin it should not have — read that charter.
 
-# 11. The trace is readable, and you opened one
-npx playwright show-trace .agent-artifacts/*.zip
-# Expected: the viewer opens with Actions, DOM snapshots, Network and Console.
-#           If Network is empty, --save-trace captured a session that made no
-#           requests, which means the run never started.
+# 11. The session log is readable, and you read one
+grep -c '^### Tool call:' .agent-artifacts/session-*/session.md
+# Expected: a number in the tens for a fifteen-minute charter. A 0 means
+#           --save-session captured a session that made no tool calls, which means
+#           the run never started.
 
 # 12. The coverage gaps are written down, not implied
 grep -c 'publish_incidents' docs/agentic-qa.md
@@ -809,23 +819,24 @@ finding to delete, not the check to relax.
 4. F3 is recorded with the verdict "not an open bug" and cites a passing spec. Argue for recording
    it at all rather than discarding it, then describe the failure mode of the opposite choice:
    filing it as a real bug.
-5. Verification check 10 reads origins out of the trace rather than out of the agent's narrative,
-   and the lesson calls it the most valuable check. Explain what it tests that Lesson 23.7's two
-   hand probes did not, and say what you would do with the six findings from a session that
-   failed it.
+5. An earlier draft made Verification check 10 the most valuable in the lesson: read origins out
+   of the trace's network entries and prove the origin guardrail held under redirects. Both halves
+   turned out to be false. Name each, say what check 10 can still honestly tell you, and explain
+   why a check that overstates its own reach is worse than not having it.
 
 ## Learn More
 
 - [James Bach and Michael Bolton — Exploratory Testing](https://www.satisfice.com/exploratory-testing) —
   the source of the charter idea, written decades before agents and still the clearest statement
   of what a charter is for
-- [Session-Based Test Management](https://www.satisfice.com/download/session-based-test-management-1) —
+- [Session-Based Test Management](https://www.satisfice.com/download/session-based-test-management) —
   the time-boxed, charter-driven session, which is exactly the unit this lesson automates; read
   the debrief section next to Key Concept 5
-- [Playwright — trace viewer](https://playwright.dev/docs/trace-viewer) — the four tabs Step 4
-  walks. The network tab is the one this lesson leans on hardest
+- [Playwright — trace viewer](https://playwright.dev/docs/trace-viewer) — not what Step 4 reads,
+  and worth knowing anyway: it is what you get once a finding becomes a spec in Lesson 23.9
 - [Playwright MCP](https://github.com/microsoft/playwright-mcp) — what the agent is actually
-  driving, and the `--save-trace` behaviour Step 3 depends on
+  driving. Check its flag list against Step 3 before you trust either: `--save-trace` was real
+  enough to reach an earlier draft of this course and does not exist
 - [WordPress — `_update_post_term_count()`](https://developer.wordpress.org/reference/functions/_update_post_term_count/) —
   read the source. It is fifteen lines and it settles F1's proposed mechanism in about a minute
 - [WordPress — `register_taxonomy()`'s `update_count_callback`](https://developer.wordpress.org/reference/functions/register_taxonomy/) —

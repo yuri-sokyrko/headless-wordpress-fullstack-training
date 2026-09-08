@@ -735,12 +735,14 @@ import { siteTag } from '@/lib/graphql/tags';
     tags: [siteTag()],
   });
 
-  // `!== false`, not `=== true`. An ACF options page nobody has saved returns
-  // null, and treating null as "closed" gives a fresh environment a dead
+  // `!== false`, not `=== true`. TWO optional links, because the shape is two
+  // levels: `siteSettings` is the ACF options PAGE and `siteChrome` is the field
+  // group on it (Lesson 04.3 §5). Either can be null on an install nobody has
+  // saved, and treating null as "closed" gives a fresh environment a dead
   // submission form for a reason no error message mentions. Compare the rate
   // limiter above, which fails CLOSED on a missing variable, because that one
   // IS a security control. Lesson 16.4 §5 has the test for telling them apart.
-  if (chrome.siteSettings?.incidentSubmissionOpen === false) {
+  if (chrome.siteSettings?.siteChrome?.incidentSubmissionOpen === false) {
     return {
       status: 'error',
       message: 'Incident submission is paused right now. Nothing you typed was sent — try again later.',
@@ -758,7 +760,7 @@ Then the polite branch in the page, so a closed form is not a form at all:
     tags: [siteTag()],
   });
 
-  if (chrome.siteSettings?.incidentSubmissionOpen === false) {
+  if (chrome.siteSettings?.siteChrome?.incidentSubmissionOpen === false) {
     // POLITE, not an error. The route still resolves, the layout still renders,
     // and the reader is told a true thing. An error boundary here would look
     // like a bug and generate a support ticket.

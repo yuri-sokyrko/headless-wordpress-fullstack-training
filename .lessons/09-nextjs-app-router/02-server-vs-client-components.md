@@ -210,10 +210,11 @@ round trip may be a prop; anything that cannot is a build-time error with a read
 The difference is the failure mode. WordPress emits `null` into a `<script>` tag and your
 JavaScript reads `undefined` at runtime, at 2 a.m., for one user. React refuses to build.
 
-> **This is the constraint that will bite you in Lesson 09.4.** `IncidentFilters` is a controlled
-> component: it takes `onSeverityChange` — a function. A Server Component cannot pass it one. That
-> single fact is why this lesson introduces a client-side composition root instead of wiring the
-> filters straight into the page, and Step 2 of the Task is where you feel it.
+> **This is the constraint that bites in this lesson's own Task, at Step 2.** `IncidentFilters` is
+> a controlled component: it takes `onSeverityChange` — a function. A Server Component cannot pass
+> it one. That single fact is why this lesson introduces a client-side composition root instead of
+> wiring the filters straight into the page. Lesson 09.4 hits the same wall from the other side,
+> with `usePathname` in the navigation, and solves it the same way.
 
 ### 6. Secrets and the boundary
 
@@ -247,7 +248,7 @@ built bundle for the endpoint.
 | `useRef` on a DOM node | `import 'server-only'` modules |
 | `onClick`, `onChange`, any event handler | Zero bytes of bundle cost |
 | `window`, `document`, `localStorage`, `matchMedia` | `cookies()`, `headers()` (Module 15) |
-| `usePathname`, `useRouter`, `useSearchParams` | `notFound()`, `redirect()` (Lesson 09.4) |
+| `usePathname`, `useRouter`, `useSearchParams` | `notFound()` (Lesson 09.4), `redirect()` (Lesson 15.4) |
 
 The two lists explain the shape of every page in this course: fetch and compose on the server,
 then hand the smallest possible slice of the tree to the browser. Note where `usePathname` sits —

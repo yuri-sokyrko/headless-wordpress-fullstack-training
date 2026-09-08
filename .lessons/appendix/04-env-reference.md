@@ -139,16 +139,23 @@ you guard the module with `import 'server-only'` — Lesson 10.1 does exactly th
 | `E2E_SECRET` | **yes** | `__CHANGE_ME__` | Required header for that hook. Read from this file inside the Next runtime (Module 18); read from the shell by the test harness (Lesson 12.4). |
 | `SENTRY_DSN` | **yes** | — | Module 24 |
 
-### 3.2 Public (`NEXT_PUBLIC_*`) — all four of them
+### 3.2 Public (`NEXT_PUBLIC_*`) — all five of them
 
-| Variable | Value | Why publishing it is safe |
-|---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | It is already in the address bar |
-| `NEXT_PUBLIC_DEFAULT_LOCALE` | `en` | Not a secret in any sense |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare site key | **Designed** to be public. The *secret* key is the one in §3.1 |
-| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | `blamethe.tech` | Optional analytics |
+| Variable | Value | Why publishing it is safe | Added by |
+|---|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | It is already in the address bar | 09.1 |
+| `NEXT_PUBLIC_DEFAULT_LOCALE` | `en` | Not a secret in any sense | 09.1 |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare site key | **Designed** to be public. The *secret* key is the one in §3.1 | 16.3 |
+| `NEXT_PUBLIC_SENTRY_DSN` | the client DSN | A DSN is a **write-only ingest key**: it can submit an event to one project and read nothing back. Lesson 24.3 argues it deliberately, as the counterpoint to Lesson 24.8's review point 5 | 24.3 |
+| `NEXT_PUBLIC_RELEASE` | the commit SHA | The SHA ships inside the bundle either way; naming it is what makes a stack trace map back to source | 24.3 |
 
-Nothing else. Ever.
+**Nothing else** — and what keeps this list short is not the number, it is the burden of proof.
+Two entries took twenty-four modules to earn a place here, and they earned it by filling in the
+third column with a **property of the value** rather than a convenience. Analytics is the
+canonical thing a reader will want to add next, and it is exactly the addition that has to clear
+the same bar. `NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT`, `NEXT_PUBLIC_WP_APP_TOKEN` and
+`NEXT_PUBLIC_REVALIDATE_SECRET` all appear in this course, every one of them as the wrong answer
+to a Control Question.
 
 ```bash
 # The verification step from Lesson 09.5 — also a CI gate in Module 24
@@ -306,7 +313,7 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en
 |---|---|
 | 02 | All of §2 except the S3, app-token and `BTT_*_PASSWORD` rows — plus the whole of §1 |
 | 04 | `ACF_PRO_LICENSE`, and the three `BTT_*_PASSWORD` session variables the seeder reads |
-| 09 | `WP_GRAPHQL_ENDPOINT`, `NEXT_PUBLIC_SITE_URL`, the `NEXT_PUBLIC_` boundary lesson |
+| 09 | `WP_GRAPHQL_ENDPOINT`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_DEFAULT_LOCALE`, the `NEXT_PUBLIC_` boundary lesson |
 | 10 | `WP_REST_BASE` |
 | 12 | `E2E_MODE`, `E2E_SECRET` |
 | 15 | `GRAPHQL_JWT_AUTH_CORS_ENABLE`, `WP_APP_TOKEN`, and the cookie table in §4. `GRAPHQL_JWT_AUTH_SECRET_KEY` and `BTT_APP_TOKEN` already exist — Lesson 02.5 wrote them into `wordpress-headless/.env`, and Lesson 15.2 *verifies* them rather than creating them. |

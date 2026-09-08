@@ -123,11 +123,11 @@ job summary and block nothing.**
 | Count today | **0**, after Lesson 22.3 | near zero — see below |
 | Blocks a merge | **yes** | no |
 
-**And here is the uncomfortable part, which Verification check 7 makes you confront.** Within the
-WCAG 2.2 A/AA tag set the rules are overwhelmingly `critical` and `serious`; the `moderate` and
-`minor` impacts are mostly carried by **best-practice** rules, which Lesson 22.3's `withTags`
-already excludes. So this suite's `moderate` reporting path is real, correct, and almost never
-exercised. The findings it was built for — `heading-order`, `region`, `landmark-one-main` — come
+**And here is the uncomfortable part, which Verification check 7 makes you confront.** The five
+tags select **70 rules**, and their impacts are 20 `critical`, 44 `serious`, 4 `moderate` and 2
+`minor` — the whole long tail is six rules. `moderate` and `minor` are mostly carried by
+**best-practice** rules, which Lesson 22.3's `withTags` already excludes. So this suite's
+`moderate` reporting path is real, correct, and almost never exercised. The findings it was built for — `heading-order`, `region`, `landmark-one-main` — come
 out of the DevTools extension's default rule set instead, which is precisely why Lesson 22.3
 Step 2 is a manual run and not a formality. A documented threshold that never fires is a
 threshold nobody has tested, and pretending otherwise is how a policy quietly becomes decoration.
@@ -326,7 +326,8 @@ lesson's key is the `projects` array and nothing else.
     },
     {
       // The NAME is a contract: Module 23's Starting State runs
-      // `--project=a11y`, and Lesson 24.5 lists it as a required check.
+      // `--project=a11y`, Lesson 24.4 puts it in `ci-required`'s `needs:` list,
+      // and Lesson 24.5 decides that it blocks a merge.
       name: 'a11y',
       testMatch: /a11y\.spec\.ts/,
       // NO `dependencies` key. The `setup` project does not exist yet — Lesson
@@ -680,10 +681,10 @@ off. This is Lesson 21.4's ratchet applied to a different number, and 21.4 owns 
 VoiceOver/NVDA smoke script — are the majority of the audit and nothing enforces that they were
 run. That is a process gap, honestly, and no gate closes it.
 
-**Known gap 2.** Within the WCAG 2.2 A/AA tag set, axe's impacts are almost entirely `critical`
-and `serious`. The `moderate`/`minor` reporting path above is therefore correct and rarely
-exercised: `heading-order`, `region` and `landmark-one-main` are best-practice rules and this
-suite does not run them. They are covered by the manual extension run in Lesson 22.3 Step 2, and
+**Known gap 2.** Of the 70 rules these five tags select, 64 are `critical` or `serious` and six
+are not. The `moderate`/`minor` reporting path above is therefore correct and rarely exercised:
+`heading-order`, `region` and `landmark-one-main` are best-practice rules and this suite does not
+run them. They are covered by the manual extension run in Lesson 22.3 Step 2, and
 the number in the job summary is usually zero. Do not read a zero there as "there is nothing in
 the long tail".
 ```
@@ -909,7 +910,7 @@ than a dated suppression.
   — what "required check" actually enforces, and the ways it can be bypassed
 - [Testing Library: which query should I use?](https://testing-library.com/docs/queries/about/#priority)
   — the priority list is the accessibility tree, which is the whole of Key Concept 9
-- [Deque: shifting accessibility left](https://www.deque.com/shift-left-accessibility/) — the
+- [Deque: shifting accessibility left](https://www.deque.com/blog/transform-digital-accessibility-from-a-reactive-break-fix-to-a-proactive-shift-left/) — the
   argument for a gate, read critically: note what it claims a gate proves and compare with §1
 - [WAI: planning and managing web accessibility](https://www.w3.org/WAI/planning/) — the process
   side that no CI check covers, and the reason `docs/quality-gates.md` records a known gap

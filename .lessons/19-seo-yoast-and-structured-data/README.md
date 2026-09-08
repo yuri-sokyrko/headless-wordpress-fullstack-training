@@ -79,7 +79,7 @@ nobody deploys anything.
 | Output | Source of truth | Fallback when empty | Lesson |
 |---|---|---|---|
 | `<title>` | Yoast `seo.title` | `${post.title} — Blame The Tech` | 19.1, 19.2 |
-| `<meta name="description">` | Yoast `seo.metaDesc` | the route's own summary, trimmed to 155 chars — `incident` and `tech_review` have no `excerpt` support ([appendix 03 §1](../appendix/03-content-model-reference.md#1-custom-post-types)) | 19.2 |
+| `<meta name="description">` | Yoast `seo.metaDesc` | the route's own summary, trimmed to 155 chars — `incident` and `tech_review` have no `excerpt` support ([appendix 03 §1](../appendix/03-content-model-reference.md#1-post-types)) | 19.2 |
 | `<link rel="canonical">` | **the route's own path** — Yoast's value is generated from `home_url()`, so it carries WordPress's origin *and* WordPress's path, which has no `[locale]` segment | Yoast `seo.canonical` is honoured verbatim only when it points at a **third** origin, which is the one case an editor could mean it | 19.2 |
 | `<meta name="robots">` | Yoast `seo.metaRobotsNoindex` / `...Nofollow` | `index, follow` | 19.2 |
 | `og:image` | Yoast `seo.opengraphImage` (via `MediaFields`) | generated `[locale]/opengraph-image.tsx` | 19.2 |

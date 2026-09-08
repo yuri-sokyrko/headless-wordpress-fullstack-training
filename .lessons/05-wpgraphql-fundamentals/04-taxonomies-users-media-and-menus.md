@@ -535,11 +535,13 @@ query SiteChrome {
     description
   }
   siteSettings {
-    siteTagline
-    primaryCtaLabel
-    primaryCtaUrl
-    incidentSubmissionOpen
-    socialLinks { network url }
+    siteChrome {
+      siteTagline
+      primaryCtaLabel
+      primaryCtaUrl
+      incidentSubmissionOpen
+      socialLinks { network url }
+    }
   }
   menuItems(where: { location: PRIMARY }, first: 50) {
     nodes {

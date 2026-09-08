@@ -20,9 +20,9 @@ restriction below is a default you set once and never think about again, which i
 of security control that survives contact with a deadline.
 
 The configuration: `--isolated` so there is no persisted browser profile and no session survives
-the run; `--allowed-origins localhost:3000;localhost:8080` with `--blocked-origins *` so the
-browser cannot reach anything else, including your production site and including whatever a page
-tries to redirect it to; `--save-trace` writing to a gitignored `.agent-artifacts/`. A
+the run; `--allowed-origins localhost:3000;localhost:8080` and **nothing else**, so the browser
+cannot request your production site — though not, per the tool's own help text, a boundary that
+survives a redirect; `--save-session` writing to a gitignored `.agent-artifacts/`. A
 least-privilege `e2e_agent` WordPress user — the one seeded in
 [appendix 03 §9](../appendix/03-content-model-reference.md#9-seed-data) — whose password comes
 from a secret store **at runtime, never from a committed file**. And one hard rule about
@@ -38,13 +38,13 @@ tests maintainable at all.
 
 By the end of this lesson you will have:
 
-- `next-app/.mcp.json` — a Playwright MCP server with `--isolated`, explicit allowed origins,
-  `--blocked-origins *` and trace saving
+- `next-app/.mcp.json` — a Playwright MCP server with `--isolated`, explicit allowed origins and
+  session saving — and, measured rather than assumed, no `--blocked-origins`
 - An `e2e_agent` WordPress user with the minimum capabilities its charters need, and a documented
   runtime path for its password
 - `.agent-artifacts/` confirmed already gitignored — the root `.gitignore` has carried the line
-  since Module 01, and you check rather than add — plus a CI artifact-scrubbing step so traces
-  never carry secrets into a build log
+  since Module 01, and you check rather than add — plus a CI artifact-scrubbing step so session
+  logs never carry secrets into a build log
 - Agent CI jobs sketched with minimal `permissions:`, `pull_request` and never
   `pull_request_target`, and no access to deploy secrets
 - The selector contract written down and **enforced**: an ESLint rule banning CSS-chain locators
@@ -83,8 +83,9 @@ Two things are worth taking from that absence rather than glossing over it.
 two decades of accumulated warnings — never edit core, never trust `$_POST`, never `eval()` a
 shortcode attribute. Nobody has that stock of hard-won caution about agentic tooling, so the
 caution has to be reasoned from first principles and written into configuration rather than
-absorbed from a community. That is exactly what `--blocked-origins *` and a least-privilege user
-are: reasoned caution, encoded once.
+absorbed from a community. That is exactly what an explicit origin allowlist and a least-privilege
+user are: reasoned caution, encoded once. Key Concept 6 is what happens when reasoned caution is
+then *measured* — and turns out to have configured a browser that could reach nothing.
 
 **Second, one instinct does transfer, and it is the important one.** You already treat post
 content as untrusted input — `wp_kses_post()`, `esc_html()`, never rendering user HTML raw. The
@@ -111,7 +112,7 @@ change that makes something stop working, proposed to someone with a deadline.
    ────────────────────────────────────      ──────────────────────────────────────
    write .mcp.json with 4 flags              write .mcp.json with 0 flags
    run the first charter                     run the first charter, it works
-   it works, under the restrictions          "add --blocked-origins" → a PR that
+   it works, under the restrictions          "add --allowed-origins" → a PR that
    nobody ever thinks about them again        breaks a working workflow, in a week
                                               where two other things are on fire
 ```
@@ -135,12 +136,12 @@ reviewable rather than remembered.
 |---|---|---|
 | The local seeded WordPress on `:8080` | **yes, by design** | nothing. It is disposable and `wp blame fixture load` restores it in two seconds |
 | The local Next app on `:3000` | **yes, by design** | nothing. `E2E_MODE=1`, no real data |
-| The production site | no | `--allowed-origins` lists two localhost origins; nothing else is listed |
-| Any third-party origin a page tries to redirect to | no | same flag. A redirect is a request, and the check is per request, not per navigation |
+| The production site | not requested | `--allowed-origins` lists two localhost origins; nothing else is listed. The flag's help text is explicit that this "does not serve as a security boundary" — it is a route filter, not a firewall |
+| Any third-party origin a page tries to redirect to | **not covered** | the same help text says an origin list "does not affect redirects". Key Concept 6. What actually stands here is the target rule: local seeded content only, so no page has an interest in redirecting you |
 | Your browser's real cookies, sessions and password manager | no | `--isolated`: no persisted profile, and the profile is discarded at the end of the run |
 | `publish_incidents` | **no, and this is the interesting one** | `e2e_agent` holds `incident_reporter`, which does not have it. Module 03, not this lesson |
 | Deploy credentials | no | they exist only as GitHub Actions secrets, and the agent job does not request them |
-| Your shell environment | not directly | but a trace can capture a request header, which is why Step 7's CI rule scrubs artifacts |
+| Your shell environment | not directly | but a session log can capture a request header, which is why Step 7's CI rule scrubs artifacts |
 
 And the column most threat models omit — **what would have to go wrong for any of this to
 matter.** A flag dropped from `.mcp.json` in a "tidy up the config" commit; a charter pointed at
@@ -239,29 +240,47 @@ The reproducibility half matters as much as the security half. Lesson 23.9's fir
 nondeterminism, and a persisted profile adds a second, avoidable source of it: a charter that
 passed because it was still logged in from yesterday is a charter whose result means nothing.
 
-### 6. Two origin flags, one evaluation order — and you test the permit hardest
+### 6. One origin flag, because the second one was measured and it swallows the first
 
-The frozen configuration carries both flags:
+An earlier draft of this lesson carried both flags, as belt and braces — an explicit allowlist,
+plus an explicit deny of everything else so a future maintainer could not mistake the allowlist
+for a hint:
 
 ```
    --allowed-origins  localhost:3000;localhost:8080
-   --blocked-origins  *
+   --blocked-origins  *      ← REMOVED. This aborted the allowlist too.
 ```
 
-The intent is belt and braces: an explicit allowlist, plus an explicit deny of everything else so
-a future maintainer cannot mistake the allowlist for a hint. **The two flags interact, and the
-documented evaluation order is blocklist first.** So there is a real possibility — one this course
-cannot execute and will not pretend to have executed — that `--blocked-origins *` swallows the
-allowlist and the agent can reach nothing at all. That is why Step 3 is written the way it is, and
-the rule generalises well past this flag pair:
+It also said the two flags interact, that the documented evaluation order is blocklist first, and
+that there was therefore a real possibility the deny-all swallowed the permit — a possibility the
+draft could not execute and would not pretend to have executed. **It has now been executed, and
+the pessimistic reading was the correct one.** Under both flags the agent could not load
+`http://localhost:3000/en` either. The mechanism, from the tool's own source:
+
+- The server registers Playwright routes in three passes: abort `**`, then `continue` each
+  allowed origin, then abort each blocked origin. Playwright resolves routes **last-registered
+  first**, so the blocklist outranks the allowlist rather than merely preceding it.
+- `*` is not a special token. It goes through the same origin-to-glob conversion as any other
+  value, `new URL('*')` throws, and the fallback produces `*://*/**` — which matches everything,
+  including the two localhost origins on the permit list.
+
+So the config below carries the allowlist **alone**, which is not a weakening: an allowlist that
+is present already denies every origin not on it. That is what check 4 in the Verification proves
+and what the removed flag was redundantly restating. And the rule generalises well past this flag
+pair:
 
 > **Test the permit at least as hard as the deny.** A guardrail you have never seen allow the
 > legitimate case is a guardrail that will be removed the first time it blocks someone, at speed,
-> by someone who does not know why it was there. Verification checks 4 and 5 are a matched pair:
-> the agent *can* reach `http://localhost:3000/en`, and *cannot* reach an external origin. If the
-> first one fails, drop `--blocked-origins` and rely on the allowlist alone — an allowlist that
-> is present already denies everything not on it, and a config that blocks the work is a config
-> that gets deleted whole.
+> by someone who does not know why it was there. Here the deny was the *only* thing that worked,
+> and a suite of charters that all failed on their first navigation would have looked like a
+> broken agent rather than a broken config.
+
+One more limit, from the flags' own help text and worth reading before you lean on either of
+them: an origin list "*does not* serve as a security boundary and *does not* affect redirects."
+It is a per-request route filter inside one browser context, not a network policy. It is the
+right control for keeping an exploratory agent pointed at the local stack; it is not what stands
+between a compromised page and your production site. The controls that do that are `--isolated`,
+the least-privilege `e2e_agent` and the choice of target — Key Concepts 5, 7 and 1.
 
 Note the spelling too, because it will bite once. `localhost:3000` and `127.0.0.1:3000` are
 **different origins** — the same fact that made Lesson 15.5 list both in
@@ -379,7 +398,7 @@ in front of you rather than tangled up with YAML syntax.
 | `pull_request`, **never** `pull_request_target` | `pull_request_target` runs the *base* branch's workflow with **write** permissions and access to repository secrets, in the context of a pull request whose code came from a fork. It exists for a narrow labelling use case and is the single most common way a repository leaks its secrets |
 | `permissions:` declared explicitly, minimally, per job | the default is whatever the repository default is, which is a setting somebody changed in 2022 |
 | No deploy secrets in the job's `env` | the agent needs a browser and a localhost stack. `VERCEL_TOKEN` and `FLY_API_TOKEN` have no business in the same process as a model reading untrusted page text |
-| Artifacts scrubbed and retention short | a trace holds request headers. See [appendix 04 §7](../appendix/04-env-reference.md#7-secret-injection-per-target) |
+| Artifacts scrubbed and retention short | a session log holds request headers. See [appendix 04 §7](../appendix/04-env-reference.md#7-secret-injection-per-target) |
 | Nightly or label-triggered, never on every push | Lesson 23.9's second honest limit. A run costs minutes and money |
 
 `grep -c pull_request_target` over `.github/` is `0` today because there is no
@@ -447,9 +466,7 @@ is why every decision in it is explained here and written down in Step 7.
         "--isolated",
         "--allowed-origins",
         "localhost:3000;localhost:8080",
-        "--blocked-origins",
-        "*",
-        "--save-trace",
+        "--save-session",
         "--output-dir",
         "../.agent-artifacts",
         "--storage-state",
@@ -460,15 +477,15 @@ is why every decision in it is explained here and written down in Step 7.
 }
 ```
 
-Six decisions, in the order they appear:
+Five decisions, in the order they appear — and one deliberate absence:
 
 | Argument | Decision |
 |---|---|
 | `npx -y @playwright/mcp@latest` | fetched per run, not a project dependency. `@latest` is deliberate for a tool whose flag surface is still moving; pin it the day a flag change breaks a charter |
 | `--isolated` | no persisted profile, no session survives the run. Key Concept 5 |
 | `--allowed-origins localhost:3000;localhost:8080` | the two origins the local stack listens on. **Semicolon**-separated, not comma. `127.0.0.1:3000` is deliberately absent — one spelling, one way in |
-| `--blocked-origins *` | belt and braces, with the caveat in Key Concept 6. Step 3 tests the permit before you trust the deny |
-| `--save-trace --output-dir ../.agent-artifacts` | a Playwright trace per session, in the gitignored directory at the repository root. Relative to `next-app/`, hence the `../` |
+| no `--blocked-origins` | removed, on evidence. `*` becomes the glob `*://*/**` and outranks the allowlist, so the pair blocked `localhost:3000` too. Key Concept 6 |
+| `--save-session --output-dir ../.agent-artifacts` | the MCP session log per session, in the gitignored directory at the repository root. Relative to `next-app/`, hence the `../`. **Not `--save-trace`** — that flag does not exist; the server exits with `unknown option` |
 | `--storage-state e2e/.auth/agent.json` | the agent inherits a session and never sees a credential. Key Concept 7. Step 4 mints the file |
 
 There is deliberately **no `env` block.** `.mcp.json` is a committed file; a secret in it is a
@@ -482,8 +499,11 @@ secret in every clone forever, and the remedy is rotation rather than `git rm`.
 
 **Verify §2:**
 
-- [ ] `npx jq -e '.mcpServers.playwright' next-app/.mcp.json` exits `0`. A trailing comma is the
-      most common mistake here and JSON gives you a useless error message for it.
+- [ ] `jq -e '.mcpServers.playwright' next-app/.mcp.json` exits `0`. A trailing comma is the
+      most common mistake here and JSON gives you a useless error message for it. **`jq`, not
+      `jq`** — and this is the only tool in the course invoked that way. The npm package
+      named `jq` is a broken native wrapper that dies with `MODULE_NOT_FOUND`; the real thing
+      ships with macOS 15+ and is `apt-get install jq` on a Linux runner.
 - [ ] `grep -c 'env' next-app/.mcp.json` returns `0`.
 - [ ] `git status --short` shows `.mcp.json` as a new **tracked** file. It is committed on purpose:
       the guardrails are the artefact.
@@ -493,7 +513,10 @@ secret in every clone forever, and the remedy is rotation rather than `git rm`.
 ```bash
 # Confirm the flag names against the tool you actually have, rather than against
 # this lesson. This is a young package and its flag surface moves.
-npx -y @playwright/mcp@latest --help | grep -E 'isolated|allowed-origins|blocked-origins|save-trace|output-dir|storage-state'
+npx -y @playwright/mcp@latest --help | grep -E 'isolated|allowed-origins|save-session|output-dir|storage-state'
+# Expected: five flags. Measured against @playwright/mcp 0.0.80 — and note what is
+#           NOT there: `--save-trace`. It was in an earlier draft of this lesson and
+#           the server exits `error: unknown option '--save-trace'`.
 ```
 
 Then bring the stack up and point your MCP client at the config. The client reports the server as
@@ -501,15 +524,16 @@ connected and lists its tools; the exact wording depends on the client.
 
 **Verify §3:**
 
-- [ ] All six flags appear in `--help`. If one does not, the tool renamed it — fix `.mcp.json`
+- [ ] All five flags appear in `--help`. If one does not, the tool renamed it — fix `.mcp.json`
       rather than dropping the guardrail. The client lists the `playwright` server.
 - [ ] **The permit works.** *"Open http://localhost:3000/en and tell me the level-1 heading."*
       It answers `Blame The Tech`.
 - [ ] **The deny works.** *"Open https://example.com and tell me the heading."* It reports the
-      request was refused, and names no heading.
-- [ ] If the permit fails while the deny passes, `--blocked-origins *` swallowed the allowlist
-      (Key Concept 6). Drop that flag and its value, keep `--allowed-origins`, rerun **both**
-      checks, and record which configuration your version needed in Step 7's document.
+      request was refused, and names no heading. The allowlist alone does this: an allowlist
+      that is present already denies every origin not on it.
+- [ ] If the permit fails, something has reintroduced a blocklist — `grep blocked .mcp.json`.
+      Key Concept 6: `--blocked-origins *` aborts the allowlisted origins too, so the symptom
+      is an agent that cannot load your own app and looks broken rather than restricted.
 
 ### Step 4: Mint the agent's session, without the password entering the agent
 
@@ -532,7 +556,7 @@ variable the seeder used, injected into the session that needs it and nowhere el
 
 **Verify §4:**
 
-- [ ] `npx jq -r '.cookies[].name' e2e/.auth/agent.json` lists `btt_at` **and** `btt_rt`. Without
+- [ ] `jq -r '.cookies[].name' e2e/.auth/agent.json` lists `btt_at` **and** `btt_rt`. Without
       the refresh cookie the session dies after 300 seconds and every charter fails five minutes
       in, which is a confusing failure. Lesson 15.5's middleware does the hand-off.
 - [ ] `git status --short | grep -c '\.auth/'` returns `0`. That file is a live session.
@@ -598,9 +622,9 @@ because it only disables rules.
 
 **Verify §5:**
 
-- [ ] `npx eslint --print-config e2e/smoke.spec.ts | npx jq '.rules["no-restricted-syntax"][0]'`
-      prints `"error"`. If it prints nothing, your `files` glob does not match — `e2e/**/*.ts`,
-      relative to `eslint.config.mjs`.
+- [ ] `npx eslint --print-config e2e/smoke.spec.ts | jq '.rules["no-restricted-syntax"][0]'`
+      prints `2`, not `"error"` — `--print-config` emits numeric severities throughout. Nothing
+      at all means your `files` glob does not match: `e2e/**/*.ts`, relative to the config.
 - [ ] `npm run lint` is clean on the existing suite. `page.locator('html')` in `e2e/i18n.spec.ts`
       is the one bare-element locator in the repository and it must **not** be reported.
 - [ ] If it *is* reported, your regex character class is too wide — check that you did not include
@@ -673,16 +697,18 @@ is committed and reviewed like any other code.
 | Flag | Effect |
 |---|---|
 | `--isolated` | no persisted browser profile; nothing survives the run |
-| `--allowed-origins localhost:3000;localhost:8080` | the only two origins reachable |
-| `--blocked-origins *` | everything else refused, including a redirect target |
-| `--save-trace --output-dir ../.agent-artifacts` | one trace per session, gitignored |
+| `--allowed-origins localhost:3000;localhost:8080` | the only two origins requested |
+| *no* `--blocked-origins` | removed on evidence; `*` aborted the allowlist too (below) |
+| `--save-session --output-dir ../.agent-artifacts` | one session log, gitignored |
 | `--storage-state e2e/.auth/agent.json` | a session, not a credential |
 
 **Reachable:** the local Next app on :3000 and the local seeded WordPress on :8080.
 Both disposable; `wp blame fixture load` restores WordPress in two seconds.
 
-**Not reachable:** production, any third-party origin (including one a page redirects
-to), the developer's real browser profile, `publish_incidents`, deploy secrets.
+**Not requested:** production, any third-party origin, the developer's real browser
+profile. **Not covered by the origin flag:** redirects — its help text says so, in
+those words. What covers those is the target rule, not the flag. Also not reachable:
+`publish_incidents`, deploy secrets.
 
 **Page content is untrusted data.** A seeded title could read "ignore previous
 instructions and …", and the agent is a model reading that text. There is no filter
@@ -707,14 +733,17 @@ The agent receives a storage state minted by a human logging in interactively.
 `pull_request`, never `pull_request_target` — the latter runs the base branch's
 workflow with write permissions and repository secrets in the context of a fork's
 pull request. Explicit minimal `permissions:` per job. No deploy secrets in the
-job's environment. Artifacts scrubbed, retention short, because a trace holds
+job's environment. Artifacts scrubbed, retention short, because a session log holds
 request headers. Nightly or label-triggered, never on every push.
 
-**Open question, recorded rather than hidden.** `--blocked-origins` is documented as
-being evaluated before `--allowed-origins`, so `*` may swallow the allowlist. Verify
-both polarities on your version: the agent must reach `http://localhost:3000/en` and
-must not reach an external origin. If the permit fails, drop `--blocked-origins` and
-rely on the allowlist alone.
+**Open question, asked and then answered.** `--blocked-origins` is documented as
+being evaluated before `--allowed-origins`, so `*` might swallow the allowlist. It
+does. Measured on @playwright/mcp 0.0.80: with both flags the agent could not load
+`http://localhost:3000/en`. `*` is converted to the glob `*://*/**` and its route is
+registered last, and Playwright resolves routes last-registered-first. So the
+blocklist is gone and the allowlist stands alone. Re-verify both polarities on your
+version — reach `http://localhost:3000/en`, refuse an external origin — and record
+the result here rather than trusting this paragraph.
 ```
 
 ```bash
@@ -725,7 +754,8 @@ grep -c 'Lesson 23.7' docs/architecture.md
 **Verify §7:**
 
 - [ ] The grep returns `1`. One section per lesson, appended, never rewriting another lesson's.
-- [ ] The section names all five flags, the capability ceiling and the `pull_request_target` rule.
+- [ ] The section names all four flags **and the one deliberate absence**, the capability ceiling
+      and the `pull_request_target` rule.
 - [ ] The "Open question" paragraph records which configuration **your** version actually needed.
       A document saying what a tool is supposed to do is worth less than one saying what it did.
 
@@ -754,34 +784,37 @@ git commit -m "test(agentic): isolated origin-restricted Playwright MCP, selecto
 cd /Users/you/path/to/blame-the-tech
 
 # 1. The config is valid JSON and declares the server
-npx jq -e '.mcpServers.playwright.command' next-app/.mcp.json
+jq -e '.mcpServers.playwright.command' next-app/.mcp.json
 # Expected: "npx"
 
-# 2. All five guardrail flags are present. This is the check that notices a
+# 2. All four guardrail flags are present. This is the check that notices a
 #    "tidy up the config" commit, and it belongs in CI rather than in memory.
-for flag in --isolated --allowed-origins --blocked-origins --save-trace --storage-state; do
-  npx jq -e --arg f "$flag" '.mcpServers.playwright.args | index($f) != null' \
+for flag in --isolated --allowed-origins --save-session --storage-state; do
+  jq -e --arg f "$flag" '.mcpServers.playwright.args | index($f) != null' \
     next-app/.mcp.json > /dev/null && echo "$flag present" || echo "$flag MISSING"
 done
-# Expected: five "present" lines
+# Expected: four "present" lines. NOT --save-trace: that flag does not exist, and a
+#           config carrying it exits `error: unknown option '--save-trace'`.
 
-# 3. NEGATIVE — --blocked-origins is not merely present, it is `*`
-npx jq -r '.mcpServers.playwright.args as $a
-  | $a[($a | index("--blocked-origins")) + 1]' next-app/.mcp.json
-# Expected: *
-#           An allowlist without a deny-all is a hint, not a boundary, and the
-#           next person to read the config will treat it as one.
+# 3. NEGATIVE — there is NO --blocked-origins, and this is the measured result rather
+#    than a preference. `*` becomes the glob `*://*/**`, its route is registered last,
+#    and Playwright resolves routes last-registered-first — so it aborted the
+#    allowlisted origins too and the agent could not load localhost:3000. KC 6.
+jq -r '.mcpServers.playwright.args | index("--blocked-origins") // "absent"' next-app/.mcp.json
+# Expected: absent
+#           An allowlist that is present already denies every origin not on it, so
+#           nothing was lost. Check 4 is what proves the permit still works.
 
 # 4. NEGATIVE — no origin outside localhost is allowed
-npx jq -r '.mcpServers.playwright.args as $a
+jq -r '.mcpServers.playwright.args as $a
   | $a[($a | index("--allowed-origins")) + 1]' next-app/.mcp.json
 # Expected: localhost:3000;localhost:8080
 #           Semicolons, not commas. No 127.0.0.1 — one spelling, one way in.
-npx jq -r '.mcpServers.playwright.args[]' next-app/.mcp.json | grep -c 'https\?://'
+jq -r '.mcpServers.playwright.args[]' next-app/.mcp.json | grep -c 'https\?://'
 # Expected: 0 — there is no absolute URL in the guardrails at all
 
 # 5. NEGATIVE — the committed config carries no environment block and no secret
-npx jq -e '.mcpServers.playwright.env' next-app/.mcp.json; echo "exit=$?"
+jq -e '.mcpServers.playwright.env' next-app/.mcp.json; echo "exit=$?"
 # Expected: null and exit=1 — the key does not exist
 grep -rnE "(pass(word)?|secret|token)[[:space:]]*[:=][[:space:]]*['\"][^'\"$]{8,}" next-app/.mcp.json \
   || echo 'no literal credential — correct'
@@ -824,9 +857,9 @@ docker compose -f wordpress-headless/docker-compose.yml run --rm -T wpcli \
 
 # 11. The ESLint rule is active on e2e/ and nowhere else
 cd next-app
-npx eslint --print-config e2e/smoke.spec.ts | npx jq -r '.rules["no-restricted-syntax"][0]'
-# Expected: error
-npx eslint --print-config src/app/api/health/route.ts | npx jq -r '.rules["no-restricted-syntax"] // "absent"'
+npx eslint --print-config e2e/smoke.spec.ts | jq -r '.rules["no-restricted-syntax"][0]'
+# Expected: 2 — --print-config prints numeric severities, never the names
+npx eslint --print-config src/app/api/health/route.ts | jq -r '.rules["no-restricted-syntax"] // "absent"'
 # Expected: absent — src/** has no locators, so the rule has nothing to say there
 
 # 12. NEGATIVE — the rule FIRES on a non-compliant locator
@@ -873,10 +906,10 @@ rule rather than the probe — the probe is correct code and the rule is the thi
 
 ## Control Questions
 
-1. The lesson configures `--blocked-origins *` **and** `--allowed-origins`, then spends a
-   Verification check proving the agent can still reach `localhost:3000`. Explain why the permit
-   check is more important than the deny check here, and describe what you would do — and record —
-   if the permit check failed.
+1. An earlier draft of this lesson configured `--blocked-origins *` **and** `--allowed-origins`,
+   and reasoned that the deny-all *might* swallow the permit. Measurement showed it does. Explain
+   why the permit check is the one that had to be run, and what the same reasoning says about any
+   guardrail whose allow-path you have never watched succeed.
 2. A charter stalls with "I could not find the submit button", and the button is plainly visible
    in your browser. Give the first hypothesis you should test, say which earlier module's work
    that hypothesis is about, and name the change that would fix the *product* rather than the

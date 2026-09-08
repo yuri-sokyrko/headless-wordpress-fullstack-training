@@ -1377,20 +1377,27 @@ E2E_MODE=1 npx playwright test
 
 # 11. NEGATIVE — with E2E_MODE unset, global-setup changes NOTHING. Proved by
 #     damaging the database first and checking the damage survives.
-VICTIM=$(docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli \
+#     BOTH -f flags: an explicit -f overrides the COMPOSE_FILE in
+#     wordpress-headless/.env, and base-only makes `run` recreate `db`.
+VICTIM=$(docker compose -f ../wordpress-headless/docker-compose.yml \
+  -f ../wordpress-headless/docker-compose.dev.yml run --rm -T wpcli \
   wp post list --post_type=incident --posts_per_page=1 --format=ids | tr -d '\r')
-docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli \
+docker compose -f ../wordpress-headless/docker-compose.yml \
+  -f ../wordpress-headless/docker-compose.dev.yml run --rm -T wpcli \
   wp post delete "$VICTIM" --force
-docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli \
+docker compose -f ../wordpress-headless/docker-compose.yml \
+  -f ../wordpress-headless/docker-compose.dev.yml run --rm -T wpcli \
   wp post list --post_type=incident --format=count
 # Expected: 39
 npx playwright test -g 'redirects to /en'
 # Expected: 1 passed, and the "E2E_MODE is not \"1\"" line
-docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli \
+docker compose -f ../wordpress-headless/docker-compose.yml \
+  -f ../wordpress-headless/docker-compose.dev.yml run --rm -T wpcli \
   wp post list --post_type=incident --format=count
 # Expected: still 39 — the setup did not touch the database. That is the interlock.
 E2E_MODE=1 npx playwright test -g 'redirects to /en'
-docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli \
+docker compose -f ../wordpress-headless/docker-compose.yml \
+  -f ../wordpress-headless/docker-compose.dev.yml run --rm -T wpcli \
   wp post list --post_type=incident --format=count
 # Expected: 40 — armed, it restored the fixture.
 

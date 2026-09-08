@@ -781,7 +781,7 @@ have mattered.
 - [Martin Fowler: Technical Debt Quadrant](https://martinfowler.com/bliki/TechnicalDebtQuadrant.html)
   — the difference between deliberate and inadvertent debt; owning the preview code is the
   deliberate-and-prudent quadrant, and this ADR is what makes it deliberate
-- [Faust.js: migrating away](https://faustjs.org/docs/next/migration) — read the migration guide of
+- [Faust.js: migrating away](https://faustjs.org/docs/how-to/migrate-from-legacy-faust/) — read the migration guide of
   anything before you adopt it. What it does *not* cover is the useful signal
 - [WP-CLI `plugin uninstall`](https://developer.wordpress.org/cli/commands/plugin/uninstall/) — the
   `--deactivate` flag and what "uninstall" runs that "deactivate" does not

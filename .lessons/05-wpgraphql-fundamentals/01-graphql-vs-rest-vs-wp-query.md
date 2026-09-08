@@ -246,7 +246,7 @@ The argument mapping, which is most of what you need to know to write a query:
 | `'author' => 4` | `where: { author: 4 }` |
 | `'date_query' => [...]` | `where: { dateQuery: { after: { year: 2025 } } }` |
 | `'tax_query' => [...]` | **not in core WPGraphQL** — see Lesson 05.2 §6 |
-| `'meta_query' => [...]` | **not in core WPGraphQL** — deliberately, and Lesson 06.4 says why |
+| `'meta_query' => [...]` | **not in core WPGraphQL** — deliberately, and Lesson 05.2 §6 says why |
 
 Everything you know about performance survives intact. `wp_postmeta.meta_value` still has no
 usable index, so a filter on `downtime_minutes` is still the slow query you `EXPLAIN`ed in
@@ -600,7 +600,7 @@ cd .. && ls -l queries.graphql && git status --short | grep -c queries.graphql
   ideas expressed in WordPress terms, by the plugin's authors
 - [WPGraphQL — Interacting with WPGraphQL](https://www.wpgraphql.com/docs/interacting-with-wpgraphql) —
   the request shape, `GET` versus `POST`, batching, and the GraphiQL IDE
-- [WPGraphQL — Posts and Pages](https://www.wpgraphql.com/docs/posts) — the full connection
+- [WPGraphQL — Posts and Pages](https://www.wpgraphql.com/docs/posts-and-pages) — the full connection
   argument reference; the authoritative version of Key Concept 5's mapping table
 - [WordPress REST API Handbook](https://developer.wordpress.org/rest-api/) — worth skimming
   `_embed` and `_fields`, so your comparison in Step 5 is fair to REST

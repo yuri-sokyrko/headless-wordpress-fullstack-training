@@ -369,7 +369,7 @@ commercial landing page is the realistic case where both belong: commerce facts 
 so they are queryable and cannot be reordered into the wrong place, narrative in blocks between
 them so marketing can rewrite it without a ticket.
 
-**The cost, stated plainly: two editing surfaces on one page is a real tax on editors.** To
+**Two editing surfaces on one page is a real, ongoing tax on editors.** To
 change the price they use the sidebar field group, to change the narrative they use the block
 canvas, and nothing in wp-admin explains which is which. They will edit the wrong one and be
 right to be annoyed. Mitigations, none free: a `theme.json` palette limiting what is insertable
@@ -630,13 +630,17 @@ query ScapegoatById($id: ID!) {
 # editor preview. Change one, change the other — Lesson 23.5 has the contract test.
 # `...IncidentCardFields` and not a new field set: the ticker renders title,
 # severity, downtime and environment, which is exactly that fragment.
+# `severityIn` is the one narrow taxonomy argument the plugin registers (Lesson
+# 06.1 §9). No `taxQuery` exists in this schema — 05.2 §6 refuses the extension
+# that would add one. A `[String!]!` variable is accepted in a `[String]`
+# position, so the variable keeps its own non-null contract with the component.
 query IncidentTicker($first: Int!, $severities: [String!]!) {
   incidents(
     first: $first
     where: {
       status: PUBLISH
       orderby: { field: DATE, order: DESC }
-      taxQuery: { taxArray: [{ taxonomy: SEVERITY, field: SLUG, terms: $severities }] }
+      severityIn: $severities
     }
   ) {
     nodes {
@@ -740,8 +744,10 @@ export async function IncidentTicker({ block, locale }: BlockComponentProps<'Btt
     typeof rawCount === 'number' && rawCount >= 1 ? Math.min(Math.trunc(rawCount), 20) : DEFAULT_COUNT;
 
   // Drop nulls and anything that is not a real severity slug, then fall back.
-  // An empty array here would produce a taxQuery matching nothing, which reads
-  // as "the ticker is broken" rather than "the editor cleared the filter".
+  // An empty array here would reach `severityIn` and match nothing — the server
+  // allowlist narrows to zero rather than widening to everything (Lesson 06.1
+  // §9) — which reads as "the ticker is broken" rather than "the editor cleared
+  // the filter". So the fallback happens here, on the way out.
   const chosen = (attributes?.severities ?? [])
     .map((value) => SEVERITY_ORDER.find((slug) => slug === value))
     .filter((slug): slug is SeverityLevel => slug !== undefined);
@@ -868,7 +874,7 @@ export function HobtCta({ block, locale }: BlockComponentProps<'BttHobtCta'>) {
 }
 ```
 
-> **"With its CTA still inert until Module 16" means the lead, not the link.** The Quick
+> **This block's CTA is not what "still inert until Module 16" refers to.** The Quick
 > Overview's bullet is about `HobtCtaBand`'s "Get Demo" — a dialog trigger with no dialog behind
 > it, which is why it carries `aria-disabled` and a visible explanation. This block's `Button` is
 > plain navigation to the target an editor chose, so making *it* inert would be inventing a
@@ -1449,6 +1455,6 @@ which is correct and looks identical to "not registered". Re-run `wp blame seed`
   — why `idType: DATABASE_ID` is needed for a term ID and a bare `id:` returns `null`
 - [Next.js — `revalidateTag`](https://nextjs.org/docs/app/api-reference/functions/revalidateTag)
   — the function Key Concept 9's right-hand column is waiting for, and Module 18 calls
-- [WordPress page templates and the template hierarchy](https://developer.wordpress.org/themes/templates/page-templates/)
+- [WordPress page templates and the template hierarchy](https://developer.wordpress.org/themes/classic-themes/templates/page-template-files/)
   — worth rereading against Key Concept 8, because the hybrid page is the thing a page template
   could not express

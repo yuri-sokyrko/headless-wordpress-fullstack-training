@@ -208,18 +208,20 @@ import { submitIncident } from '@/actions/incidents';
 ```
 
 The test fails at **import time**, before a single assertion runs, with a message about Client
-Components in a file that has nothing to do with the client. Two ways out, and the choice is not
+Components in a file that has nothing to do with the client. Three ways out, and the choice is not
 obvious:
 
 | Option | What it costs |
 |---|---|
 | `vi.mock` every `server-only` module the subject imports, **with a factory** — so Vitest never loads the original | verbose, and you must mock a module even when you did not want to fake it. But every mock is a spy you probably wanted anyway, and the guard stays intact for anything you forgot |
 | Alias `server-only` to an empty module in `vitest.config.ts` | one line, and the guard no longer fires **anywhere in the test run** — including in a test that accidentally imports a module holding `WP_APP_TOKEN` |
+| `ssr: { resolve: { conditions: ['react-server'] } }` | the narrow one, and the one you would not guess. It satisfies the guard per-resolution instead of deleting it. **`resolve.conditions` alone does nothing** — `server-only` is externalised, so Node picks the condition and only the `ssr` key reaches it. Measured; do not "simplify" it |
 
 Lesson 23.3 takes the first for Server Actions, because the mocks are the assertions. Lesson 23.2
 takes the second, narrowly, to test `client.ts` at all — and pays for it with a `grep` proving no
-other test imports a secret-holding module. Both are recorded in the strategy document, because
-the second one is a hole somebody will otherwise widen.
+other test imports a secret-holding module. The third is strictly safer and arrived too late to
+rewrite a lesson around; if you are starting fresh, start there. All three are recorded in the
+strategy document, because the second one is a hole somebody will otherwise widen.
 
 This is also why 12.2's house rule — *the `server-only` guard names files, not directories* —
 was worth the argument. `tags.ts` and `errors.ts` hold no secret and do no I/O, so they carry no
@@ -508,12 +510,14 @@ lifted out first, and say whether the component got easier to read.
 
 `src/lib/graphql/client.ts`, `src/lib/auth/cookies.ts`, `src/lib/auth/session.ts` and
 `src/lib/auth/guards.ts` throw on import outside a `react-server` environment, which a Vitest
-worker is not. Two ways past it, both recorded here because the second one is a hole:
+worker is not. Three ways past it, all recorded here because the second one is a hole:
 
 - `vi.mock('<module>', () => ({ … }))` with a factory — Vitest never loads the original.
   Used by suite 2 for Server Actions, where the mocks are the assertions.
 - aliasing `server-only` to an empty module in `vitest.config.ts` — TODO: say which tests need
   this, and what compensating check stops a test importing a module that holds a token.
+- `ssr: { resolve: { conditions: ['react-server'] } }` — satisfies the guard rather than
+  removing it. TODO: say whether you would migrate to this, and what it would let you delete.
 
 ### Decision table
 
@@ -869,10 +873,10 @@ most, because everything Lesson 12.1 decided disappears without an error anywher
 - [Martin Fowler — The Test Pyramid](https://martinfowler.com/bliki/TestPyramid.html) — the
   original bliki entry. Read it noticing what it assumes: one deployable, one language, one
   process
-- [Martin Fowler — On the Diverse and Fantastical Shapes of Testing](https://martinfowler.com/articles/2021/test-shapes.html)
+- [Martin Fowler — On the Diverse and Fantastical Shapes of Testing](https://martinfowler.com/articles/2021-test-shapes.html)
   — the honest answer to "is the pyramid still right", and the argument that the shape follows
   from your architecture rather than from a diagram
-- [Kent C. Dodds — Write tests. Not too many. Mostly integration.](https://kentcdodds.com/blog/write-tests-not-too-many-mostly-integration)
+- [Kent C. Dodds — Write tests. Not too many. Mostly integration.](https://kentcdodds.com/blog/write-tests)
   — the "testing trophy" counter-position. Read it and notice that its "integration" is this
   course's suite 1 with jsdom, not `wp-phpunit`; the disagreement is mostly vocabulary
 - [Google Testing Blog — Flaky Tests at Google and How We Mitigate Them](https://testing.googleblog.com/2016/05/flaky-tests-at-google-and-how-we.html)

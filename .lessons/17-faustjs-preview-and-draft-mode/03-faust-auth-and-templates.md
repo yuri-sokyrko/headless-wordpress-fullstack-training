@@ -855,12 +855,12 @@ not happen; check you are not passing a jar from Step 3.
 
 ## Learn More
 
-- [Faust.js: authentication](https://faustjs.org/docs/next/guides/post-authentication) — `useAuth`,
+- [Faust.js: authentication](https://faustjs.org/docs/how-to/authentication/) — `useAuth`,
   the `redirect` and `local` strategies, and the API route that does the exchange; read it before
   you decide how much Step 3's finding matters
-- [Faust.js: templates and the hierarchy](https://faustjs.org/docs/next/reference/wp-templates) —
+- [Faust.js: templates and the hierarchy](https://faustjs.org/blog/understanding-the-templating-system-in-faust-js/) —
   the resolution order Step 2's fallback experiment walks, in the maintainers' own words
-- [Faust.js: `getWordPressProps`](https://faustjs.org/docs/next/reference/functions/getWordPressProps)
+- [Faust.js: `getWordPressProps`](https://faustjs.org/docs/reference/get-wordpress-props/)
   — the function that runs the seed query, and the only place a `revalidate` can be set
 - [Apollo Client: `HttpLink`](https://www.apollographql.com/docs/react/api/link/apollo-link-http)
   — the `fetchOptions` surface, so you can confirm for yourself that Next's `next: { tags }` has no

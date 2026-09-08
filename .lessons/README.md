@@ -7,7 +7,8 @@ You already know Classic WordPress. This course rebuilds that knowledge on a hea
 and fills in everything around it — React, Next.js, TypeScript, GraphQL, Docker, testing,
 CI/CD — in the order you need it, using one real application as the spine.
 
-**New here?** Read the root [README.md](../README.md) for prerequisites, then
+**New here?** Read the root [README.md](../README.md) for prerequisites — including the accounts
+and licences table, which is worth five minutes now rather than a surprise in Module 04 — then
 [PROJECT.md](PROJECT.md) for what you are building. Then start
 [Module 01](01-kickoff/README.md).
 

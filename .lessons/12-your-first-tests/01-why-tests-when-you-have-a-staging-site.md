@@ -129,8 +129,8 @@ two strings are the same string.
 | Contract surface | Fails as | Built in | Covered by |
 |---|---|---|---|
 | The GraphQL schema | a field your query selects stops existing; codegen still passes because `src/gql/` was generated from a stale `wordpress-headless/schema.graphql` | Lessons 06.3, 10.2 | `npm run codegen:check` today; a real contract test in Lesson 23.5 |
-| The cache-tag strings | `incident:dns` in TypeScript, `incident-dns` in PHP. HTTP 200, no log line, permanently stale pages | Lessons 10.3, 18.2, 18.3 | Lesson 12.2 pins the TypeScript side; Lesson 23.5 pins both against each other |
-| The webhook signature | an HMAC computed over a differently-serialised payload. Every revalidation is rejected as a forgery, which looks exactly like a caching bug | Lesson 18.3 | Lesson 23.5 |
+| The cache-tag strings | `incident:dns` in TypeScript, `incident-dns` in PHP. HTTP 200, no log line, permanently stale pages | Lessons 10.3, 18.2, 18.3 | Lesson 12.2 pins `tags.ts`, and nothing else can: WordPress sends identifiers and never builds a tag string (Lesson 18.3 §8), so there is only one side to pin |
+| The webhook signature | an HMAC computed over a differently-serialised payload. Every revalidation is rejected as a forgery, which looks exactly like a caching bug | Lesson 18.3 | Lessons 23.3 and 23.4 |
 
 Two things follow. First, "we have 90% coverage" is not a statement about this application; it is
 a statement about one of its halves. Second, the highest-value test in the whole course is the
@@ -582,8 +582,9 @@ self needs.
   is the ESM and transform-pipeline case from Key Concept 6 in its authors' words
 - [Jest — ECMAScript modules](https://jestjs.io/docs/ecmascript-modules) — read this before
   disagreeing with Key Concept 6; the "experimental" banner and the caveat list *are* the argument
-- [Playwright — why Playwright](https://playwright.dev/docs/why-playwright) — the multi-engine
-  and out-of-process design, and where `webServer` and `getByRole` come from
+- [Playwright](https://playwright.dev/) — the multi-engine pitch and where `getByRole` comes from.
+  The dedicated "why Playwright" page was folded into the homepage, so the out-of-process argument
+  now lives in [the architecture docs](https://playwright.dev/docs/test-webserver)
 - [Cypress — Playwright comparison](https://docs.cypress.io/app/references/trade-offs) — the
   trade-offs from the other side, so Key Concept 7's concession is not just this course being
   polite

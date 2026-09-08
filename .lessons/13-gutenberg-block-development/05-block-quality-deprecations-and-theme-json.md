@@ -419,10 +419,12 @@ every user with `edit_posts`. Restrict `key` to an explicit list, and return `nu
 
 Two honest caveats, and they are why this block is optional:
 
-- **Which attributes core replaces server-side depends on your WordPress version.** Bindings
-  shipped in 6.5 with replacement limited to a fixed set of core block attributes; later releases
-  generalised it to attributes marked `"role": "content"`. Declare the role, and **verify on your
-  own install** rather than trusting a tutorial — including this one.
+- **Core will not substitute a bound value on a custom block — not on 6.8, and not yet on any
+  shipped version.** `WP_Block::process_block_bindings()` opens with a hard-coded literal
+  (paragraph, heading, image, button on 6.8; seven core blocks on 6.9 and 7.0) and returns
+  immediately for any block name outside it. `"role": "content"` is an **editor** hint, for
+  content-only locking, and core's binding code never reads it. 6.9 adds a
+  `block_bindings_supported_attributes` filter — that, not the role, is the supported opt-in.
 - **In this architecture the payoff is small.** Bindings resolve on the WordPress render path,
   and Module 14 reads `reviewSlug` and queries the review over GraphQL regardless. The binding
   improves wp-admin and Module 17's preview and changes nothing a visitor sees. Learn the
@@ -889,8 +891,8 @@ If you are doing it: `verdict` is sourced from the block's **root** element, wit
 
 `"source": "html"` with **no `selector`** means "the innerHTML of the block's root element", which
 is what makes the fixture's `<div class="wp-block-btt-tech-verdict-card">Trial.</div>` parse back
-to `verdict: 'Trial.'`. `"role": "content"` marks the attribute bindable on WordPress versions
-that generalise binding beyond core's own attributes.
+to `verdict: 'Trial.'`. `"role": "content"` declares the attribute *editable content* for the
+editor's content-only mode; it is not a server-side binding switch — Key Concept 8's first caveat.
 
 ```js
 // wordpress-headless/wp-content/plugins/blame-the-tech-blocks/src/tech-verdict-card/save.js
@@ -1034,9 +1036,10 @@ from the start precisely so that this step is a build and not an edit.
       is on top.
 - [ ] `blog-01` in the editor shows the verdict card reading `Trial.` with no validation warning,
       which proves the selector-less `source: 'html'` round-trips against the frozen fixture.
-- [ ] Whether core substitutes a bound value server-side depends on your WordPress version — Key
-      Concept 8's first caveat. **Verify it on your install rather than assuming**, and record
-      the result in `docs/content-model.md` either way.
+- [ ] The rendered card shows the **saved** text, not the bound value — core's allowlist has no
+      entry for `btt/tech-verdict-card`, so `get_value_callback` never runs. That is the expected
+      result on 6.8, and Key Concept 8's first caveat says why. Record in
+      `docs/content-model.md` that the binding serves the editor, not the output.
 - [ ] Nothing on the Next side changed, with or without this step.
 
 ---
@@ -1214,4 +1217,4 @@ understand block deprecations.
 - [`wp i18n make-pot`](https://developer.wordpress.org/cli/commands/i18n/make-pot/) — every flag, including the `--exclude` behaviour that keeps `build/` out of your template
 - [`wp i18n make-json`](https://developer.wordpress.org/cli/commands/i18n/make-json/) — why the editor needs JSON rather than `.mo`, and the hashed filename convention
 - [`@wordpress/i18n`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-i18n/) — `__`, `_x`, `_n`, `sprintf` and `setLocaleData`, with the placeholder rules spelled out
-- [Block Bindings API](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-bindings/) — `register_block_bindings_source()`, `get_value_callback`'s signature, and the current list of attributes core will substitute. **Check this list against your own WordPress version** before relying on Step 8
+- [Block Bindings API](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-bindings/) — `register_block_bindings_source()`, `get_value_callback`'s signature, and the allowlist of attributes core will substitute. Read it next to `wp-includes/class-wp-block.php`, where the list is a literal: the source is shorter than the docs and settles Key Concept 8's caveat in one screen

@@ -432,7 +432,7 @@ export default defineConfig({
 
     // Overriding `exclude` REPLACES Vitest's defaults rather than extending them,
     // so node_modules has to be restated. e2e/ is the one that matters.
-    exclude: ['e2e/**', 'node_modules/**', '.next/**', 'scratch/**'],
+    exclude: ['e2e/**', 'node_modules/**', '.next/**'],
 
     coverage: {
       provider: 'v8',

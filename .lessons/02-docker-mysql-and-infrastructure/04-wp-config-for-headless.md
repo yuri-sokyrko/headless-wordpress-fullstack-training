@@ -476,8 +476,12 @@ environment switch and comments. Keeping both would leave two sources of truth f
 
 - [ ] `docker compose -f docker-compose.yml -f docker-compose.dev.yml config` prints the merged
       configuration with no error, and no longer contains `WORDPRESS_CONFIG_EXTRA` anywhere.
-- [ ] It contains `./wp-config.php:/var/www/html/wp-config.php:ro` twice — once for
-      `wordpress`, once for `wpcli`.
+- [ ] `docker compose --profile cli config | grep -c 'target: /var/www/html/wp-config.php'`
+      prints **2** — once for `wordpress`, once for `wpcli`. Both parts matter: Compose rewrites
+      short volume syntax into long form in `config` output, so grepping for the string you
+      typed (`./wp-config.php:/var/www/html/wp-config.php:ro`) finds nothing even when both
+      mounts are present; and without `--profile cli` the `wpcli` service is omitted from that
+      output altogether and you get `1`. Lesson 02.2 Key Concept 1.
 
 ### Step 4: Recreate the container and read the logs
 
@@ -669,9 +673,12 @@ docker compose run --rm wpcli wp theme list
 - [ ] `curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8080/`
       returns `302` to `http://host.docker.internal:3000/`. Nothing is listening there yet —
       you are testing WordPress's response, not Next's.
-- [ ] The same command against `/graphql` returns **`404`, not `302`**. WPGraphQL arrives in
-      Module 05, so 404 is correct today, and a 302 would mean Module 05's first query gets
-      HTML from Next instead of JSON. Checks 7–10 below prove the rest of the table.
+- [ ] The same command against `/graphql` redirects **inside `localhost:8080`**, never to
+      `:3000`. Module 02 still has plain permalinks, so what you actually get is a `301` to
+      `/graphql/` from WordPress's canonical redirect, and `/graphql/` answers `200`; once
+      Module 03.2 sets a permalink structure it becomes the `404` you would expect. Either way
+      a `302` to `:3000` would mean Module 05's first query gets HTML from Next instead of
+      JSON. Checks 7–10 below prove the rest of the table.
 
 ---
 
@@ -692,7 +699,9 @@ docker compose run --rm wpcli wp option get siteurl     # Expected: http://local
 
 # 3. NOT ONE literal credential in the file — everything comes from the environment
 grep -cE "^define\( *'DB_PASSWORD', *'" wp-config.php   # Expected: 0
-grep -c getenv wp-config.php                            # Expected: 15 or more
+# Count the HELPER calls, not getenv: every value goes through btt_env*(), so the
+# file calls getenv() exactly three times (once per helper) plus one comment.
+grep -cE 'btt_env(_opt|_bool)?\( *.[A-Z]' wp-config.php # Expected: 21
 
 # 4. The file is ignored, and is not staged
 git check-ignore -v wp-config.php
@@ -719,17 +728,21 @@ curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8080/
 curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8080/wp-json/
 # Expected: 200 and nothing after it
 curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8080/graphql
-# Expected: 404 and nothing after it. 404 is correct until Module 05 installs WPGraphQL;
-#           a 302 here would break the whole architecture.
+# Expected: 301 to http://localhost:8080/graphql/ — WordPress's own canonical
+#           redirect adding a trailing slash, because Module 02 still has PLAIN
+#           permalinks. Follow it and you get 200 (index.php's diagnostic page).
+#           Module 03.2 sets a permalink structure and this becomes 404.
+#           What must be true TODAY: the host is localhost:8080, never :3000.
 
 # 9. NEGATIVE — the old config mechanism is gone, so there is one source of truth
 docker compose -f docker-compose.yml -f docker-compose.dev.yml config | grep -c WORDPRESS_CONFIG_EXTRA
 # Expected: 0
 
 # 10. The whole thing survives a restart
-docker compose down && docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait
+docker compose down && docker compose up -d --wait
 docker compose run --rm wpcli wp option get blogname
-# Expected: Blame The Tech
+# Expected: `up --wait` exits 0 — the cli profile from Lesson 02.2 keeps
+#           run-on-demand containers out of the wait set — then: Blame The Tech
 ```
 
 Check 7 is the one people get wrong. They see `302` for `/wp-admin/`, assume the redirect is
@@ -766,7 +779,7 @@ distinguishes a working guard from a broken one.
 - [`getenv()` in the PHP manual](https://www.php.net/manual/en/function.getenv.php) — worth two
   minutes for the return-value note alone: `false` on failure, which is why the helpers in Step 2
   check for it explicitly
-- [Theme basics](https://developer.wordpress.org/themes/basics/) — the `style.css` header and
+- [Theme basics](https://developer.wordpress.org/themes/classic-themes/basics/) — the `style.css` header and
   template hierarchy pages, which together explain why a theme with two files and no CSS is
   still valid
 - [`wp_redirect()` and `wp_safe_redirect()`](https://developer.wordpress.org/reference/functions/wp_safe_redirect/) —

@@ -712,7 +712,7 @@ They are audited by reading the rendered DOM, and by Module 22's axe run.
 | Gap | Owner |
 |---|---|
 | Focus is not moved after a client-side navigation | Module 22 (Lesson 11.4 Key Concept 7 describes the fix and its limits) |
-| Heading levels inside `dangerouslySetInnerHTML` content cannot be audited | Module 14 |
+| Heading levels inside `dangerouslySetInnerHTML` content cannot be audited | Module 14 makes them auditable by parsing the blocks; controlling them stays with Module 22 |
 | No colour-contrast measurement of the severity tokens against their backgrounds | Module 22 |
 | No screen-reader pass with VoiceOver or NVDA | Module 22 |
 ```

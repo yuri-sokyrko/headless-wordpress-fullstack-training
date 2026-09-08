@@ -221,8 +221,11 @@ Location: `page` **and** `page_template == templates/hobt.php`.
 
 ### 4.5 `Site Settings` (options page)
 
-`acf_add_options_page()` + `show_in_graphql`, `graphql_field_name: siteSettings`, exposed on
-the **root query** so it can be fetched once in the root layout.
+`acf_add_options_page()` + `show_in_graphql`, page `graphql_field_name: siteSettings`, field
+group `graphql_field_name: siteChrome` — **they must differ**, or both resolve to the type
+`SiteSettings`, the second registration loses silently, and the fields land on an orphan
+`SiteSettings_Fields` interface nothing implements. Reached as `siteSettings { siteChrome { … } }`
+on the **root query**, so it can be fetched once in the root layout.
 
 | ACF field name | Type | GraphQL field | Notes |
 |---|---|---|---|
@@ -322,6 +325,7 @@ Registered in Module 06.
 | Name | Kind | On | Auth | Notes |
 |---|---|---|---|---|
 | `blameScore` | field → `Float` | `Incident` | public | Computed from severity weight × `blameConfidence` × `downtimeMinutes`. Teaches `register_graphql_field` and resolver caching. |
+| `severityIn` | connection `where` arg → `[String]` | `RootQueryToIncidentConnectionWhereArgs` | public | The **only** taxonomy `where` argument this project registers. Incoming slugs are intersected with the closed severity set in §2, so an unrecognised slug narrows to zero rows rather than widening to all of them. There is no generic `taxQuery` — Lesson 05.2 §6. Consumers: `HomepageFeeds` (10.5) and `IncidentTicker` (14.4); every other facet traverses from the term. |
 | `createIncident` | mutation | — | **user JWT**, `create_incidents` | Forces `post_status = 'pending'` and `post_author = get_current_user_id()`. Ignores `is_verified`. |
 | `registerDeveloper` | mutation | — | **app token** (server-to-server) | Creates a user with role `incident_reporter`, `btt_verified = 0`, sends a verification mail. |
 | `verifyDeveloper` | mutation | — | **app token** (server-to-server) | Module **15**, not 06. Consumes the single-use code `registerDeveloper` mailed, **sets the account password** — `registerDeveloper` generates one and never discloses it, so this is where the user first gets a usable credential — sets `btt_verified = 1`, and returns the same generic payload for a bad, expired or already-used code. |
@@ -352,7 +356,14 @@ exists to gate.
 | **`blame-the-tech-core`** | **yes** | §1–§7 — everything above |
 | **`blame-the-tech-blocks`** | **yes** | The six Gutenberg blocks (Modules 13–14) |
 
-Deliberately **not** installed: **WPGraphQL CORS.** The browser never talks to `/graphql` —
+Deliberately **not** installed: **`wp-graphql-tax-query`.** It would add
+`where: { taxQuery: { taxArray: [ ... ] } }` to every post-object connection, which is a
+taxonomy-join builder handed to anonymous callers — the surface core WPGraphQL declines to ship
+and Lesson 05.2 §6 declines to re-open. Lesson 06.1 §9 registers one narrow, allowlisted
+`severityIn` instead (§7). A query using `taxQuery` against this schema is a validation error,
+and Lesson 23.5's `@graphql-eslint` gate fails the build on it.
+
+Also deliberately **not** installed: **WPGraphQL CORS.** The browser never talks to `/graphql` —
 only the Next.js server runtime does. That is a load-bearing architectural property, not an
 accident: there is no GraphQL endpoint in the client bundle, therefore no CORS policy to get
 wrong and no public introspection surface reachable from the app's own traffic. Lesson 15.1

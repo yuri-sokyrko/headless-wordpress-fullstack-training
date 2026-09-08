@@ -31,10 +31,10 @@ does not retry politely.
 
 By the end of this lesson you will have:
 
-- `wordpress-headless/docker-compose.yml` with five services, one network, two named volumes
+- `wordpress-headless/docker-compose.yml` with five services, one network, three named volumes
   and three bind mounts
 - `wordpress-headless/docker-compose.dev.yml` — the development-only overlay
-- `wordpress-headless/php.ini` and `uploads.ini`, mounted into the WordPress container
+- `wordpress-headless/php.ini` and `uploads.ini`, mounted into both PHP containers
 - A `db` healthcheck that `wordpress` genuinely waits on, via the long form of `depends_on`
 - All four long-running services reporting `running` in `docker compose ps`, with `db` marked
   `(healthy)`
@@ -106,6 +106,13 @@ The five services and why each exists:
 > same database credentials — the standard pattern, and it keeps the `wordpress` image
 > unmodified until Module 24 builds a real production image. From this lesson onward, every
 > `wp` command in this course is `docker compose run --rm wpcli wp …`.
+>
+> `wpcli` carries `profiles: ['cli']`, which is what makes "run-on-demand" true rather than
+> aspirational: without it, `up` starts the container, its default command exits, and
+> `up -d --wait` returns `1`. The cost is that a profile-gated service is invisible to
+> `up`, `ps` **and `docker compose config`** unless you ask for it — so any check that inspects
+> the `wpcli` service needs `docker compose --profile cli config`. `docker compose run` turns
+> the profile on for you, so nothing you type day to day changes.
 
 ### 2. Service names are hostnames — this is the whole networking model
 
@@ -259,6 +266,25 @@ Structuring the files this way now means the production deploy has nothing to re
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
+**The half of this that bites, and the one-line cure.** Typing both flags every time is tedious;
+*forgetting* them on some commands and not others is a bug. Compose compares the service
+definition it is given against the container that is running, so a bare
+`docker compose run --rm wpcli wp …` — which sees only the base file — decides `db` has changed,
+**recreates it**, and quietly takes the published `3306` away with it. Your next `EXPLAIN` from a
+host client fails for a reason nothing on screen mentions.
+
+`COMPOSE_FILE` in `.env` (Step 3) removes the choice. Compose reads `COMPOSE_*` variables from
+`.env` before it resolves which files to load, so every bare invocation loads both:
+
+| Invocation | Files loaded | `db` published? |
+|---|---|---|
+| `docker compose up -d`, with `COMPOSE_FILE` set | both | yes |
+| `docker compose run --rm wpcli wp …`, with it set | both | yes — and no recreate |
+| `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` | both | yes — an explicit `-f` still wins |
+| `docker compose -f docker-compose.yml up -d` | base only | no — one flag still overrides, which is §5's whole point |
+
+An explicit `-f` always beats the variable, so nothing you have already typed changes meaning.
+
 ### 6. `env_file` versus `environment`
 
 Both inject environment variables. Only one keeps secrets out of git.
@@ -329,7 +355,7 @@ git check-ignore -v .env
 
 **Verify §1:**
 
-- [ ] The output names a rule from `.gitignore`, something like `../.gitignore:78:.env*   .env`.
+- [ ] The output names a rule from `.gitignore` — currently `../.gitignore:80:.env   .env`.
 - [ ] If there is **no output**, stop. `.env` is not ignored. Fix the root `.gitignore` before
       you continue — do not "fix it afterwards".
 
@@ -361,6 +387,15 @@ Paste those two lines into `.env` alongside the rest:
 ```dotenv
 # wordpress-headless/.env
 # GITIGNORED. Never commit this file. Lesson 02.5 explains every variable in full.
+
+# ── Compose itself ───────────────────────────────────────────────────
+# Not a WordPress setting. Compose reads COMPOSE_* variables out of this file
+# BEFORE it resolves anything else, so this one line makes every bare
+# `docker compose …` in this course behave as if you had typed both -f flags.
+# Without it, `docker compose run --rm wpcli …` sees a different `db` than
+# `up -f … -f … ` created, decides the service changed, and RECREATES it —
+# silently dropping the published 3306 that Lesson 02.3 needs. See §5.
+COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml
 
 # ── Database ─────────────────────────────────────────────────────────
 MYSQL_DATABASE=btt
@@ -460,8 +495,10 @@ services:
   db:
     image: mysql:8.0
     command:
-      # Pinned to 8.0, where this flag still exists. Some MySQL clients in the
-      # WordPress/PHP ecosystem still expect the older auth plugin.
+      # Pinned to 8.0, where this flag still exists. It is NOT for PHP: mysqlnd
+      # 8.3 in the wordpress image connects to caching_sha2_password accounts
+      # perfectly well. It is for third-party GUI clients, and MySQL 8.0.46
+      # already logs both this option and the plugin as deprecated at boot.
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -513,6 +550,12 @@ services:
     # The stock wordpress image has no WP-CLI. This service provides it.
     # Run with:  docker compose run --rm wpcli wp <command>
     image: wordpress:cli-php8.3
+    # Run-on-demand, and the profile is what makes that true. Without it `up`
+    # starts this container too, its default command (`wp shell`) exits, and
+    # `up -d --wait` then reports "container wpcli-1 exited" and returns 1.
+    # `docker compose run` activates a service's own profile, so every
+    # `run --rm wpcli` in this course keeps working unchanged.
+    profiles: ['cli']
     depends_on:
       db:
         condition: service_healthy
@@ -542,6 +585,11 @@ services:
       - ./wp-content/themes:/var/www/html/wp-content/themes
       - ./wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins
       - btt-uploads:/var/www/html/wp-content/uploads
+      # BOTH PHP config files, same as the web container. uploads.ini carries
+      # memory_limit=512M, and `wp media import` in Lesson 04.5 sideloads
+      # through WP-CLI — leave it out and WP-CLI runs at the image default
+      # 128M while Apache gets 512M, which is a confusing way to fail.
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
       - ./php.ini:/usr/local/etc/php/conf.d/zz-btt.ini:ro
     extra_hosts:
       - 'host.docker.internal:host-gateway'
@@ -561,14 +609,18 @@ networks:
 
 - [ ] `docker compose config` prints the merged configuration with no error.
 - [ ] In that output, `WORDPRESS_DB_HOST` is `db:3306`.
-- [ ] In that output, the `db` healthcheck test still contains the literal string
-      `$MYSQL_ROOT_PASSWORD` — **not** your actual password. If you see the password, you wrote
-      `$` where you needed `$$`.
+- [ ] In that output, the `db` healthcheck test reads `-p"$$MYSQL_ROOT_PASSWORD"` — Compose
+      re-escapes the literal `$`, so you see **two** of them and **not** your actual password.
+      If you see the password, you wrote `$` where you needed `$$`.
 - [ ] `docker compose config --volumes` lists **three** volumes: `btt-db-data`, `btt-uploads`
-      and `btt-wp-core`.
-- [ ] `btt-wp-core:/var/www/html` appears **twice** in the file — once under `wordpress`, once
-      under `wpcli`. Once is worse than never: the two containers would then disagree about
-      what WordPress is.
+      and `btt-wp-core`, in any order.
+- [ ] `docker compose --profile cli config | grep -c 'source: btt-wp-core'` prints **2** — once
+      under `wordpress`, once under `wpcli`. Two details make the obvious version of this check
+      lie to you. Compose rewrites short volume syntax into long form in `config` output, so
+      grepping for the `btt-wp-core:/var/www/html` you typed finds nothing even when the file is
+      right; and `config` **omits services whose profile is not active**, so without
+      `--profile cli` you see only the `wordpress` half and get `1`. Once is worse than never:
+      the two containers would then disagree about what WordPress is.
 
 ### Step 6: Write the development overlay
 
@@ -597,23 +649,40 @@ services:
 `wp-content/debug.log`, not injected into GraphQL JSON responses — a PHP notice in the middle of
 a JSON body produces a parse error in Next.js and sends you hunting in entirely the wrong place.
 
-### Step 7: Bring the stack up
+### Step 7: Bring the stack up, and give the uploads volume an owner
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-```
-
-First run pulls roughly 700 MB of images. Then:
-
-```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait
 docker compose ps
 ```
+
+First run pulls roughly 700 MB of images.
+
+Then one command you will run exactly once per fresh `btt-uploads` volume. Docker creates a new
+named volume owned by `root:root` with mode `755`, and the WordPress image's entrypoint does not
+chown into it — so **nothing** can write media there: not WP-CLI at uid 33, and not Apache,
+whose workers are also uid 33. The `exec` below runs as root inside the container, which is
+exactly the privilege needed and the only place it exists:
+
+```bash
+docker compose exec wordpress chown 33:33 /var/www/html/wp-content/uploads
+docker compose exec wordpress ls -ldn /var/www/html/wp-content/uploads
+```
+
+Skip it and Step 8 answers with
+`Warning: Unable to create directory wp-content/uploads/2026/09. Is its parent directory writable
+by the server?`, the media library refuses every upload, and `wp media import` in Lesson 04.5
+fails with a permission error rather than a clear one. Re-run it after any `down -v`.
 
 **Verify §7:**
 
 - [ ] `wordpress`, `db`, `adminer` and `mailpit` all show `running`.
-- [ ] `db` shows `(healthy)` — not `(health: starting)`. Give it 30 seconds if needed.
-- [ ] `wpcli` does **not** appear. It is a run-on-demand service and that is correct.
+- [ ] `db` shows `(healthy)` — not `(health: starting)`. Give it 30 seconds if needed. `mailpit`
+      and `wordpress` ship healthchecks of their own, so you will see **three** `(healthy)`
+      services, not one; only `db`'s is the one this lesson added.
+- [ ] `wpcli` does **not** appear, in `ps` or in `ps -a`. It is a run-on-demand service and the
+      `profiles: ['cli']` line is what keeps it out — and keeps `up -d --wait` at exit `0`.
+- [ ] `ls -ldn` on the uploads directory prints `33 33`, not `0 0`.
 
 ### Step 8: Complete the WordPress installation
 
@@ -654,8 +723,10 @@ cd wordpress-headless
 
 # 1. All four long-running services are up, and db is HEALTHY (not "health: starting")
 docker compose ps
-# Expected: wordpress, db, adminer, mailpit — all "running"; db shows "(healthy)"
-#           wpcli absent — it is run-on-demand
+# Expected: wordpress, db, adminer, mailpit — all "running"; db shows "(healthy)".
+#           mailpit and wordpress carry healthchecks of their own, so THREE
+#           services read "(healthy)" — only db's was added by this lesson.
+#           wpcli absent from ps AND from `ps -a` — profiles: ['cli'].
 
 # 2. WordPress answers on 8080
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/
@@ -679,7 +750,7 @@ docker compose run --rm wpcli id -u
 
 # 4. Service-name DNS works from inside the wordpress container
 docker compose exec wordpress getent hosts db
-# Expected: an IP followed by "db" — e.g. 172.20.0.2   db
+# Expected: an address followed by "db" — e.g. 172.19.0.2   db
 
 # 5. NEGATIVE — `localhost` inside that container is NOT the database (Key Concept 2)
 docker compose exec wordpress bash -c 'timeout 3 bash -c "</dev/tcp/127.0.0.1/3306" 2>&1; echo "exit=$?"'
@@ -687,8 +758,10 @@ docker compose exec wordpress bash -c 'timeout 3 bash -c "</dev/tcp/127.0.0.1/33
 
 # 6. The host IS reachable from the container under the name Module 18 will use
 docker compose exec wordpress getent hosts host.docker.internal
-# Expected: an IP followed by "host.docker.internal". If EMPTY, your extra_hosts
-#           entry is missing — fix it now, not in Module 18.
+# Expected: an address followed by "host.docker.internal". Docker Desktop often
+#           answers with IPv6 (fdc4:…::254), which is correct — the only wrong
+#           answer is EMPTY, which means extra_hosts is missing. Fix it now,
+#           not in Module 18.
 
 # 7. Adminer is up and pointed at the right server
 curl -s http://localhost:8081/ | grep -o 'Adminer' | head -1
@@ -696,7 +769,8 @@ curl -s http://localhost:8081/ | grep -o 'Adminer' | head -1
 
 # 8. Mailpit is up and its inbox is reachable
 curl -s http://localhost:8025/api/v1/messages | head -c 60
-# Expected: JSON beginning with {"messages":  (an empty inbox is correct)
+# Expected: JSON beginning {"total":0,"unread":0,"count":0,  — an empty inbox
+#           is correct. The `messages` array comes later in the same object.
 
 # 9. PHP limits from uploads.ini actually applied
 docker compose exec wordpress php -r 'echo ini_get("upload_max_filesize"), " ", ini_get("max_input_vars"), PHP_EOL;'
@@ -710,8 +784,9 @@ rm wp-content/plugins/_mount-test.php
 
 # 11. NEGATIVE — the healthcheck did not leak your password into the merged config
 docker compose config | grep -A1 'CMD-SHELL'
-# Expected: the literal string $MYSQL_ROOT_PASSWORD.
-#           If you see your real password, you wrote $ where you needed $$.
+# Expected: -p"$$MYSQL_ROOT_PASSWORD" — TWO dollars, because Compose re-escapes
+#           the literal one on the way out. If you see your real password, you
+#           wrote $ where you needed $$.
 
 # 12. NEGATIVE — no secret is staged for commit
 git status --short wordpress-headless/
@@ -719,9 +794,10 @@ git check-ignore -v .env
 # Expected: .env does NOT appear in git status, and check-ignore names a rule
 
 # 13. Data survives a restart (named volumes), and the stack comes back healthy
-docker compose down && docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker compose down && docker compose up -d --wait
 docker compose run --rm wpcli wp option get blogname
-# Expected: Blame The Tech
+# Expected: exit 0 from `up --wait` (the cli profile keeps run-on-demand
+#           containers out of the wait set), then: Blame The Tech
 ```
 
 If check 6 is empty, or check 11 shows a real password, fix it before moving on. Both fail

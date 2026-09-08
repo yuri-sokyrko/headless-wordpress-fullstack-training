@@ -49,6 +49,12 @@ wordpress-headless/wp-content/plugins/*
 !wordpress-headless/wp-content/plugins/blame-the-tech-core/
 !wordpress-headless/wp-content/plugins/blame-the-tech-blocks/
 
+# Same pattern for themes. The container entrypoint copies the three bundled
+# core themes (~14 MB) onto this bind mount at first boot, so without these two
+# lines `git add -A` in Lesson 02.6 commits WordPress core.
+wordpress-headless/wp-content/themes/*
+!wordpress-headless/wp-content/themes/btt-headless/
+
 wordpress-headless/wp-content/uploads/
 wordpress-headless/wp-content/upgrade/
 wordpress-headless/wp-content/cache/

@@ -299,7 +299,7 @@ architecture with a different theory of freshness, and the two theories do not c
 
 Faust's Apollo client runs in the browser, so the browser must know where WordPress is. The
 variable is `NEXT_PUBLIC_WORDPRESS_URL`, and
-[appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them) names
+[appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them) names
 that exact pattern as one to avoid, listing four public variables and saying "nothing else, ever".
 
 This is not Faust being careless. It is the honest consequence of client-side data fetching: a
@@ -586,8 +586,8 @@ docker compose run --rm wpcli wp option get faustwp_settings --format=json
 #           never been saved — `wp option list --search='faust*'` finds the real name
 #           in your release.
 
-docker compose run --rm wpcli wp option patch update faustwp_settings frontend_uri 'http://localhost:3001'
-docker compose run --rm wpcli wp option patch update faustwp_settings disable_theme '1'
+docker compose run --rm wpcli wp option patch insert faustwp_settings frontend_uri 'http://localhost:3001'
+docker compose run --rm wpcli wp option patch insert faustwp_settings disable_theme '1'
 ```
 
 **Verify §4:**
@@ -956,7 +956,7 @@ assumes those two files are untouched, and Lesson 17.4's deletion is only clean 
 - [`@faustwp/core` on npm](https://www.npmjs.com/package/@faustwp/core) — where Step 2's version,
   publish date, licence and peer ranges actually come from; check it yourself rather than trusting
   any course
-- [WordPress template hierarchy](https://developer.wordpress.org/themes/basics/template-hierarchy/)
+- [WordPress template hierarchy](https://developer.wordpress.org/themes/classic-themes/basics/template-hierarchy/)
   — the chart Faust's `wp-templates/` keys reproduce; worth re-reading with the Faust key names
   beside it
 - [`template-loader.php` in Trac](https://core.trac.wordpress.org/browser/trunk/src/wp-includes/template-loader.php)

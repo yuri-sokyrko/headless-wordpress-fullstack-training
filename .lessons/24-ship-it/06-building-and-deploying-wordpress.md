@@ -238,11 +238,10 @@ This is the asymmetry to carry out of the module, and it is genuinely new.
 | Roll back application code | re-upload yesterday's folder, hope | `fly deploy --image …:<previous-sha>` — seconds, exact |
 | Roll back a database schema change | restore a `.sql` dump, lose everything since | **not possible.** Forward-only |
 
-In the FTP era both operations were equally awkward, so nobody distinguished them. Immutable
-images make code rollback a one-liner, which makes it very easy to assume everything rolls back —
-right up to the deploy that ran `wp core update-db`, after which the previous image is talking to
-a schema it does not recognise. `wp core update-db` has no inverse. There is no
-`--downgrade-db`, and WordPress does not keep the old schema.
+The Classic WP Analogy above made the asymmetry concrete; the mechanical reason behind it is one
+sentence. `wp core update-db` has no inverse: there is no `--downgrade-db`, WordPress does not
+keep the old schema, and the routine that migrated your rows did not record what they used to
+look like. Everything else in this Key Concept follows from that single missing function.
 
 Three consequences, all of them design decisions in this lesson:
 
@@ -324,7 +323,7 @@ rule is narrower than it sounds. `wp` is a single PHAR, owned by root, mode 0755
 the process that serves requests, not reachable over HTTP, and its install and update subcommands
 are inert because 24.1 sets `DISALLOW_FILE_MODS`. Composer, npm and Xdebug are genuinely absent.
 Removing WP-CLI too would mean no `release_command`, which would mean activation state and
-rewrite rules drift silently — a much worse trade, stated rather than glossed.
+rewrite rules drift silently — a much worse trade, and the honest one to make.
 
 ### 9. The deploy has no migration step, and that is Module 04's doing
 
@@ -721,7 +720,7 @@ const HEALTH_EXPECTED_PLUGINS = array(
 	'advanced-custom-fields'        => '6.3.6',
 	'polylang'                      => '3.6.6',
 	'wp-graphql-content-blocks'     => '4.5.0',
-	'wp-graphql-jwt-authentication' => '0.7.0',
+	'wp-graphql-jwt-authentication' => '0.7.2',
 );
 
 /**
@@ -1093,7 +1092,10 @@ name: Deploy WordPress
 
 on:
   workflow_run:
-    workflows: ['CI']
+    # This string must match ci.yml's `name:` EXACTLY — it is `ci`, lower case.
+    # `workflow_run` matches on the workflow name, and a near-miss does not warn:
+    # the trigger simply never fires and the deploy silently never happens.
+    workflows: ['ci']
     types: [completed]
     branches: [main]
   # The rollback path. One input, one command, no rebuild.
@@ -1144,7 +1146,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # `@v1`, not `@master`: check 13 in Lesson 24.4 greps every workflow for a
+      # branch ref and expects no output, and this is the one job with a production
+      # environment and a deploy token. An action that can change under you is a
+      # worse idea here than anywhere else in the pipeline.
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
 
       - name: Copy the manifest to Fly's registry — no rebuild
         env:

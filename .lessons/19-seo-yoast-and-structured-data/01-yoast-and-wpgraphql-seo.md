@@ -115,18 +115,20 @@ The bridge plugin does one thing: it walks Yoast's meta and exposes it as GraphQ
         authored by an editor           resolved per node             one tag per concern
 ```
 
-This lesson names that interface **`NodeWithSeo`**, because
-[appendix 05 §9](../appendix/05-graphql-cheatsheet.md#9-query-patterns-this-app-actually-uses)
-declares it and Lessons 05.3 and 10.5 both told you to keep a `SeoFields` fragment commented out
-until it existed. That is the name to write.
+That interface is **`ContentNode`**, WPGraphQL's own, and the bridge adds `seo` to it rather
+than declaring one of its own. Measured on `wp-graphql-yoast-seo` 5.1.0: the plugin calls
+`register_graphql_field('ContentNode', 'seo', …)` and `register_graphql_field('NodeWithTitle',
+'seo', …)`, and has done since 4.18.0. There is no `NodeWithSeo`, in any release. That matters
+because [appendix 05 §9](../appendix/05-graphql-cheatsheet.md#9-query-patterns-this-app-actually-uses)
+and Lessons 05.3 and 10.5 all promised a `SeoFields` fragment, and `ContentNode` is its type
+condition.
 
-> **Introspect your own installation before you believe any of it.** Lesson 14.1 established
-> this discipline for `NodeWithEditorBlocks` and it applies for exactly the same reason: the
-> interface name is the fragment's **type condition**, a fragment on a type that does not exist
-> fails validation for the *whole document*, and plugin versions rename things. Task §3 has you
-> print the interface list on `Incident` from your own schema. **If your installed version
-> prints a different name, that name is the one line you change** — in `SeoFields.graphql`, and
-> nowhere else. That is the entire payoff of having written the field set once.
+> **Introspect your own installation anyway.** Lesson 14.1 established this discipline for
+> `NodeWithEditorBlocks` and it applies for exactly the same reason: the interface name is the
+> fragment's **type condition**, and a fragment on a type that does not exist fails validation
+> for the *whole document* — not just the file that spread it. Task §3 has you print the
+> interface list on `Incident` from your own schema, so that the one thing you cannot check by
+> reading is the one thing you measure. If it disagrees with this page, believe your schema.
 
 ### 3. A schema diff is a contract change, and this one is large
 
@@ -138,7 +140,7 @@ Read it looking for exactly four things:
 
 | Look for | Why | If it is missing |
 |---|---|---|
-| `interface NodeWithSeo` | It is the fragment's type condition | The bridge plugin is inactive, or your version names it differently — Task §3 |
+| `seo: PostTypeSEO` on `interface ContentNode` | It is the fragment's type condition | The bridge plugin is inactive — Task §3 |
 | `type PostTypeSEO` | The payload shape for posts, incidents, reviews, pages | Same |
 | `type TaxonomySEO` | The payload shape for **terms** — a different type, which is why Key Concept 4 leaves scapegoats out | Same |
 | `seo: PostTypeSEO` on `Incident`, `Post`, `TechReview`, `Page` | The field you are about to select | The post type was registered without Yoast support |
@@ -362,13 +364,22 @@ Two plugins, two different sources, and the second one has a name trap in it.
 ```bash
 cd wordpress-headless
 
-# 1. Yoast itself comes from wordpress.org. Find the current stable version FIRST,
-#    then install exactly that — `wp plugin install wordpress-seo` with no --version
-#    pins you to "whatever was newest the day you ran it", which is not a pin.
-curl -s https://api.wordpress.org/plugins/info/1.0/wordpress-seo.json | jq -r '.version'
+# 1. Yoast itself comes from wordpress.org. Read BOTH the current version and the
+#    WordPress version it requires — `wp plugin install wordpress-seo` with no
+#    --version pins you to "whatever was newest the day you ran it", which is not a
+#    pin, and on this stack it does not even install.
+curl -s https://api.wordpress.org/plugins/info/1.0/wordpress-seo.json \
+  | jq -r '"latest \(.version)  requires WP \(.requires)"'
+# Measured 2026-09: `latest 28.4  requires WP 6.9`. This course pins WordPress 6.8,
+# so the newest Yoast REFUSES to install:
+#   Warning: wordpress-seo: This plugin does not work with your version of
+#            WordPress. Minimum WordPress requirement is 6.9
+# 27.9 is the last release whose header says `Requires at least: 6.8`; 28.0 moved to
+# 6.9. So the pin is not caution, it is the only version that runs here.
 
-# 2. Install the version that printed. Replace the value; do not paste mine.
-YOAST_VERSION=25.3
+# 2. Install 27.9. If you have moved this course to WordPress 6.9 or later, read the
+#    version from command 1 instead and pin that.
+YOAST_VERSION=27.9
 docker compose run --rm wpcli wp plugin install wordpress-seo \
   --version="$YOAST_VERSION" --activate
 ```
@@ -396,9 +407,10 @@ docker compose run --rm wpcli wp plugin list --status=active --fields=name,versi
 
 **Verify §1:**
 
-- [ ] Both plugins appear with `status=active` and a **concrete version number**. Write both
-      numbers into `docs/schema-notes.md` — Lesson 10.2 established that habit and this is the
-      largest schema change since Module 14.
+- [ ] Both plugins appear with `status=active` and a **concrete version number** — `27.9` and
+      `5.1.0` if you pasted the pins. Write both into `docs/schema-notes.md`, *with the
+      WordPress version beside them*: Yoast's floor moves, and "27.9 because core is 6.8" is
+      the note that saves the next upgrade. Lesson 10.2 established the habit.
 - [ ] `docker compose logs --tail=40 wordpress` shows no PHP fatal. The bridge requires both
       WPGraphQL and Yoast to be active; with either missing you get a notice on load, not a
       silent no-op.
@@ -420,7 +432,7 @@ docker compose run --rm wpcli wp option get wpseo_titles --format=json | jq '{se
 # 2. The separator becomes an em dash, matching the fallback title in Lesson 19.2
 #    (`<title> — Blame The Tech`). A Yoast title and a code title that disagree about
 #    their separator look like two systems, because they are.
-docker compose run --rm wpcli wp option patch update wpseo_titles separator sc-mdash
+docker compose run --rm wpcli wp option patch insert wpseo_titles separator sc-mdash
 
 # 3. Read it back. `wp option patch` on a serialized array is quiet on success, so the
 #    read-back IS the confirmation.
@@ -465,18 +477,20 @@ for every document in the project, not just the one that spread it. So print it 
 installation.
 
 ```bash
-# 1. Which interfaces does Incident actually implement? The one you want has "seo"
-#    in its name; the rest are WPGraphQL core.
+# 1. Which interfaces does Incident actually implement? Do NOT grep for "seo" — the
+#    bridge declares no type of its own, so no interface name contains it. The two
+#    that will carry the field are core WPGraphQL interfaces.
 curl -s -X POST http://localhost:8080/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ __type(name: \"Incident\") { interfaces { name } } }"}' \
-  | jq -r '.data.__type.interfaces[].name' | grep -i seo
+  | jq -r '.data.__type.interfaces[].name' | grep -xE 'ContentNode|NodeWithTitle'
 
-# 2. The interface's field list — one field, `seo`, and its type.
+# 2. `seo` on that interface, and its type. THIS is the check that the bridge is
+#    active: ContentNode is core, so it exists either way — `seo` on it does not.
 curl -s -X POST http://localhost:8080/graphql \
   -H 'Content-Type: application/json' \
-  -d '{"query":"{ __type(name: \"NodeWithSeo\") { kind fields { name type { name kind ofType { name } } } } }"}' \
-  | jq '.data.__type'
+  -d '{"query":"{ __type(name: \"ContentNode\") { kind fields { name type { name kind ofType { name } } } } }"}' \
+  | jq '.data.__type | {kind, seo: [.fields[] | select(.name == "seo")]}'
 
 # 3. The payload type, which is what the fragment selects FROM. This is also the
 #    list you read Key Concept 4's table against.
@@ -495,9 +509,10 @@ curl -s -X POST http://localhost:8080/graphql \
 
 **Verify §3:**
 
-- [ ] Command 1 prints `NodeWithSeo`. **If it prints a different name, that name is the type
-      condition in Step 5** and the only line you change. Write it down.
-- [ ] Command 2 prints `INTERFACE` and a single field `seo`, whose type is `PostTypeSEO`.
+- [ ] Command 1 prints **both** `ContentNode` and `NodeWithTitle`. `ContentNode` is the type
+      condition in Step 5, because it is the one that means "a content node".
+- [ ] Command 2 prints `INTERFACE` and one entry for `seo`, whose type is `PostTypeSEO`. An
+      empty `seo` list means the bridge plugin is inactive — `ContentNode` itself is core.
 - [ ] Command 3 lists at least `title`, `metaDesc`, `canonical`, `metaRobotsNoindex`,
       `metaRobotsNofollow`, `opengraphTitle`, `opengraphDescription`, `opengraphImage`,
       `schema` and `fullHead`. If `metaRobotsNofollow` is absent, note it — Lesson 19.2's
@@ -521,7 +536,7 @@ wc -l ../wordpress-headless/schema.graphql
 
 # 3. Read the diff for the four things Key Concept 3 lists — and nothing else.
 git diff --stat ../wordpress-headless/schema.graphql
-git diff ../wordpress-headless/schema.graphql | grep -E '^\+(interface NodeWithSeo|type PostTypeSEO|type TaxonomySEO)'
+git diff ../wordpress-headless/schema.graphql | grep -E '^\+( +seo: PostTypeSEO|type PostTypeSEO|type TaxonomySEO)'
 git diff ../wordpress-headless/schema.graphql | grep -cE '^\-' 
 ```
 
@@ -529,8 +544,9 @@ git diff ../wordpress-headless/schema.graphql | grep -cE '^\-'
 
 - [ ] The file grew by several hundred lines. That is expected — Yoast registers a payload type
       per post type and per taxonomy.
-- [ ] The third command prints all three of `interface NodeWithSeo`, `type PostTypeSEO` and
-      `type TaxonomySEO`.
+- [ ] The third command prints all three of `seo: PostTypeSEO`, `type PostTypeSEO` and
+      `type TaxonomySEO`. The first appears **twice** — once under `ContentNode`, once under
+      `NodeWithTitle` — which is the diff's own proof of Key Concept 2.
 - [ ] The fourth command — the count of **removed** lines — is `0`. A schema pull that deletes
       something is drift you have just discovered, not a Yoast change. Stop and find out what,
       before you commit.
@@ -547,9 +563,10 @@ One new file, named for the fragment it contains, exactly as Lesson 10.5's conve
 # out until now because a fragment on a type that does not exist fails validation for
 # the whole project — not just this file.
 #
-# THE TYPE CONDITION CAME FROM THE INTROSPECTION IN TASK §3. If your installed version
-# of wp-graphql-yoast-seo names the interface something else, this line is the one and
-# only line you change.
+# THE TYPE CONDITION CAME FROM THE INTROSPECTION IN TASK §3. `ContentNode` is core
+# WPGraphQL; wp-graphql-yoast-seo adds `seo` to it (and to NodeWithTitle) rather than
+# declaring an interface of its own. If your schema disagrees, this is the one line
+# you change.
 #
 # Spread into DOCUMENTS, never into another fragment: SEO is orthogonal to what a card
 # or a detail body renders, and nesting it inside IncidentCardFields would drag eight
@@ -564,7 +581,7 @@ One new file, named for the fragment it contains, exactly as Lesson 10.5's conve
 #                       the route.
 #   · breadcrumbs     — WordPress's hierarchy, not your router's.
 #   · focuskw, cornerstone, readingTime, metaKeywords, twitter* — Key Concept 4's table.
-fragment SeoFields on NodeWithSeo {
+fragment SeoFields on ContentNode {
   seo {
     # Already RESOLVED from Yoast's title template — you receive the finished string.
     title
@@ -650,7 +667,7 @@ Five documents, and note the two that are **not** on the list:
 
 | Document | Spread? | Why |
 |---|---|---|
-| `IncidentsList`, `PostsList`, `ReviewsList` | ❌ | An archive has no node, so there is nothing for `NodeWithSeo` to describe. Lesson 19.2 builds archive titles by hand — Key Concept 8. |
+| `IncidentsList`, `PostsList`, `ReviewsList` | ❌ | An archive has no node, so there is nothing for `ContentNode` to describe. Lesson 19.2 builds archive titles by hand — Key Concept 8. |
 | `ScapegoatLeaderboard` | ❌ | A term's payload is `TaxonomySEO`, a different object type, so `SeoFields` cannot spread there. Lesson 19.2 builds scapegoat metadata from `name` and `scapegoatProfile.tagline`. |
 
 **Verify §6:**
@@ -755,10 +772,14 @@ docker compose -f ../wordpress-headless/docker-compose.yml run --rm wpcli \
   wp plugin list --status=active --fields=name,version --format=csv | grep -E 'wordpress-seo|yoast'
 # Expected: two rows, each with a real version number. No "latest", no blank.
 
-# 2. The interface is in the COMMITTED schema, not just in the live one
-grep -c '^interface NodeWithSeo' ../wordpress-headless/schema.graphql
-# Expected: 1. A 0 means you introspected a running server but never ran schema:pull,
-#           so codegen is working from the pre-Yoast contract.
+# 2. The FIELD is in the COMMITTED schema, not just in the live one. There is no
+#    `interface NodeWithSeo` line to count — the bridge adds `seo` to two core
+#    interfaces instead, so the field is what you grep for.
+grep -cE '^ +seo: PostTypeSEO' ../wordpress-headless/schema.graphql
+# Expected: 2 or more — ContentNode and NodeWithTitle both carry it, and every
+#           concrete post type re-prints its interfaces' fields. A 0 means you
+#           introspected a running server but never ran schema:pull, so codegen is
+#           working from the pre-Yoast contract.
 grep -cE '^type (PostTypeSEO|TaxonomySEO)' ../wordpress-headless/schema.graphql
 # Expected: 2
 
@@ -840,7 +861,7 @@ PROBE
 npm run codegen 2>&1 | grep -c 'cannot be spread here\|can never be of type'
 # Expected: 1 or more. Message shape:
 #   Fragment "SeoFields" cannot be spread here as objects of type "SiteSettings"
-#   can never be of type "NodeWithSeo".
+#   can never be of type "ContentNode".
 rm src/graphql/_wrong.graphql
 npm run codegen && npm run codegen:check
 # Expected: no output — clean again
@@ -879,8 +900,8 @@ which points at the `documents` glob in `codegen.ts` rather than at anything in 
 1. Yoast's `wp_head()` output never appears anywhere in this application, and yet the course
    keeps Yoast. List four capabilities that survive the move to headless, and then name the one
    Classic behaviour whose loss costs you the most code in Lesson 19.2.
-2. `SeoFields` is declared `on NodeWithSeo` rather than on `Incident`. Say what would fail, at
-   what moment, if the installed plugin named that interface something else — and be specific
+2. `SeoFields` is declared `on ContentNode` rather than on `Incident`. Say what would fail, at
+   what moment, if the installed plugin put `seo` on the concrete types only — and be specific
    about what happens to the *other* documents in `src/graphql/` when it does.
 3. `metaRobotsNoindex` comes back as `"index"` for a page the editor has explicitly allowed into
    search. Write the wrong one-line mapping, say exactly what it does to the site, and explain
@@ -906,8 +927,8 @@ which points at the `documents` glob in `codegen.ts` rather than at anything in 
 - [Yoast: the schema `@graph` and its pieces](https://developer.yoast.com/features/schema/api/)
   — worth reading precisely because you are refusing it: it is the shape Lesson 19.3 has to
   reproduce, and the `@id` conventions are worth copying even when the data is not
-- [WPGraphQL — Interfaces](https://www.wpgraphql.com/docs/interfaces) — why `NodeWithSeo` is an
-  interface rather than a field on each type, and what that buys a single fragment
+- [WPGraphQL — Interfaces](https://www.wpgraphql.com/docs/interfaces) — why adding `seo` to
+  `ContentNode` rather than to each type is what buys you a single fragment
 - [GraphQL specification — fragment spread type conditions](https://spec.graphql.org/October2021/#sec-Fragment-spread-is-possible)
   — the formal rule behind "cannot be spread here", which is the error Verification check 11
   deliberately triggers

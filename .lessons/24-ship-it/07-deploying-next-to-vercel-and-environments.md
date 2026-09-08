@@ -496,7 +496,7 @@ name: Deploy Web
 
 on:
   workflow_run:
-    workflows: ['CI']
+    workflows: ['ci']   # must match ci.yml's `name:` exactly — lower case
     types: [completed]
     branches: [main]
   # The rollback path: promote an existing deployment by URL. No rebuild, which

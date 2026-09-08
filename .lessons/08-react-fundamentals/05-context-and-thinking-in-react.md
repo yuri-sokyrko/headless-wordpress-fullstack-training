@@ -750,7 +750,7 @@ Second, the shadowing. Temporarily mount a second, nested board:
       component, with no prefixes and no coordination.
 - [ ] There is no `global $post` arrangement that does this. Note the duplicated input `id`
       attributes in the DOM while you are here — two `id="incident-search"` values on one page is
-      invalid HTML, and Lesson 11.4 is where that gets solved properly with `useId`.
+      invalid HTML, and Lesson 22.2 is where that gets solved properly with `useId`.
 - [ ] Remove the nested provider and its two children.
 
 ### Step 6: Write the state inventory down

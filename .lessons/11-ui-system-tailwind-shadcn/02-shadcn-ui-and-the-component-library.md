@@ -424,6 +424,14 @@ overlay. That contrast *is* Key Concept 3.
 > attribute appears, a component becomes a function declaration instead of a `forwardRef`, a
 > class string gets tuned. The two files this lesson *depends* on are written out in full
 > below, because the rest of the module imports them. For the other seven, read what you got.
+>
+> **And one non-obvious switch:** a **non-empty `tailwind.config` in `components.json` is what
+> tells the CLI you are on Tailwind 3.** Because Lesson 11.1 kept a config file for the
+> typography plugin, the CLI emits its Tailwind-3-era components — `React.forwardRef`,
+> `bg-black/80` — into a Tailwind 4 project. They work, with one consequence worth knowing
+> now: `animate-in`, `fade-in-0` and `zoom-in-95` come from `tailwindcss-animate`, a Tailwind 3
+> plugin this course does not install, so those utilities compile to nothing. Nothing here
+> depends on them, and Lesson 22.2 §9 is where it matters.
 
 Which files carry `'use client'` is not a style choice; it follows from what the file does:
 

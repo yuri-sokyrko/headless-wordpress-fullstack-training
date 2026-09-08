@@ -391,7 +391,9 @@ WPGraphQL JWT Authentication is **not** in the WordPress.org directory, so
 `wp plugin install wp-graphql-jwt-authentication` fails. It ships as a GitHub release asset,
 exactly like WPGraphQL Content Blocks in Lesson 14.1. Open
 <https://github.com/wp-graphql/wp-graphql-jwt-authentication/releases>, note the current tag, and
-install that tag rather than a branch:
+install that tag rather than a branch. **Check that the tag you pick actually has a `.zip`
+attached** — `v0.7.0` and everything before `v0.7.1` were tagged with no release asset at all, so
+their download URLs are a 404 rather than a plugin:
 
 ```bash
 cd wordpress-headless
@@ -399,7 +401,7 @@ cd wordpress-headless
 # Pin the TAG. A URL ending in /heads/main.zip is not a version, it is a moving target,
 # and Module 24 cannot reproduce a build from it.
 docker compose run --rm wpcli wp plugin install \
-  https://github.com/wp-graphql/wp-graphql-jwt-authentication/releases/download/v0.7.0/wp-graphql-jwt-authentication.zip \
+  https://github.com/wp-graphql/wp-graphql-jwt-authentication/releases/download/v0.7.2/wp-graphql-jwt-authentication.zip \
   --activate
 
 docker compose run --rm wpcli wp plugin get wp-graphql-jwt-authentication --field=version
@@ -890,7 +892,8 @@ test -n "$BTT_APP_TOKEN" && echo 'app token loaded into this session' || echo 'M
 docker compose run --rm wpcli wp plugin get wp-graphql-jwt-authentication --field=status
 # Expected: active
 docker compose run --rm wpcli wp plugin get wp-graphql-jwt-authentication --field=version
-# Expected: the tag from the URL in Step 1 (v0.7.0 unless you pinned a newer release)
+# Expected: the tag from the URL in Step 1 — 0.7.2 unless you pinned a newer one. If this
+#           errors instead, the download 404'd: the tag you chose has no asset attached.
 
 # 2. It added exactly the two mutations and nothing surprising
 curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
@@ -1094,7 +1097,7 @@ that will hold your users' cookies cannot judge the tokens inside them.
   filter chain Key Concept 9 depends on; note `authenticate` and `wp_login_failed`
 - [`hash_equals()`](https://www.php.net/manual/en/function.hash-equals.php) — one paragraph, and
   the argument-order note Key Concept 8's second rule depends on
-- [A lesson in timing attacks](https://codahale.com/a-lesson-in-timing-attacks/) — why byte-by-byte
+- [A lesson in timing attacks](https://www.sjoerdlangkemper.nl/2024/05/29/string-comparison-timing-attacks/) — why byte-by-byte
   comparison leaks a prefix, with the maths behind "a few thousand requests per character"
 - [TypeScript handbook — discriminated unions](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions) —
   the narrowing that makes `credential.kind === 'user'` give you `jwt` and nothing else

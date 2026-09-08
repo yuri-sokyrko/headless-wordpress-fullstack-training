@@ -25,7 +25,7 @@ prefix so `/incidents` redirects to `/en/incidents`. That middleware is the seco
 doing that in middleware means Module 15's auth gate and Module 20's locale negotiation both
 have a place to live that already exists. The lesson closes by proving the client bundle holds
 no secrets, with the `grep` from
-[the env reference](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them) —
+[the env reference](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them) —
 the same check Module 24 turns into a CI gate.
 
 By the end of this lesson you will have:
@@ -302,7 +302,7 @@ the whole application answers with one redirect status and there is one behaviou
 ### 9. The `NEXT_PUBLIC_` boundary, proved rather than asserted
 
 The lesson closes with the check from
-[appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them):
+[appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them):
 build for production, then grep the client bundle for the value of a server-only variable.
 
 ```bash

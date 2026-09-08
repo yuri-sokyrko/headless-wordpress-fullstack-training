@@ -1383,12 +1383,14 @@ docker compose run --rm -T wpcli wp blame status
 - [Polylang — Functions reference](https://polylang.pro/doc/function-reference/) — the canonical
   list of `pll_*` functions, including which ones return `false` rather than an empty array; read
   `pll_save_post_translations` before you call it
-- [Polylang — Translating a custom post type](https://polylang.pro/doc/integrate-custom-post-types-and-taxonomies/)
+- [Polylang — Translating a custom post type](https://polylang.pro/documentation/support/guides/multilingual-custom-post-types-and-taxonomies/)
   — the `pll_get_post_types` and `pll_get_taxonomies` filters used in Step 2, in the author's own
   words
-- [Polylang FAQ — how the data is stored](https://polylang.pro/doc/faq/) — confirms the
-  `language` and `post_translations` taxonomies and the serialized term description, which is
-  what Key Concept 1's diagram is drawn from
+- [Polylang — documentation index](https://polylang.pro/doc/) — the plugin's own docs.
+  Note what is **not** there: the `language` and `post_translations` taxonomies and the serialized
+  term description that Key Concept 1's diagram is drawn from are no longer documented by Polylang
+  anywhere. Read them out of your own `wp_term_taxonomy` table instead — Key Concept 1's
+  `wp db query` does exactly that, which is why it is a query and not a citation
 - [Polylang Pro — translating URL slugs](https://polylang.pro/downloads/polylang-pro/) — the
   feature that would reverse Lesson 20.3's `pathnames` decision, so you know what the reversal
   costs before you argue for it

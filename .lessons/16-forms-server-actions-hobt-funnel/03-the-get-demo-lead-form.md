@@ -25,7 +25,7 @@ This form is public, which means it is a spam target and a PII store at the same
 controls stack, cheapest first: a **honeypot** field that real users never fill, a **render-timing**
 check that rejects submissions arriving impossibly fast after the form was served, **Cloudflare
 Turnstile** verified server-side against `siteverify` (the site key is public by design, the
-secret key is not — [appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them)),
+secret key is not — [appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them)),
 and the per-IP rate limiter from Lesson 16.2. On the data side there are two absolute rules.
 `ip_hash` is an **HMAC** keyed with `BTT_LEAD_IP_HMAC_KEY`, never a raw address — it exists to
 deduplicate and to spot abuse, not to identify a person. And **never log PII or tokens**: no email
@@ -248,7 +248,7 @@ wrong. Without Turnstile, the honest code comment is "this timing check is a wea
 
 **Turnstile, precisely.** The widget renders with the **site key**, public by design and inlined
 into your client bundle — one of the four legal `NEXT_PUBLIC_` variables
-([appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them)). The
+([appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them)). The
 token it produces means nothing until your **server** posts it to `siteverify` with the **secret
 key**, which never leaves the server. A client-side "the widget said OK" is not a check.
 

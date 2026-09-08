@@ -548,6 +548,18 @@ The third command is belt and braces: `ensure_permalink_structure()` already did
 it by hand proves the value you expect is the value WordPress has. It is also the exact command
 Module 24's `release_command` uses.
 
+It answers with `Success: Rewrite structure set.` **and**
+`Warning: Regenerating a .htaccess file requires special configuration. See usage docs.` — expect
+that warning and ignore it. `--hard` asks WP-CLI to write `.htaccess` as well as the database
+rules, and it declines because it cannot tell whether Apache reads one; this image serves the
+pretty permalinks from `mod_rewrite` with `AllowOverride` already configured, so the rules that
+matter are in the database and they are set. The `Success` line is the one to read.
+
+> **This is also the lesson that makes Lesson 02.4's `/graphql` check change its answer.** Until
+> now `permalink_structure` was empty, so WordPress parsed no paths and `redirect_canonical`
+> answered `/graphql` with a `301` to `/graphql/`. From this step on the route genuinely does not
+> exist and you get a clean `404` — which is what Module 05 replaces with WPGraphQL.
+
 ### Step 5: Create one of each and look at what you got
 
 Reload wp-admin. **Incidents** and **Tech Reviews** should both be in the sidebar now — reviews
@@ -699,10 +711,12 @@ makes Module 10's codegen possible, and it means the schema — not your memory 
   `set_props()` is why every argument you pass is readable back as a property, which is what
   Verification check 2 exploits
 - [WPGraphQL — custom post types](https://www.wpgraphql.com/docs/custom-post-types/) — the
-  official statement of what `graphql_single_name` and `graphql_plural_name` generate
-- [WPGraphQL — naming conventions](https://www.wpgraphql.com/docs/naming-conventions/) — read
-  before you invent a plural; the rules for reserved names and collisions are here
-- [Using permalinks](https://developer.wordpress.org/advanced-administration/server/wordpress-and-url/) —
-  the structure tags, and the performance note about verbose page rules that motivates `/blog`
+  official statement of what `graphql_single_name` and `graphql_plural_name` generate. The separate
+  naming-conventions page that used to hold the reserved-name and collision rules no longer exists,
+  and nothing replaced it — so the only reliable check on a plural you invent is to register it and
+  read your own schema, which is what Step 4 has you do
+- [Using permalinks](https://wordpress.org/documentation/article/customize-permalinks/) —
+  the structure tags. The performance note about verbose page rules that motivates `/blog` is no
+  longer on any current official page; Key Concept 6 above is where this course argues it
 - [WP-CLI `rewrite list`](https://developer.wordpress.org/cli/commands/rewrite/list/) — the
   fastest way to answer "did my flush actually happen" without clicking Settings → Permalinks

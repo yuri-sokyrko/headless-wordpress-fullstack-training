@@ -441,7 +441,7 @@ fragment TechReviewCardFields on TechReview {
 > is why operation and fragment names must be globally unique, and why a fragment on a type that
 > does not exist yet fails the whole build rather than one file. That is also why Lesson 05.3
 > told you to keep `SeoFields` commented out until Module 19 installs the plugin that defines
-> `NodeWithSeo`.
+> `seo` on `ContentNode`.
 
 ### Step 2: Restructure the route documents
 
@@ -478,11 +478,13 @@ query IncidentBySlug($slug: ID!) {
 
 # Aliases, so one request feeds two homepage sections. Lesson 05.3 Key Concept 6.
 query HomepageFeeds($featuredCount: Int!, $recentCount: Int!) {
+  # `severityIn` is the ONE narrow taxonomy argument this project registers, in
+  # Lesson 06.1 §9. There is no `taxQuery` in this schema — the extension that
+  # provides one is deliberately not installed (Lesson 05.2 §6), and 23.5's
+  # @graphql-eslint gate validates this file against the committed schema.
   catastrophic: incidents(
     first: $featuredCount
-    where: { status: PUBLISH, taxQuery: { taxArray: [
-      { taxonomy: SEVERITY, field: SLUG, terms: ["s1-catastrophic"] }
-    ] } }
+    where: { status: PUBLISH, severityIn: ["s1-catastrophic"] }
   ) {
     nodes {
       ...IncidentCardFields
@@ -640,14 +642,16 @@ query SiteChrome {
     description
   }
   siteSettings {
-    siteTagline
-    primaryCtaLabel
-    primaryCtaUrl
-    incidentSubmissionOpen
-    footerBlurb
-    socialLinks {
-      network
-      url
+    siteChrome {
+      siteTagline
+      primaryCtaLabel
+      primaryCtaUrl
+      incidentSubmissionOpen
+      footerBlurb
+      socialLinks {
+        network
+        url
+      }
     }
   }
 }
@@ -682,8 +686,9 @@ and why `undefined` is passed positionally to reach the options argument.
 
 **Verify §4:**
 
-- [ ] `siteSettings` is not `null`. If it is, the ACF options page is missing `show_in_graphql` —
-      see the content model contract, Site Settings.
+- [ ] Neither `siteSettings` nor `siteSettings.siteChrome` is `null`. A null page means the
+      options page is missing `show_in_graphql`; a null `siteChrome` means the field group is.
+      Two different fixes, and the content model contract's Site Settings section names both.
 - [ ] There is **no** `menuItems` selection in `siteSettings.graphql`.
 - [ ] The layout renders the site title from `chrome.generalSettings?.title`, not from a literal.
 
@@ -921,8 +926,9 @@ were not, which points at the `documents` glob in `codegen.ts`.
 
 ## Learn More
 
-- [WPGraphQL — Fragments](https://www.wpgraphql.com/docs/fragments) — fragment usage against a
-  WordPress schema, including interface and union narrowing you will need in Module 14
+- [WPGraphQL — GraphQL queries](https://www.wpgraphql.com/docs/graphql-queries) — fragment usage,
+  aliases and query structure against a WordPress schema. The dedicated Fragments page is gone and
+  the interface-narrowing detail with it; Module 14 teaches that part itself
 - [GraphQL — Queries and mutations](https://graphql.org/learn/queries/) — the fragments,
   aliases and directives sections, from the specification's own tutorial
 - [The `client` preset](https://the-guild.dev/graphql/codegen/plugins/presets/preset-client) —

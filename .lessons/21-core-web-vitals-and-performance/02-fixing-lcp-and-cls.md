@@ -235,7 +235,10 @@ too small to register.
 
 A Google font is published as several **subsets** — `latin`, `latin-ext`, `cyrillic`,
 `cyrillic-ext`, `greek`, and so on — each one a separate file with its own `unicode-range`.
-`next/font/google` requires you to name the ones you want, and downloads only those.
+`next/font/google` requires you to name the ones you want — and what naming them actually
+controls is **preloading**, not downloading. Measured on Next 15.5.25: Inter emits seven `.woff2`
+files whichever subsets you name; what changes is how many of them are written as `*.p.woff2` and
+given a `<link rel="preload">`.
 
 Which this app needs, and why:
 
@@ -250,12 +253,13 @@ So `subsets: ['latin', 'cyrillic']` is the complete and minimal set for these th
 this app prices in USD (`priceUsd`, appendix 03 §4.4). Add it the day a price is displayed in
 hryvnia and not before — every subset is another file in the critical path.
 
-**The failure mode is silence.** Ship `subsets: ['latin']` and English and German look exactly as
-intended, while `/uk` renders every Cyrillic character from the **fallback** font — the real
-font's `unicode-range` excludes them — so one page carries two typefaces with two sets of metrics
-and the swap shifts. Nothing warns you: not the build, not TypeScript, not ESLint, not
-Lighthouse. It is the one failure here that only shows in a locale you may not read, which is why
-Verification greps for the literal string instead of trusting a visual check. Module 20's README
+**The failure mode is silence, and it is subtler than it looks.** Ship `subsets: ['latin']` and
+`/uk` still gets Inter — the Cyrillic `@font-face` and its file ship regardless, which is the part
+worth measuring rather than assuming. What you lose is the preload: Cyrillic is then discovered
+late, from the CSS, so `/uk` alone pays a flash of unstyled text and the shift that follows it,
+on the locale you are least likely to be reading. Nothing warns you: not the build, not
+TypeScript, not ESLint, not Lighthouse. Which is why Verification counts the **preloaded** files
+rather than trusting a visual check — the plain `.woff2` count cannot fail. Module 20's README
 predicted it: "Cyrillic exposes a `next/font` subset you forgot to include".
 
 ### 8. The asynchronous regions on this site, audited rather than assumed
@@ -437,7 +441,9 @@ const bttSans = Inter({
 - [ ] `npm run build` succeeds. It now makes a network request to `fonts.gstatic.com` at build
       time — the cost named in Key Concept 5. On an offline runner this step is where the build
       fails, and the reversal is `next/font/local`.
-- [ ] `ls .next/static/media/` lists at least two `.woff2` files: one per subset.
+- [ ] `ls .next/static/media/*.p.woff2 | wc -l` is `2` — one **preloaded** file per named
+      subset. Count the `.p.` files, not the plain `.woff2` ones: Inter emits seven of those
+      whatever you declare, so that count cannot tell a correct config from a wrong one.
 - [ ] Lesson 19.2's OG-image debt is still open. It asked for a **local** font file it could read
       from disk, and a `next/font/google` file has no stable path. Write it into
       `docs/perf-baseline.md`'s open items in Step 8 rather than leaving it in a comment.
@@ -476,16 +482,23 @@ curl -s http://localhost:3000/en | grep -o 'fonts.googleapis.com\|fonts.gstatic.
 curl -s http://localhost:3000/en | grep -o 'rel="preload"[^>]*as="font"' | head -2
 # Expected: at least one match, pointing at /_next/static/media/…woff2
 curl -s http://localhost:3000/uk/incidents | grep -o 'rel="preload"[^>]*as="font"' | wc -l
-# Expected: the same count as /en. The subsets are declared once, for every locale.
+# Expected: the same count as /en. The subsets are declared once, for every
+#           locale. NOTE this is not an assertion on its own — it is equally
+#           equal with only `latin` declared. The check that discriminates is
+#           the `*.p.woff2` count in Verify §2.
+ls .next/static/media/*.p.woff2 | wc -l
+# Expected: 2 — latin and cyrillic, preloaded. This one CAN fail: drop
+#           `cyrillic` from the config and it becomes 1.
 ```
 
 **Verify §3:**
 
 - [ ] Zero references to either Google Fonts origin in the built HTML of all three locales.
 - [ ] A `<link rel="preload" as="font">` is present, and its `href` is on your own origin.
-- [ ] `/uk/incidents` renders Ukrainian text in the same typeface as `/en/incidents`. If the
-      Cyrillic looks like a different font, `subsets` is missing `cyrillic` — and this is the only
-      way you will find out.
+- [ ] `/uk/incidents` renders Ukrainian text in the same typeface as `/en/incidents`. It will do
+      so **even with `cyrillic` missing** — that is what makes this failure quiet. What a missing
+      subset costs is the preload, so the tell is the `*.p.woff2` count and a first paint of `/uk`
+      that flashes.
 
 ### Step 4: Move the header's reserved box into the Server Component
 

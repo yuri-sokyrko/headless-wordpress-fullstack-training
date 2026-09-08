@@ -716,8 +716,10 @@ grep -rc 'sessionStorage' src/ 2>/dev/null | grep -v ':0$' ; echo "hits above? e
 # 8. NEXT_PUBLIC_ is fully accounted for: exactly the two that exist today
 grep -rho 'NEXT_PUBLIC_[A-Z_]*' src/ | sort -u
 # Expected: NEXT_PUBLIC_DEFAULT_LOCALE and NEXT_PUBLIC_SITE_URL — and nothing else.
-#           Appendix 04 §3.2 lists four in total; TURNSTILE_SITE_KEY arrives in
-#           Lesson 16.3 and PLAUSIBLE_DOMAIN is optional. Two now, four at most, ever.
+#           Appendix 04 §3.2 is the allowlist and holds five: TURNSTILE_SITE_KEY
+#           arrives in Lesson 16.3, and SENTRY_DSN and RELEASE in Lesson 24.3.
+#           Two now, five by the end of the course, and every one of the three
+#           still to come has to argue why publishing it is safe.
 grep -c 'NEXT_PUBLIC_' .env.example
 # Expected: 2
 
@@ -792,7 +794,7 @@ is downstream of those three facts.
   registered claim names; it is two pages and it is the source for every claim you decoded in Step 2
 - [jwt.io introduction](https://jwt.io/introduction) — the clearest short explanation of the three
   segments, and a decoder you can paste your Step 1 token into to confirm your shell maths
-- [OWASP — JSON Web Token Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html) —
+- [OWASP — JSON Web Token Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html) —
   the algorithm-confusion and `alg: none` attacks named in Key Concept 2, with the mitigations
 - [OWASP — HTML5 Security Cheat Sheet, Local Storage](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage) —
   the canonical short argument against `localStorage` for credentials, in the words of the people who catalogue the attacks

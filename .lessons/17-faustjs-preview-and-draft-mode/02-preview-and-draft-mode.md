@@ -1586,6 +1586,13 @@ diff <(sed -n '/Route (app)/,$p' /tmp/btt-build-before-banner.txt | grep -o '[ƒ
 #           are not — yet. Lesson 18.1 removes the session read, and the absolute
 #           measurement arrives with it. A lesson that claimed otherwise here
 #           would be bluffing.
+#
+#           And a second, sharper limit, measured on Next 15.5.25: this diff is
+#           not an assertion even after Lesson 18.1. A layout that reads
+#           cookies() prerenders ZERO pages and still prints an identical symbol
+#           table — `●` means "has generateStaticParams", not "HTML exists". The
+#           measurement that can actually fail is Lesson 18.1 check 5, which
+#           counts prerendered HTML files on disk. This one is a smoke test.
 
 # 13. NEGATIVE — Next's draft-mode cookies are never in a caching rule
 grep -c '__prerender_bypass\|__next_preview_data' next.config.ts

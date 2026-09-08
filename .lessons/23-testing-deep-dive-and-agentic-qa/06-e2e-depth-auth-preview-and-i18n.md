@@ -22,7 +22,7 @@ document reachable in three languages with a switcher that preserves the slug an
 Getting there needs Playwright structured properly. A **setup project** logs in once and writes
 `storageState` to disk, so the other projects start authenticated instead of driving the login
 form forty times. Then the projects **split by whether they mutate**: reads run `fullyParallel`
-because they cannot interfere, mutations run with `workers: 1` and `fullyParallel: false` because
+because they cannot interfere, mutations run serialised and with `fullyParallel: false` because
 two workers publishing incidents in the same database will interleave and produce failures that
 reproduce only in CI. Cleanup runs after, deterministically.
 
@@ -166,11 +166,13 @@ public archive rendered for a logged-in reporter is not the artefact the public 
 smoke suite that silently tests the authenticated variant of every page has stopped testing the
 site.
 
-**One honest correction to make here, because it is a type error waiting to happen.**
-Playwright's per-project options do **not** include `workers`. `TestProject` has `fullyParallel`,
-`retries`, `timeout`, `testMatch`, `dependencies`, `teardown` and `use`, and nothing that limits
-worker count for one project. So "one worker for mutations" is expressed with the two mechanisms
-that do exist, plus one documented invocation:
+**One honest correction to make here, and it is a correction to an earlier draft of this lesson.**
+That draft said `TestProject` has no `workers` option. It does — Playwright added
+`workers?: number | string` to `TestProject` in **1.52**, and `workers: 1` inside a project object
+type-checks cleanly today. This config still does not use it, for a reason that is a preference
+rather than a constraint: **one worker limit, in one place.** So "one worker for mutations" is
+expressed with the two mechanisms below plus the top-level limit, and if you would rather say it
+once on the project instead, that is a legitimate choice this course simply did not take.
 
 | Goal | Mechanism | Scope it actually covers |
 |---|---|---|
@@ -181,8 +183,9 @@ that do exist, plus one documented invocation:
 `fullyParallel: false` plus `mode: 'serial'` covers everything inside a file. Two mutation files
 in two workers is the remaining hole, and it is closed by the config's existing
 `...(process.env.CI ? { workers: 1 } : {})` in CI and by `--workers=1` locally, which Step 8
-puts in the command you type. Writing `workers: 1` inside a project object would not compile, and
-a config that does not compile is worse than one that is honest about its limit.
+puts in the command you type. A per-project `workers: 1` would close the same hole — the reason
+to keep it at the top is that a run has one concurrency budget, and two places to set it is one
+place too many when a suite starts interleaving and you are reading the config at speed.
 
 ### 4. `dependencies`, teardown, and why every project needs the root
 
@@ -619,10 +622,11 @@ const REPORTER_STATE = 'e2e/.auth/reporter.json';
       // and the failure reproduces only under concurrency — the most expensive
       // signature there is. Key Concept 3.
       //
-      // `fullyParallel: false` serialises tests WITHIN a file. There is no
-      // per-project `workers` option in Playwright's TestProject, so the
-      // cross-FILE guarantee comes from the top-level `workers` (1 in CI, and
-      // `--workers=1` locally). Each mutation spec also opens with
+      // `fullyParallel: false` serialises tests WITHIN a file. The cross-FILE
+      // guarantee comes from the top-level `workers` (1 in CI, `--workers=1`
+      // locally) rather than a per-project `workers` — which does exist, since
+      // Playwright 1.52, and is deliberately not used here so the run has ONE
+      // concurrency budget in one place. Each mutation spec also opens with
       // test.describe.configure({ mode: 'serial' }).
       name: 'mutations',
       testMatch: [
@@ -664,8 +668,8 @@ const REPORTER_STATE = 'e2e/.auth/reporter.json';
 
 **Verify §3:**
 
-- [ ] `npm run type-check` is silent. If it complains about `workers` inside a project object,
-      you wrote the brief's shorthand rather than Key Concept 3's mechanism.
+- [ ] `npm run type-check` is silent. Measured: the whole composed config type-checks clean
+      under `exactOptionalPropertyTypes`, including the conditional top-level `workers` spread.
 - [ ] `npx playwright test --list --project=setup` prints **3** tests.
 - [ ] `npx playwright test --list --project=smoke` and `--project=a11y` both resolve. Those two
       names are in Module 23's Starting State; a "project not found" here breaks the module you
@@ -1209,9 +1213,10 @@ cd next-app
 # The reset first: fixture import, then the cache purge that `setup` performs.
 npm run e2e:reset
 
-# --workers=1 is the cross-file half of Key Concept 3's isolation, and it is in
-# the command rather than in the config because Playwright has no per-project
-# workers option. In CI the top-level `workers: 1` already covers it.
+# --workers=1 is the cross-file half of Key Concept 3's isolation. It is in the
+# command rather than on the project because this suite keeps one worker limit in
+# one place, not because TestProject lacks the option — it has had it since 1.52.
+# In CI the top-level `workers: 1` already covers it.
 E2E_MODE=1 \
 E2E_SECRET="$E2E_SECRET" \
 BTT_REPORTER_PASSWORD="$BTT_REPORTER_PASSWORD" \
@@ -1246,8 +1251,9 @@ npm run type-check && npm run lint
 grep -n "name: '" playwright.config.ts
 # Expected: setup, smoke, mutations, a11y — in that order, and nothing else
 
-# 3. NEGATIVE — no `workers` key inside a project object. TestProject has no such
-#    option, so this would be a type error, not a slow suite.
+# 3. NEGATIVE — no `workers` key inside a project object. TestProject DOES accept
+#    one (Playwright 1.52+), so this is a house rule, not a compile error: one
+#    concurrency budget, set once at the top. A hit here is a second one.
 sed -n '/projects: \[/,/^  \],/p' playwright.config.ts | grep -c 'workers'
 # Expected: 0
 
@@ -1272,11 +1278,14 @@ npx playwright test --list | grep -oE '\[(setup|smoke|mutations|a11y)\] › [^ ]
   | awk '{print $3}' | sort | uniq -d
 # Expected: no output — every spec file belongs to exactly one project
 
-# 4d. NEGATIVE — nor does any spec match NONE. Count the files on disk against
-#     the files the four projects between them collect.
+# 4d. NEGATIVE — nor does any spec match NONE. Count the files on disk against the
+#     spec FILENAMES the four projects between them collect. Note this does NOT
+#     reuse 4c's output: 4c's third field carries `file:line:col`, so it counts
+#     TESTS, and comparing that to a file count can only ever mismatch.
+npx playwright test --list | grep -oE '[a-z0-9.-]+\.spec\.ts' | sort -u | wc -l
 ls -1 e2e/*.spec.ts | wc -l
-# Expected: the same number as the unique filenames in check 4c's listing.
-#           A mismatch names a spec that is silently never run.
+# Expected: the two numbers are EQUAL. A mismatch names a spec that is silently
+#           never run — the failure mode the allowlist trades for, and the loud one.
 
 # 5. Mutation isolation is configured on `mutations` and NOWHERE else
 grep -c 'fullyParallel: false' playwright.config.ts
@@ -1435,9 +1444,9 @@ answer — fix Lesson 18.3's branch order before shipping anything.
    `dependencies: ['setup']`. Give the reason, then describe the exact failure you would see if
    you removed that dependency — including why it would look like a data bug rather than an
    ordering bug.
-2. The brief for this lesson said to put `workers: 1` on the `mutations` project. Explain what is
-   wrong with that instruction, name the two mechanisms that do exist, and say precisely which
-   interleaving neither of them prevents and what closes that gap instead.
+2. An earlier draft of this lesson claimed `TestProject` has no `workers` option; it has had one
+   since Playwright 1.52. Name the two other mechanisms, say precisely which interleaving neither
+   prevents, and argue for or against moving the limit onto the `mutations` project.
 3. Lesson 16.4's `funnel.spec.ts` drives the login form and this lesson does not change it, even
    though `storageState` would make it four seconds faster. Justify keeping it, then name the
    circumstance under which you would reverse that decision.
@@ -1456,8 +1465,8 @@ answer — fix Lesson 18.3's branch order before shipping anything.
   the project's own words, including the per-role variant this lesson uses and the "reuse signed-in
   state" caveats
 - [Playwright — test projects and dependencies](https://playwright.dev/docs/test-projects) — the
-  full `TestProject` option list. Read it once and you will see for yourself that `workers` is not
-  on it, which is Key Concept 3's whole point
+  full `TestProject` option list. Read it once and check the `workers` entry against Key Concept 3
+  yourself: this is the flag surface that moved under an earlier draft of this lesson
 - [Playwright — parallelism and sharding](https://playwright.dev/docs/test-parallel) —
   `fullyParallel`, `describe.configure({ mode: 'serial' })` and where the worker boundary actually
   falls; the section on serial mode's failure propagation is the part people miss

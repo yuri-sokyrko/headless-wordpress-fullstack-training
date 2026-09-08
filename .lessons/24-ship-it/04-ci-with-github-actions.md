@@ -902,7 +902,7 @@ jobs:
 
       - name: Trivy — HIGH and CRITICAL with a fix available
         if: steps.guard.outputs.ready == 'true'
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: ${{ steps.tag.outputs.image }}
           severity: HIGH,CRITICAL
@@ -1106,9 +1106,27 @@ Lesson 21.4 wrote `lighthouserc.json` with the six budgeted routes and the thres
         if: steps.preview.outputs.url != ''
         env:
           PLAYWRIGHT_BASE_URL: ${{ steps.preview.outputs.url }}
+          # WITHOUT this, six of the 23 scans are the authenticated ones and they
+          # SKIP — and a skipped scan is not a failed scan, so the job goes green
+          # having audited 17 routes while claiming 23. Lesson 22.4 Step 8 says so
+          # in as many words. This is the whole reason the secret is here.
+          BTT_REPORTER_PASSWORD: ${{ secrets.E2E_REPORTER_PASSWORD }}
         # Lesson 22.4's project. Zero critical and zero serious; moderate and
         # minor are reported, not failed — 22.4 set that and 24.5 restates it.
         run: npx playwright test --project=a11y
+
+      - name: a11y counts into the job summary
+        if: always() && steps.preview.outputs.url != ''
+        # Lesson 22.4 Step 3's line, verbatim. "Reported, not enforced" means
+        # nothing at all unless the report lands somewhere a human sees it
+        # without downloading an artifact.
+        run: |
+          jq -s '{scans: length,
+                  critical: (map(.counts.critical) | add),
+                  serious:  (map(.counts.serious)  | add),
+                  moderate: (map(.counts.moderate) | add),
+                  minor:    (map(.counts.minor)    | add)}' \
+            test-results/a11y/*.json >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         if: always() && steps.preview.outputs.url != ''
@@ -1117,6 +1135,7 @@ Lesson 21.4 wrote `lighthouserc.json` with the six budgeted routes and the thres
           path: |
             next-app/.lighthouseci/
             next-app/playwright-report/
+            next-app/test-results/a11y/
           retention-days: 7
 ```
 
@@ -1128,6 +1147,9 @@ Lesson 21.4 wrote `lighthouserc.json` with the six budgeted routes and the thres
 - [ ] `deployments: read` is the only permission beyond `contents: read`.
 - [ ] The job **skips** cleanly with a warning when there is no preview, and `ci-required` counts
       that as pass. It goes live in Lesson 24.7.
+- [ ] `BTT_REPORTER_PASSWORD` is set. Confirm it the only way that can fail: the summary line says
+      `"scans": 23`, not `"scans": 17`. Six authenticated scans skipping is invisible in a green
+      check, and a skip is what you get when the secret is absent.
 
 ### Step 8: `ci-required`, written so 24.5 can append one line
 
@@ -1251,9 +1273,16 @@ grep -rnE '\$\{\{ *secrets\.' .github/workflows/ | grep -c 'password-stdin'
 # Expected: 2 — the two `docker login … --password-stdin` uses. A token on
 #           stdin never reaches the process list or the step log.
 # 5b. NEGATIVE — and no database or JWT credential exists in CI at all
-grep -rncE 'WORDPRESS_DB_PASSWORD|GRAPHQL_JWT_AUTH_SECRET_KEY|BTT_APP_TOKEN' .github/workflows/
-# Expected: 0 for every file. Because schema.graphql is committed, codegen needs
-#           no live WordPress — appendix 04 §7's promise, cashed in.
+grep -rncE 'WORDPRESS_DB_PASSWORD|GRAPHQL_JWT_AUTH_SECRET_KEY|BTT_APP_TOKEN' \
+  .github/workflows/ | grep -v '_web.yml:1$'
+# Expected: `:0` for every remaining file. `_web.yml` scores 1 and that hit is
+#           this very check, which _web.yml also runs against the built bundle —
+#           the pattern strings are in the file as grep arguments, not as values.
+#           A check that matches its own text is the trap this course names most
+#           often; here it is excluded by name rather than by loosening the
+#           pattern, so a real leak in _web.yml would still show as `:2`.
+#           Because schema.graphql is committed, codegen needs no live
+#           WordPress — appendix 04 §7's promise, cashed in.
 
 # 6. NEGATIVE — agentic-qa.yml is NOT aggregated
 sed -n '/^  ci-required:/,/^  [a-z]/p' .github/workflows/ci.yml | grep -c 'agentic'
@@ -1262,7 +1291,10 @@ grep -c 'agentic' .github/workflows/ci.yml
 # Expected: 0 anywhere in the entry workflow
 
 # 7. ci-required lists every other job, and treats skipped as pass
-grep -A2 '^    needs: \[detect' .github/workflows/ci.yml | head -3
+#    Anchored on the JOB NAME, not on `needs: [detect`: `contract` starts with the
+#    same literal and appears earlier in the file, so the unanchored grep matched
+#    the wrong job and printed a plausible answer to a question it never asked.
+sed -n '/^  ci-required:/,/^    if:/p' .github/workflows/ci.yml | grep 'needs:'
 # Expected: needs: [detect, web, php, image, contract, e2e, quality]
 sed -n '/^  ci-required:/,$p' .github/workflows/ci.yml | grep -c 'if: always()'
 # Expected: 1

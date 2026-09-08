@@ -1684,7 +1684,7 @@ authority" line mean something to a user rather than only to a reviewer.
   twice; it states Key Concept 1's consequence in React's own words
 - [React: `useActionState`](https://react.dev/reference/react/useActionState) — the signature, and
   why the previous state is the first argument
-- [Next.js: updating data with server functions](https://nextjs.org/docs/app/getting-started/updating-data) —
+- [Next.js: updating data with server functions](https://nextjs.org/docs/app/getting-started/mutating-data) —
   forms, pending states and the redirect-versus-return decision
 - [Next.js: `serverActions.allowedOrigins`](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions) —
   the configuration behind the Origin/Host check Lesson 15.5's matrix relies on

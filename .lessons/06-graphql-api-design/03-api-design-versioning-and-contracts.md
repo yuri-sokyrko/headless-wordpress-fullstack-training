@@ -142,6 +142,13 @@ WordPress-shaped thing you expose is a WordPress detail your front end now depen
 | `metaValue`, `postMeta`, raw meta keys | named fields (`downtimeMinutes`) | `wp_postmeta` is storage. Nobody outside should know it exists. |
 | A `String` holding `"s2-major"` | a `Severity` term, or an enum | the slug is a WordPress identifier; the consumer wants a value |
 | `severitySlug` on a breakdown object | `severities { nodes { slug } }` | one way to ask a question, not two |
+
+> **`severitySlug` and `severityIn` are deliberately not the same name.** `severitySlug` is a
+> singular **mutation input** on `createIncident` (Lesson 06.2); `severityIn` is a plural
+> **connection filter** on the where-args input (Lesson 06.1 §9). Core WPGraphQL draws the same
+> distinction with `nameIn` and `tagSlugIn`, and the `In` suffix is the convention that says "a
+> list, matched by OR". Two names because they are two things — which is the rule above applied,
+> not broken.
 | `postId`, `ID` and `databaseId` all exposed and interchangeable | the relay `id` for identity, `databaseId` where you truly need the integer | three identities for one thing is three ways to get it wrong |
 | `acfFields { … }` as a passthrough | field groups with a named `graphql_field_name` | the plugin's name in your contract |
 | Anything with `wp` in the name | — | you may move off WordPress. The contract should survive it. |
@@ -706,11 +713,11 @@ reason no job in this course's CI ever holds a database password.
   the official argument for one evolving schema; two paragraphs, and it is the whole model
 - [GraphQL spec — Field deprecation](https://spec.graphql.org/October2021/#sec-Field-Deprecation) —
   the normative behaviour of `@deprecated`, including that a deprecated field must still resolve
-- [Nullability in GraphQL](https://graphql.org/learn/non-null-and-nullable/) — read the
+- [Nullability in GraphQL](https://spec.graphql.org/October2021/#sec-Executing-Selection-Sets.Errors-and-Non-Null-Fields) — read the
   error-propagation section, which is Key Concept 2's most expensive detail
 - [Apollo — Schema design: nullability](https://www.apollographql.com/docs/graphos/schema-design/guides/nullability) —
   the "be generous in what you accept" rule argued at length, with production examples
-- [WPGraphQL — the `generate-static-schema` command](https://www.wpgraphql.com/docs/wp-cli/) —
+- [WPGraphQL — the `generate-static-schema` command](https://github.com/wp-graphql/wp-graphql/blob/main/plugins/wp-graphql/src/CLI/Commands.php) —
   the flags, and where the file goes when you omit `--output`
 - [graphql-inspector](https://the-guild.dev/graphql/inspector) — diffs two schema files and
   classifies every change as breaking, dangerous or safe; the tool version of Key Concept 4

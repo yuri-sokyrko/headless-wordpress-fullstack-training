@@ -363,9 +363,12 @@ cd next-app
 npm run build 2>&1 | tee /tmp/btt-build-before.txt | sed -n '/Route (app)/,$p' | head -40
 ```
 
-Three things to read out of that table: the marker before each route (`○` static, `●` prerendered
-from `generateStaticParams`, `ƒ` dynamic), `Size` (the route's own JavaScript) and
-`First Load JS` (the route's JavaScript **plus** the shared chunks — the budgeted number).
+Five columns, three of which matter here: the marker before each route (`○` static, `●` has
+`generateStaticParams`, `ƒ` dynamic), `Size` (the route's own JavaScript) and `First Load JS`
+(the route's JavaScript **plus** the shared chunks — the budgeted number). Next 15.5 also prints
+`Revalidate` and `Expire`, and `Revalidate` is worth knowing: it appears only when something was
+genuinely prerendered with ISR, which makes it the one column that can contradict the marker.
+`●` means the route *has* `generateStaticParams`, not that any HTML came out of it.
 
 The markers should match Lesson 18.1's table: `/[locale]/hobt` static, `/[locale]/incidents`
 dynamic, the three `[slug]` routes prerendered. If they do not, stop. Something after Module 18

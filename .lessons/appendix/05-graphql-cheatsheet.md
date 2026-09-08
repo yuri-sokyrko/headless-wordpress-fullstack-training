@@ -10,8 +10,8 @@ Try everything here in GraphiQL first: <http://localhost:8080/wp-admin/admin.php
 ## 1. Anatomy
 
 ```graphql
-query GetIncidents($first: Int!, $scapegoat: String) {   # operation type, name, variables
-  incidents(first: $first, where: { scapegoatSlug: $scapegoat }) {   # field + arguments
+query IncidentsList($first: Int!) {                      # operation type, name, variables
+  incidents(first: $first, where: { status: PUBLISH }) {   # field + arguments
     nodes {                                              # selection set
       id
       title
@@ -143,7 +143,11 @@ Same field, twice, with different arguments.
 
 ```graphql
 query GetHomepageFeeds {
-  catastrophic: incidents(first: 3, where: { severitySlug: "s1-catastrophic" }) {
+  # `severityIn` is the ONE narrow taxonomy where-arg this project registers
+  # (Lesson 06.1 §9). `where: { taxQuery: … }` is NOT a real argument here — the
+  # extension providing it is not installed, and an unregistered input key is a
+  # validation error with `data: null`, not an empty list. Lesson 05.2 §6.
+  catastrophic: incidents(first: 3, where: { severityIn: ["s1-catastrophic"] }) {
     nodes { ...IncidentCardFields }
   }
   recent: incidents(first: 6) {
@@ -234,11 +238,13 @@ query GetPrimaryMenu {
 # Site-wide settings from the ACF options page — fetched once in the root layout
 query GetSiteSettings {
   siteSettings {
-    siteTagline
-    primaryCtaLabel
-    primaryCtaUrl
-    incidentSubmissionOpen
-    socialLinks { network url }
+    siteChrome {
+      siteTagline
+      primaryCtaLabel
+      primaryCtaUrl
+      incidentSubmissionOpen
+      socialLinks { network url }
+    }
   }
 }
 
@@ -277,7 +283,7 @@ query GetPageBlocks($uri: String!) {
 # Locale-filtered list — every localised CONNECTION in this app takes this variable.
 # A by-slug query does NOT: GraphQL rejects a declared-but-unused variable, so those
 # select `language { code }` and compare it against the URL segment instead.
-query GetGermanIncidents($language: LanguageCodeEnum!) {
+query GetGermanIncidents($language: LanguageCodeFilterEnum!) {
   incidents(first: 10, where: { status: PUBLISH, language: $language }) {
     nodes { slug language { code } }
   }
@@ -294,7 +300,7 @@ query GetTranslations($slug: ID!) {
 }
 
 # SEO, on every content query
-fragment SeoFields on NodeWithSeo {
+fragment SeoFields on ContentNode {
   seo {
     title
     metaDesc
@@ -336,3 +342,4 @@ Introspection is how GraphiQL autocompletes and how codegen works.
 | Works in GraphiQL, fails from Next | GraphiQL is authenticated as your wp-admin session. Anonymous requests have fewer permissions — that is usually correct behaviour, not a bug. |
 | The query is enormous and slow | An unbounded connection or an N+1 in a resolver. Turn on `SAVEQUERIES` and count. Lesson 06.4. |
 | Empty `data` and a 200 | Read `errors`. `fetch` did not throw and never will. |
+| `Field "taxQuery" is not defined by type "RootQueryToIncidentConnectionWhereArgs"` | You copied a query written against the `wp-graphql-tax-query` extension, which is not installed. Narrow with `severityIn` (Lesson 06.1 §9) or traverse from the term. |

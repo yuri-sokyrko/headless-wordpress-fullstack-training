@@ -304,7 +304,7 @@ page, because there was no `not-found.tsx` above it. Now it renders yours.
 There is no `[locale]` parameter available in `not-found.tsx` — Next renders it without the
 route's params — so any link in it has to construct a locale itself. The app has one locale,
 `en`, from `NEXT_PUBLIC_DEFAULT_LOCALE` per
-[appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them);
+[appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them);
 Module 20 revisits it.
 
 ### 9. `loading.tsx`, `<Suspense>`, and where a spinner actually helps

@@ -396,7 +396,8 @@ forever — and it is the reason the payload carries `termId` at all.
 
 ### 10. The test-only hook, and why it 404s rather than 401s
 
-Lesson 23.6's `global-setup` restores `fixtures/seeded.sql` and then has a problem: **Next has no
+Lesson 23.6 runs Lesson 12.4's `global-setup`, which restores `fixtures/seeded.sql`, and then
+has a problem: **Next has no
 idea the database was replaced.** Every ISR entry still describes the pre-import content, the tags
 were never expired, and the specs that follow assert against data that is correct in MySQL and
 stale in Next. Appendix 06 §7 lists it as "passes alone, fails in the suite" — the worst possible
@@ -1447,7 +1448,7 @@ says is the oracle you just built. Delete the message and reread Key Concept 7 b
   return is the part Key Concept 4 is about
 - [WordPress — `saved_term`](https://developer.wordpress.org/reference/hooks/saved_term/) — fires
   for every taxonomy including `nav_menu`, which is why the allowlist exists
-- [ACF — `acf/save_post`](https://www.advancedcustomfields.com/resources/acf-save-post/) — the
+- [ACF — `acf/save_post`](https://www.advancedcustomfields.com/resources/acf-save_post/) — the
   priority argument and the three shapes of `$post_id`, including `options` and `term_<id>`
 - [PHP — `hash_hmac()`](https://www.php.net/manual/en/function.hash-hmac.php) and
   [`hash_equals()`](https://www.php.net/manual/en/function.hash-equals.php) — the pair you already

@@ -536,13 +536,22 @@ function buildOutput() {
   }
 
   // No log supplied, so run the build. In CI, tee the build you already ran and
-  // pass --log, so the job builds once instead of twice. NO_COLOR because ANSI
-  // escape codes sit between the number and its unit and break the regex.
-  return execFileSync('npx', ['next', 'build'], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'inherit'],
-    env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
-  });
+  // pass --log, so the job builds once instead of twice. NO_COLOR belt and
+  // braces: on Next 15.5 the escapes wrap the number-and-unit pair rather than
+  // splitting it, so a coloured log happens to parse — but that is an accident
+  // of where Next puts them, not a promise, and this file is a gate.
+  try {
+    return execFileSync('npx', ['next', 'build'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'inherit'],
+      env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
+    });
+  } catch {
+    // Without this, a failing build dumps a raw Node Error object — `output`,
+    // `stdout` and `pid` arrays — and Key Concept 6's promise of failing
+    // loudly AND READABLY is only half kept. The build's own output is above.
+    die('`next build` failed. Its output is above. Fix the build, then the budget.');
+  }
 }
 
 const routes = parseRoutes(buildOutput());
@@ -630,11 +639,12 @@ if (failures.length > 0) {
 console.log('\nall routes within budget');
 ```
 
-> **This parser is reasoned, not executed.** This is a documentation repository — there is no
-> `node_modules`, no build to run and no output to parse — so the row regex is derived from Next
-> 15's printed table rather than tested against it. Run it once against your own build log before
-> you trust it, and if it parses zero routes, that is Key Concept 6's failure path working
-> correctly rather than a bug in your setup.
+> **This parser has been run against a real build — on Next 15.5.25, where it read six routes
+> correctly, skipped the child slug rows and the `/api/*` rows, and was untroubled by the
+> `Revalidate` and `Expire` columns Next added.** All three loud-failure paths were exercised too:
+> no baseline, a header with zero rows, and no header at all. What is *not* guaranteed is your
+> Next version: the route table is not a public API. If it parses zero routes, that is Key Concept
+> 6's failure path working correctly rather than a bug in your setup.
 
 **Verify §3:**
 
@@ -1123,7 +1133,7 @@ Key Concept 3 applies and the answer is in `docs/perf-baseline.md`, not in a low
 
 - [Lighthouse CI — configuration](https://github.com/GoogleChrome/lighthouse-ci/blob/main/docs/configuration.md)
   — every key in Task §1, including `aggregationMethod` and the `collect.settings` passthrough
-- [Lighthouse CI — assertions](https://github.com/GoogleChrome/lighthouse-ci/blob/main/docs/assertions.md)
+- [Lighthouse CI — assertions](https://github.com/GoogleChrome/lighthouse-ci/blob/main/docs/configuration.md#assertions)
   — the `["error", { … }]` tuple form, the presets, and how `median` aggregation is computed
 - [Lighthouse CI — getting started](https://github.com/GoogleChrome/lighthouse-ci/blob/main/docs/getting-started.md)
   — `startServerCommand` and the ready-pattern behaviour Task §1 hedges about

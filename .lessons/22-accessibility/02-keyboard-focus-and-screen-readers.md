@@ -317,11 +317,19 @@ mostly confirms is a legitimate outcome:
 | `Button`, `Badge`, `IncidentCard`, `Skeleton`, `Sheet` | **done**, 11.4 Step 7 |
 | `LocaleSwitcher` (20.3) — the only animated component added after 11.4 | **done**, it shipped with `motion-reduce:transition-none` |
 | `IncidentTicker` (14.4) | **nothing to reduce.** Despite the name it renders a static `<ul>`; there is no marquee, no scroll and no animation. Read the component |
-| `ui/dialog.tsx` | **the one real gap.** `DialogContent` and `DialogOverlay` carry `data-[state=open]:animate-in`, `fade-in-0` and `zoom-in-95` from the shadcn CLI, and 11.4 Step 7 covered `sheet.tsx` and not this |
+| `ui/dialog.tsx`, `ui/sheet.tsx` | **the real gap, and it is five class strings, not two.** Both overlays, both `Close` buttons (`transition-opacity`, easy to miss) and `DialogContent` are unguarded. 11.4 Step 7 patched `SheetContent`'s base string and nothing else |
 
 The last row is worth a note on method: the course never prints `ui/dialog.tsx`, because the CLI
 generates it and its output changes between versions. So the honest instruction is "read your
-own copy and grep it", not "add this line" — and Step 6 is written that way.
+own copy and grep it", not "add this line" — and Step 6 is written that way. At shadcn CLI
+4.21.0 neither file carries `motion-reduce:` anywhere, so expect to patch, not to skip.
+
+And one thing the grep cannot tell you, which Step 6 makes you check separately: **on this
+project those animations do not currently render at all.** `animate-in`, `fade-in-0` and
+`zoom-in-95` are not Tailwind core utilities — they come from `tailwindcss-animate`, and Lesson
+11.1 never installed it. They compile to zero bytes of CSS. So the class strings are a real
+latent defect and the *motion* is not there yet; fix the strings, and do not read a still dialog
+as proof that you fixed anything.
 
 ---
 
@@ -772,27 +780,40 @@ cd next-app
 # 1. Every animation utility in the project, and whether its element is guarded.
 grep -rn 'animate-in\|animate-out\|animate-pulse\|animate-spin\|transition-' \
   src/components/ | grep -v 'motion-reduce'
-# Expected: hits in src/components/ui/dialog.tsx ONLY — DialogOverlay and
-#           DialogContent, which the shadcn CLI wrote and Lesson 11.4 Step 7 did
-#           not cover. Everything else pairs its animation with motion-reduce:.
-#           If YOUR dialog.tsx already carries motion-reduce:, the CLI version
-#           moved on: record that and skip the edit.
+# Expected: FIVE hits, across TWO files — dialog.tsx's DialogOverlay, its
+#           DialogContent and its Close button; sheet.tsx's SheetOverlay and its
+#           Close button. Lesson 11.4 Step 7 covered SheetContent's base string
+#           and nothing else. The two Close buttons carry `transition-opacity`
+#           rather than an `animate-*`, which is why they get read past.
 
-# 2. The ticker, which the name suggests animates and which does not.
+# 2. Do those animation utilities even exist? `animate-in` and friends ship in
+#    tailwindcss-animate, which Lesson 11.1 did not install.
+grep -rc 'tailwindcss-animate\|tw-animate-css' package.json 'src/app/[locale]/globals.css'
+# Expected: 0 and 0. So `animate-in`/`fade-in-0`/`zoom-in-95` are undefined
+#           utilities that emit no CSS — the class strings are a latent defect,
+#           not a visible one. Fix them anyway; the day someone adds the plugin
+#           is not the day to discover five unguarded animations.
+
+# 3. The ticker, which the name suggests animates and which does not.
 grep -c 'animate\|marquee\|@keyframes' src/components/blocks/IncidentTicker.tsx
 # Expected: 0 — a static <ul>. "We checked and there is nothing to do" is a
 #           result; inventing a fix for it is not.
 ```
 
-Add `motion-reduce:animate-none motion-reduce:transition-none` to `DialogOverlay`'s and
-`DialogContent`'s base class strings in `src/components/ui/dialog.tsx`, exactly as Lesson 11.4
-Step 7 did for `SheetContent`. Then prove it:
+Add `motion-reduce:animate-none motion-reduce:transition-none` to **all five** class strings
+command 1 named — `DialogOverlay`, `DialogContent` and the `Close` button in
+`src/components/ui/dialog.tsx`, and `SheetOverlay` and its `Close` in `src/components/ui/sheet.tsx`
+— exactly as Lesson 11.4 Step 7 did for `SheetContent`. Then prove it:
 
 **Verify §6:**
 
 - [ ] Chrome DevTools → Rendering → "Emulate CSS `prefers-reduced-motion`" → `reduce`.
-- [ ] The Get Demo dialog appears without the zoom-and-fade. The mobile drawer appears without
-      sliding. A `loading.tsx` skeleton is a static grey block.
+- [ ] A `loading.tsx` skeleton is a static grey block, and the mobile drawer appears without
+      sliding. Those two are `animate-pulse` and `transition`, both Tailwind core, so this is a
+      real before-and-after.
+- [ ] The Get Demo dialog looks **identical to before the edit** — and that is the expected
+      result, not a failed fix. Command 2 explained it: its zoom-and-fade utilities compile to
+      nothing today. Command 1 returning no output is the proof here; the eye is not.
 - [ ] Button hover still changes colour. Correct — a 150 ms colour fade is not a vestibular
       trigger, and removing it makes state harder to perceive (Lesson 11.4 §9).
 
@@ -870,7 +891,7 @@ concern now has a real row above, spelled `role="status"`.
 <!-- docs/accessibility.md — append to "Known gaps, owned by a later module" -->
 | Route-change focus moves to `<main>`; nothing standardises that target, and it is not the right one on a route whose first meaningful content sits above `<main>` | accepted — Lesson 22.2 §5 states the three conditions and the caveat |
 | Two search affordances on `/incidents`: `IncidentSearch` filters the fetched page, `?q=` filters what WordPress is asked for. One announcement covers both; the duplication itself is a product decision | accepted — named by Lesson 18.1 |
-| A `motion-reduce:` variant on a new `<DialogContent>` is not enforced by anything | Lesson 24.2, as a `no-restricted-syntax` rule |
+| A `motion-reduce:` variant on a new `<DialogContent>` is not enforced by anything | open. Verification check 13's grep is the only guard; a `no-restricted-syntax` selector would close it |
 ```
 
 ---
@@ -992,7 +1013,9 @@ grep -c 'scroll-mt-20' 'src/app/[locale]/layout.tsx'
 #     component tree. This is the check that closes Lesson 11.4 Step 7's gap.
 grep -rn 'animate-in\|animate-out\|animate-pulse\|animate-spin\|transition-' \
   src/components/ | grep -v 'motion-reduce'
-# Expected: no output. Before this lesson, ui/dialog.tsx produced two hits.
+# Expected: no output. Before this lesson, dialog.tsx and sheet.tsx produced five
+#           between them — count them in Step 6 command 1 before you patch, so
+#           this zero has a denominator.
 
 # 14. The ticker does not tick. Recorded, because the audit result is "nothing
 #     to do" and a future reader will assume otherwise from the name.

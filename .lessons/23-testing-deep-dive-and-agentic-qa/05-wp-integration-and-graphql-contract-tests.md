@@ -182,23 +182,30 @@ Two configuration details follow, and both go in `wp-tests-config.php`: **`ABSPA
 the second, `WP_CONTENT_DIR` defaults inside the Composer copy where there are no plugins at all,
 so WPGraphQL and ACF are invisible and every schema test skips.
 
-**Now the constraint, and it is the one thing here that may not resolve on your machine.** Pest 3
-requires PHPUnit 11; WordPress core's test suite supports a specific range of PHPUnit majors and
-refuses others in its own bootstrap; `yoast/phpunit-polyfills` is the shim between them. All three
-have to agree, and which triple agrees depends on your WordPress version:
+**Now the constraint, and it is the one that decides the Pest major.** It does not announce itself
+the way you would expect. Composer resolves Pest 3, PHPUnit 11 and `wp-phpunit` **cleanly, with no
+conflict at all** — because `wp-phpunit/wp-phpunit` declares no `phpunit/phpunit` requirement in
+its own `composer.json`, so there is nothing for a resolver to reject. Nothing aborts in the
+bootstrap either: its only PHPUnit gate is a *minimum* of 5.7.21. The incompatibility is at **run
+time**, and it is total:
 
 ```
-   pestphp/pest  ──requires──▶  phpunit/phpunit  ◀──must be supported by──  wp-phpunit
-                                       ▲
-                                       └── yoast/phpunit-polyfills bridges the gap
+   pestphp/pest 3  ──pins──▶  phpunit/phpunit 11   ✗
+   pestphp/pest 2  ──pins──▶  phpunit/phpunit 10   ✗   WP_UnitTestCase::set_up()
+   pestphp/pest 1  ──pins──▶  phpunit/phpunit  9   ✓   works only on 9
+
+   the error on 10 and on 11, from core's own test case:
+   Call to undefined method PHPUnit\Util\Test::parseTestMethodAnnotations()
+   at vendor/wp-phpunit/wp-phpunit/includes/abstract-testcase.php
 ```
 
-**Reasoned, not executed.** This course cannot run Composer, so treat Step 2's versions as a
-starting point rather than a fact. If the bootstrap aborts naming an unsupported PHPUnit version,
-the fix is mechanical: lower `pestphp/pest` by one major, `composer update`, and **record the
-triple that worked** in a comment in `composer.json`. Never patch anything under `vendor/`. Lesson
-24.4 installs from the same `composer.lock`, so a pin that works locally works there — the entire
-reason this lives in Composer rather than in a shell script.
+`WP_UnitTestCase::set_up()` calls `expectDeprecated()`, which calls
+`PHPUnit\Util\Test::parseTestMethodAnnotations()` — removed in PHPUnit **10**. So all seventeen
+tests here error before their first assertion, on identical code in wp-phpunit 6.8.8 and 7.1.0
+alike; pinning WordPress back does not help, and lowering Pest one major does not either. Core's
+suite is PHPUnit **9**, which is why Lesson 23.4 pinned `pestphp/pest:^1.0`: one `composer.json`,
+one PHPUnit, both suites. Never patch anything under `vendor/`. Lesson 24.4 installs from the same
+`composer.lock`, so the pin that works here is what CI gets.
 
 ### 5. Two suites, two containers, one `composer.json` — said plainly
 
@@ -206,7 +213,7 @@ reason this lives in Composer rather than in a shell script.
 |---|---|---|
 | Needs WordPress | no — it is mocked out | **yes**, plus a real MySQL |
 | Local invocation | `docker compose run --rm composer run test:unit` | `docker compose exec -T -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest --testsuite=integration` |
-| Why not the other container | the stock `wordpress` image has **no Composer binary** | the `composer` service has **no WordPress** |
+| Why not the other container | the stock `wordpress` image has **no Composer binary** | the `composer` service has **no database**, so the bootstrap guard returns early and WordPress is never loaded |
 | On a CI runner | `composer test:unit` | `composer test:integration` — both verbatim |
 
 Read the last row. On a runner with PHP, Composer and a MySQL service, both run by name. Locally
@@ -422,9 +429,13 @@ from truncating your development content.
 ### Step 2: Add the three integration dependencies and the `test:integration` script
 
 ```bash
+# PIN BOTH WORDPRESS PACKAGES to the container's major. Unconstrained, Composer
+# takes the newest WordPress on Packagist — 7.x — and the suite then proves your
+# registrations against a WordPress this site does not run, which is the exact
+# divergence the table above rejects the container's copy for.
 docker compose run --rm composer require --dev \
-  wp-phpunit/wp-phpunit \
-  roots/wordpress-no-content \
+  wp-phpunit/wp-phpunit:~6.8.0 \
+  roots/wordpress-no-content:~6.8.0 \
   yoast/phpunit-polyfills:^3.0
 ```
 
@@ -442,13 +453,14 @@ docker compose run --rm composer require --dev \
 That is an anchored edit to the `scripts` block Lesson 23.4 left with three entries — the rest of
 `composer.json` is unchanged.
 
-> **The version triple, and the honest caveat.** `pestphp/pest` pins a PHPUnit major, WordPress's
-> own test suite supports a range of PHPUnit majors and refuses others in its bootstrap, and
-> `yoast/phpunit-polyfills` bridges them. This course cannot run Composer, so **these constraints
-> are reasoned, not executed.** If Step 7's first run aborts with a message about an unsupported
-> PHPUnit version, lower `pestphp/pest` by one major, `composer update`, and record the triple
-> that worked in a comment in `composer.json`. Never edit anything under `vendor/`. Lesson 24.4
-> installs from your `composer.lock`, so whatever resolves here is what CI gets.
+> **The quadruple, measured on PHP 8.3.** `pestphp/pest 1.23.1`, `phpunit/phpunit 9.6.36`,
+> `wp-phpunit/wp-phpunit 6.8.8`, `yoast/phpunit-polyfills 3.1.2` — plus `brain/monkey 2.7.0` and
+> `roots/wordpress-no-content 6.8.8`. Two traps in there. `pestphp/pest:^2.0` will not even resolve
+> beside `yoast/phpunit-polyfills:^3.0`, because the polyfills' PHPUnit range is
+> `^6.4.4 || ^7.0 || ^8.0 || ^9.0 || ^11.0` and **PHPUnit 10 is not in it**; relax the polyfills to
+> `^2.0` and it resolves and then dies at run time instead, per Key Concept 4. And Pest 1 needs PHP
+> **8.3 or lower** — on 8.4+ it fails with a wall of "Implicitly marking parameter as nullable is
+> deprecated", so check the runner's PHP before you debug anything else.
 
 **Verify §2:**
 
@@ -525,7 +537,9 @@ The reversal condition is a team that cares, and the price is the maintenance.
 
 **Verify §3:**
 
-- [ ] `pest --list-test-suites` prints **both** `unit` and `integration`.
+- [ ] `pest --list-suites` prints **both** `unit` and `integration`, in declaration order.
+      The flag is `--list-suites`; `--list-test-suites` is the XML element name and Pest
+      answers it with `Unknown option`.
 - [ ] `composer run phpcs` is clean. Before this edit it reported dozens of false positives in
       `tests/` — run it once *before* adding the exclusion if you want to see what a CI job red on
       arrival looks like.
@@ -664,9 +678,17 @@ One anchored edit to `tests/Pest.php`, so `it()` works against `WP_UnitTestCase`
 ```php
 <?php
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/tests/Pest.php (fragment — append)
-// Guarded, because Pest.php is loaded for the UNIT suite too, where WordPress does
-// not exist and a bare class reference would be a fatal error.
-if ( class_exists( '\WP_UnitTestCase' ) ) {
+// The guard CANNOT be `class_exists( '\WP_UnitTestCase' )`, however obvious that
+// looks. Pest evaluates this file BEFORE PHPUnit runs the `bootstrap` attribute, so
+// at this moment the class does not exist yet, the `uses()` is skipped in silence,
+// and every integration test quietly extends a plain PHPUnit TestCase: no
+// `self::factory()`, and — far worse — no transaction per test. Nothing warns you.
+// So test the environment instead, and load the bootstrap ourselves.
+// `require_once` makes PHPUnit's own later load of the same file a no-op, and the
+// bootstrap defines the real ABSPATH before Lesson 23.4's fallback can.
+if ( '' !== (string) getenv( 'WP_TESTS_DB_PASSWORD' ) ) {
+	require_once __DIR__ . '/bootstrap.php';
+
 	uses( \WP_UnitTestCase::class )->in( 'Integration' );
 }
 ```
@@ -892,7 +914,10 @@ it( 'agrees with what ACF actually loaded, when ACF is present', function (): vo
 } );
 
 it( 'NEGATIVE: every block.json is valid and namespaced `btt/`', function (): void {
-	$src = dirname( __DIR__, 3 ) . '/plugins/blame-the-tech-blocks/src';
+	// dirname( __DIR__, 3 ) is ALREADY wp-content/plugins — tests/Integration is two
+	// levels below the plugin root. A '/plugins/' here makes it .../plugins/plugins,
+	// is_dir() is false forever, and this test skips instead of ever asserting.
+	$src = dirname( __DIR__, 3 ) . '/blame-the-tech-blocks/src';
 
 	if ( ! is_dir( $src ) ) {
 		$this->markTestSkipped( 'The blocks plugin is not checked out.' );
@@ -1072,8 +1097,8 @@ twenty-minute timeout.
 
 - [ ] The suite boots, after several seconds of `Installing…` — WordPress installing itself into
       `wp_test`, and the honest cost of suite 4.
-- [ ] If it aborts naming an unsupported PHPUnit version, go back to Step 2's caveat. That is the
-      one constraint this course could not verify for you.
+- [ ] `Call to undefined method PHPUnit\Util\Test::parseTestMethodAnnotations()` means the Pest
+      major is wrong, not the code — Key Concept 4.
 - [ ] `-e WP_TESTS_DB_PASSWORD` is present. Without it `DB_PASSWORD` is `''` and the failure reads
       `Error establishing a database connection`, which names the wrong problem.
 - [ ] Read the skip count. Every skip is a plugin this environment lacks and a row 24.4 must close.
@@ -1144,6 +1169,14 @@ import graphqlPlugin from '@graphql-eslint/eslint-plugin';
       },
     },
     rules: {
+      // Lesson 07.5 spreads `recommendedTypeChecked` with no `files` key, so its
+      // type-aware rules reach here, where there is no TypeScript program at all.
+      // Without this line ESLint dies on the first .graphql file: "You have used a
+      // rule which requires type information … Parser: @graphql-eslint/parser".
+      // It must be the `.rules` spread INSIDE `rules:` — spreading the whole config
+      // object is undone by the `rules:` key that follows it.
+      ...tseslint.configs.disableTypeChecked.rules,
+
       // `npm run lint` runs --max-warnings=0, so a preset rule set at `warn` still
       // FAILS the build. Read the preset before you trust it to be advisory.
       ...graphqlPlugin.configs['flat/operations-recommended'].rules,
@@ -1161,9 +1194,11 @@ The file already holds the ignores block, `js.configs.recommended`, the type-awa
 an `e2e/**` block. **This lesson adds one object and touches nothing else**, and in particular no
 second `linterOptions`: `reportUnusedDisableDirectives: 'error'` has been set since Lesson 07.5.
 
-> **Reasoned, not executed.** The plugin's flat-config export names moved between majors —
-> `parser`, `configs['flat/…']` and `parserOptions.graphQLConfig` are the v4 spellings. If ESLint
-> reports "Cannot read properties of undefined", print the export map with
+> **Measured on `@graphql-eslint/eslint-plugin@4.4.1`:** the export map is
+> `['parser', 'processor', 'rules', 'configs']`, and `flat/operations-recommended` contributes 32
+> rules. So `parser`, `configs['flat/…']` and `parserOptions.graphQLConfig` are the right v4
+> spellings. They moved once between majors and will again; if a future one reports "Cannot read
+> properties of undefined", print the export map with
 > `node -e "import('@graphql-eslint/eslint-plugin').then(m => console.log(Object.keys(m.default ?? m)))"`
 > and adjust. The *shape* — one object, scoped to `**/*.graphql`, pointing at the committed schema
 > — does not change.
@@ -1190,8 +1225,13 @@ export PLUGIN=wp-content/plugins/blame-the-tech-core
 # WP_TESTS_DB_PASSWORD must still be exported in this shell — Step 1.
 
 # 1. Both suites exist and are separately addressable
-docker compose run --rm composer exec -- pest --list-test-suites
-# Expected: unit and integration, in that order
+docker compose run --rm composer exec -- pest --list-suites
+# Expected: "Available test suite(s):" then ` - unit` and ` - integration`, in that
+#           order — declaration order, from phpunit.xml.dist. The flag is
+#           --list-suites; --list-test-suites is rejected with `Unknown option`.
+#           EVERY --filter CHECK BELOW IS A FALSE GREEN IF YOU MISTYPE THE NAME:
+#           a filter that matches nothing prints `No tests executed!` and exits 0.
+#           Read the count on each one, never the exit code alone.
 
 # 2. Suite 3 is unaffected by everything this lesson added
 docker compose run --rm composer run test:unit
@@ -1207,14 +1247,21 @@ docker compose exec -T \
 # Expected: several seconds of "Installing…" — WordPress installing itself into
 #           wp_test — then 17 tests. READ THE SKIP COUNT: every skip is a plugin
 #           this environment does not have, and a skipped test is not a passing one.
+#           Without WPGraphQL, ACF and a blocks build that is SEVEN of the
+#           seventeen, and seven skips look exactly like a green run.
 
-# 4. The transaction isolation is real, not assumed
+# 4. The transaction isolation is real, not assumed. BOTH HALVES, deliberately.
 docker compose exec -T -e WP_TESTS_DB_PASSWORD="$WP_TESTS_DB_PASSWORD" \
   -w /var/www/html/wp-content/plugins/blame-the-tech-core wordpress \
-  php vendor/bin/pest --testsuite=integration --filter="rolled back"
-# Expected: 1 passed. The paired test before it creates an incident; this one
-#           asserts there are zero. Every other assertion in the suite rests on
-#           that, so it is worth having as its own check.
+  php vendor/bin/pest --testsuite=integration --filter="transaction|rolled back"
+# Expected: 2 passed. Filtering only "rolled back" is the version of this check
+#           that CANNOT FAIL, and it is worth understanding why: that test asserts
+#           there are zero incidents, so it also passes when the test before it
+#           never managed to create one — which is exactly what happens if the
+#           uses( WP_UnitTestCase ) wiring in Pest.php silently did not apply
+#           (Step 4). One test creating a row and the next not seeing it is the
+#           only pair that distinguishes a real ROLLBACK from an empty database.
+#           Every other assertion in this file rests on that, so run both.
 
 # 5. NEGATIVE — the most valuable assertion in the module
 docker compose exec -T -e WP_TESTS_DB_PASSWORD="$WP_TESTS_DB_PASSWORD" \
@@ -1290,6 +1337,8 @@ mv $PLUGIN/../blame-the-tech-blocks/src/incident-callout/block.json.bak \
 # Expected: exit NON-ZERO, failing on toBeArray(). `register_block_type()` on an
 #           unparseable block.json skips the block SILENTLY — no notice, no log —
 #           so a parse assertion is the only thing that ever notices.
+#           If this SKIPS instead, the `$src` path in AcfKeysTest is wrong and the
+#           test has never asserted anything — see the comment on that line.
 
 # 13. NEGATIVE — an anonymous caller sees no pending incident
 docker compose exec -T -e WP_TESTS_DB_PASSWORD="$WP_TESTS_DB_PASSWORD" \
@@ -1386,7 +1435,7 @@ the only failure in this stack that produces no error message of any kind, anywh
 
 ## Learn More
 
-- [WordPress — Plugin integration tests](https://make.wordpress.org/cli/handbook/misc/plugin-unit-tests/)
+- [WordPress — Plugin integration tests](https://make.wordpress.org/cli/handbook/how-to/plugin-unit-tests/)
   — the canonical `install-wp-tests.sh` path this lesson replaces; read it to see exactly which
   three moving parts moving to Composer removes
 - [`wp-phpunit/wp-phpunit`](https://github.com/wp-phpunit/wp-phpunit) — core's own test library as
@@ -1399,7 +1448,7 @@ the only failure in this stack that produces no error message of any kind, anywh
   your WordPress version before you fight the bootstrap
 - [WordPress — `WP_UnitTestCase` and the factories](https://make.wordpress.org/core/handbook/testing/automated-testing/phpunit/)
   — the factory API and the transaction-per-test contract, from the people who wrote it
-- [WPGraphQL — `graphql()` PHP function](https://www.wpgraphql.com/docs/wp-graphql-vs-wp-rest-api/)
+- [WPGraphQL — `graphql()` PHP function](https://www.wpgraphql.com/docs/use-with-php)
   — in-process execution, and the reminder that WPGraphQL's Model layer applies capability checks
   regardless of how the query arrived
 - [WPGraphQL — `graphql generate-static-schema`](https://www.wpgraphql.com/docs/wp-cli) — the CLI

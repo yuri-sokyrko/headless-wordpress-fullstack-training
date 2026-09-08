@@ -250,7 +250,7 @@ cd next-app
 
 npm install --save-dev \
   eslint@^9 \
-  @eslint/js \
+  @eslint/js@^9 \
   typescript-eslint \
   eslint-config-prettier \
   prettier
@@ -258,7 +258,9 @@ npm install --save-dev \
 
 **Verify §1:**
 
-- [ ] `npx eslint --version` prints `v9.x`.
+- [ ] `npx eslint --version` prints `v9.x`. Both ESLint packages carry `@^9` for one reason:
+      `@eslint/js` has shipped a v10 that peer-requires `eslint@^10`, so leaving it unpinned next
+      to `eslint@^9` is an `ERESOLVE` failure rather than a warning.
 - [ ] `package.json` has all five under `devDependencies`, not `dependencies` — none of this
       ships to a user.
 
@@ -311,6 +313,11 @@ export default [
 
       // `any` defeats the entire point of Module 07. Use `unknown` and narrow.
       '@typescript-eslint/no-explicit-any': 'error',
+
+      // `== null` is the one coercion worth keeping — it catches null AND
+      // undefined in one test, which is the check you actually want. Lesson
+      // 07.2 §8 promises this rule by name and permits exactly that form.
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
 
       // Stale suppressions are themselves errors. Scoped to this block, which is
       // the TS/TSX surface — so a stale disable inside the `**/*.graphql` block
@@ -407,11 +414,13 @@ Composer nor WP-CLI — see [appendix 07 §2](../appendix/07-command-reference.m
 cd ../wordpress-headless
 
 # Allowlist the installer FIRST. `dealerdirect/phpcodesniffer-composer-installer`
-# is a Composer *plugin*, and Composer 2.2+ refuses to execute a plugin that is not
-# allowlisted — silently, in any non-interactive run, which is every
-# `docker compose run`. Skip this and `require` appears to succeed, the standards
-# are never registered, and `composer phpcs` quietly checks against PEAR's default
-# ruleset instead of WordPress's. Verify §5 below is the check that catches it.
+# is a Composer *plugin*, and Composer 2.2+ refuses to execute a plugin that is
+# not allowlisted. Skip this line and the `require` below ABORTS — exit 1, with a
+# `PluginManager.php` exception naming the blocked package — after having already
+# added the three packages to `require-dev`. So the honest failure mode is a
+# half-applied change rather than a silent one: your `composer.json` says the
+# standards are there and `vendor/` says they are not. Verify §5 below is what
+# tells the two apart.
 docker compose run --rm composer config --no-plugins \
   allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
 
@@ -465,12 +474,15 @@ docker compose run --rm composer require --dev \
     </properties>
   </rule>
 
-  <!-- Every global must be prefixed. `btt` for functions and options,
-       `Blame\Core` for the namespaced code. -->
+  <!-- Every global must be prefixed. `btt_` for functions and options,
+       `Blame\Core` for the namespaced code. The trailing underscore is not
+       cosmetic: WPCS 3.2.0 raised PrefixAllGlobals' minimum prefix length to
+       FOUR characters, so a bare `btt` is rejected as too short and every file
+       with a global-scope declaration fails. The whole course writes `btt_`. -->
   <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
     <properties>
       <property name="prefixes" type="array">
-        <element value="btt"/>
+        <element value="btt_"/>
         <element value="Blame\Core"/>
       </property>
     </properties>
@@ -515,8 +527,10 @@ Add the scripts to the plugin's `composer.json`. No `--standard` flag: PHPCS dis
   "eslint.useFlatConfig": true,
   "eslint.workingDirectories": [{ "directory": "next-app", "changeProcessCWD": true }],
   "[php]": { "editor.defaultFormatter": null, "editor.formatOnSave": false },
-  "phpcs.enable": true,
-  "phpcs.standard": "wordpress-headless/wp-content/plugins/blame-the-tech-core/phpcs.xml.dist",
+  // `phpsab.*`, not `phpcs.*`: the extension recommended below reads only its own
+  // namespace. The `phpcs.*` keys belong to a different, unmaintained extension.
+  "phpsab.snifferEnable": true,
+  "phpsab.standard": "wordpress-headless/wp-content/plugins/blame-the-tech-core/phpcs.xml.dist",
   "files.eol": "\n",
   "editor.rulers": [100],
   "search.exclude": { "**/src/gql": true, "**/vendor": true, "**/.next": true }

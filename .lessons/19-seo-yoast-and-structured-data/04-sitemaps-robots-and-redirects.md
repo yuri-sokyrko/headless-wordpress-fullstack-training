@@ -524,16 +524,16 @@ docker compose run --rm wpcli wp option get options_btt_redirects
 ```bash
 cd ../next-app
 
-# 1. The new field is on the existing siteSettings root field, because the field
-#    group is already show_in_graphql with graphql_field_name: siteSettings.
+# 1. The new field sits inside siteSettings.siteChrome, because it belongs to the
+#    FIELD GROUP (graphql_field_name: siteChrome), not to the options page.
 curl -s -X POST http://localhost:8080/graphql \
   -H 'Content-Type: application/json' \
-  -d '{"query":"{ siteSettings { bttRedirects { from to permanent } } }"}' | jq '.'
+  -d '{"query":"{ siteSettings { siteChrome { bttRedirects { from to permanent } } } }"}' | jq '.'
 # Expected: your two rows. `permanent` is a Boolean; `from` and `to` are Strings.
 
 # 2. Commit the contract change.
 npm run schema:pull
-git diff ../wordpress-headless/schema.graphql | grep -E '^\+.*(bttRedirects|SiteSettingsBttRedirects)'
+git diff ../wordpress-headless/schema.graphql | grep -E '^\+.*(bttRedirects|SiteChromeBttRedirects)'
 # Expected: the new field and its generated repeater type
 
 # 3. And now the interesting part: regenerate, and watch src/gql/ NOT change.
@@ -780,7 +780,7 @@ export default function robots(): MetadataRoute.Robots {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: '{ siteSettings { bttRedirects { from to permanent } } }',
+          query: '{ siteSettings { siteChrome { bttRedirects { from to permanent } } } }',
         }),
         // A hanging WordPress must not hang CI. The redirect list is a network
         // dependency of the build now, and this is half of what that costs.
@@ -792,7 +792,7 @@ export default function robots(): MetadataRoute.Robots {
       // WPGraphQL answers 200 with an `errors` array, so read the body, never the
       // status — the same rule as everywhere else in the course.
       const payload = (await response.json()) as {
-        data?: { siteSettings?: { bttRedirects?: Row[] | null } | null };
+        data?: { siteSettings?: { siteChrome?: { bttRedirects?: Row[] | null } | null } | null };
         errors?: unknown[];
       };
 
@@ -800,7 +800,7 @@ export default function robots(): MetadataRoute.Robots {
         throw new Error(`GraphQL errors: ${JSON.stringify(payload.errors)}`);
       }
 
-      const rows = payload.data?.siteSettings?.bttRedirects ?? [];
+      const rows = payload.data?.siteSettings?.siteChrome?.bttRedirects ?? [];
 
       const redirects = rows.flatMap((row) => {
         const source = typeof row.from === 'string' ? row.from.trim() : '';
@@ -914,7 +914,7 @@ the same decision, finished:
 - **The sitemap is regenerated, not proxied.** Yoast's XML sitemap is switched off. The URL list
   is produced by the code that knows the routes; the cost is that a new route needs a new sitemap
   entry and nothing warns you.
-- **Redirects live in WordPress** (`siteSettings.bttRedirects`) and are compiled into
+- **Redirects live in WordPress** (`siteSettings.siteChrome.bttRedirects`) and are compiled into
   `next.config.ts` at build time. An editor's new redirect goes live at the next build. The fetch
   has a 5 s timeout and fails soft: no redirects, successful build.
 ```

@@ -1153,12 +1153,24 @@ grep '\[btt\] prerender' /tmp/btt-build-final.log
 #   [btt] prerender incidents: 40 pages, 1 GraphQL queries, bound 100
 #   [btt] prerender scapegoats: 10 of at most 20
 #   40 incidents and 10 scapegoat terms are appendix 03 §9's seed counts.
+#   TWO lines is correct TODAY, with one locale. Module 20 adds `uk` and `de`,
+#   and a child route's generateStaticParams runs once per parent locale — so
+#   from Lesson 20.3 onward this prints SIX lines and the build makes three
+#   times as many GraphQL round trips. That is not a regression; it is the
+#   cost of the locale segment, and Lesson 21.1 is where it gets measured.
 
-# 5. Static output actually landed on disk. Do NOT grep the build table for the
-#    literal SSG — Next 15 prints symbols, and the symbols move between minors.
+# 5. Static output actually landed on disk. THIS CHECK IS THE ARBITER, not
+#    check 4, and that ordering was measured rather than assumed. On Next
+#    15.5.25 a layout that reads `cookies()` prerenders ZERO pages and still
+#    prints the same `●` symbol, the same child slug rows, and the same check-4
+#    receipt — because `generateStaticParams` runs either way, and `●` means
+#    "this route has generateStaticParams", not "HTML exists". Only the disk
+#    tells them apart. Do not grep the build table for the literal SSG either:
+#    Next 15 prints symbols and they move between minors.
 find .next/server/app -name 'incident-*.html' | wc -l
-# Expected: 40. If this is 0, the on-disk layout changed in your Next version —
-#           trust check 4's receipt, which is our own line and cannot drift.
+# Expected: 40. If this is 0, nothing was prerendered — whatever check 4 said.
+#           The second tell is the build table's `Revalidate` column: Next only
+#           prints it when at least one route is genuinely prerendered with ISR.
 
 # 6. /hobt is genuinely static: serve it with WordPress STOPPED
 docker compose -f ../wordpress-headless/docker-compose.yml stop wordpress
@@ -1238,12 +1250,15 @@ curl -si -b "btt_at=$JWT_REPORTER" http://localhost:3000/en/account | grep -i '^
 #     Next owns, so the routes must still be pre-rendered (Key Concept 4).
 grep -c 'PreviewBanner' 'src/app/[locale]/layout.tsx'
 # Expected: 1
-grep '\[btt\] prerender incidents' /tmp/btt-build-final.log
-# Expected: still 40 pages, WITH PreviewBanner mounted. If this is 0 pages, then
-#           reading draftMode() in a layout is opting your Next version out of
-#           static rendering — that is a blocker for Lesson 17.2 as much as this
-#           one, and the fix is to move the banner below the layout. Report the
-#           build output; do not work around it silently.
+find .next/server/app -name 'incident-*.html' | wc -l
+# Expected: still 40 files, WITH PreviewBanner mounted. Measured on Next
+#           15.5.25: this passes, and the two builds' route tables are
+#           byte-identical. Check 4's receipt is NOT the arbiter here — it
+#           prints 40 pages either way. If this count is 0, reading draftMode()
+#           in a layout is opting your Next version out of static rendering —
+#           a blocker for Lesson 17.2 as much as for this one, and the fix is to
+#           move the banner below the layout, into the three content routes that
+#           already await it. Report the build output; do not work around it.
 
 # 15. NEGATIVE — the unbounded variant is gone from the committed file
 grep -c 'PRERENDER_LIMIT: number | null = null' 'src/app/[locale]/incidents/[slug]/page.tsx'

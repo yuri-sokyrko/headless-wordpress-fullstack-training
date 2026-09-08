@@ -113,8 +113,8 @@ interactively and pinning it with a test speak one vocabulary.
 Three ways they disagree, all of which will confuse you once:
 
 **Lighthouse's score is not the gate.** The accessibility category is a weighted average of a
-subset of axe rules — a page can score 100 and still fail WCAG, because the rules it omits are
-omitted. Lesson 24.5 asserts ≥ 0.95 anyway, as a **floor with a number a stakeholder
+subset of axe rules — a page can score 100 and still fail WCAG, because a rule that never ran
+cannot report a violation. Lesson 24.5 asserts ≥ 0.95 anyway, as a **floor with a number a stakeholder
 understands**, and this lesson's spec is the thing that actually decides.
 
 **The extension sees the state you are looking at.** Which is its superpower: open the dialog,
@@ -176,7 +176,7 @@ Four blind spots, each of which needs the spec to *do* something before it scans
 | A closed Radix dialog | Radix unmounts `DialogContent`'s children when closed. There is nothing to scan | opens it, then scans |
 | An authenticated header or form | `/incidents/submit` redirects to `/login` for an anonymous visitor (Lesson 15.5) | logs in, then scans |
 | `LocaleSwitcher`'s disabled locales | 20.3 server-renders every locale as available and corrects it in an effect | waits for the post-hydration state |
-| Lesson 18.4's degraded-list notice | it renders only when WordPress is unreachable | **not scanned.** It is `role="status"` with plain text; Lesson 23.6 owns the origin-down spec |
+| Lesson 18.4's degraded-list notice | it renders only when WordPress is unreachable | **not scanned.** It is `role="status"` with plain text; Lesson 23.6 covers the warm-cache origin-down case and names the cold-cache one — the case where this notice renders — as not written |
 
 The third one deserves its own note because it is a fact three lessons inherit. Lesson 20.3's
 switcher renders three available links on the server and replaces two with disabled buttons after
@@ -626,7 +626,7 @@ this lesson changed nothing in it. Performance numbers live in `docs/perf-baseli
 | `<html lang>` is present and valid | whether the content is in that language | accepted: `global-error.tsx` is English-only (20.4) |
 | duplicate ids, orphaned `aria-describedby` | whether two identically-named controls confuse a user | 22.2 §4 — `aria-modal` resolves the `/hobt` case |
 | the dialog's markup, **because the spec opens it** | whether `Escape` restores focus to the right trigger | 22.2 Step 1 and Step 4 |
-| nothing about the origin-down state | Lesson 18.4's degraded-list notice | Lesson 23.6 owns the origin-down spec |
+| nothing about the origin-down state | Lesson 18.4's degraded-list notice | Lesson 23.6, warm cache only. Nothing scans the cold-cache render |
 
 **Authentication debt.** Buckets E and F drive the login form in-spec and read
 `BTT_REPORTER_PASSWORD` from the invoking shell, exactly as `e2e/funnel.spec.ts` does. Lesson

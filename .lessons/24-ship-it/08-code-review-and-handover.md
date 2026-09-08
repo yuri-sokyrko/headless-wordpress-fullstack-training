@@ -1074,6 +1074,43 @@ grep -c 'Deferred because' docs/going-further.md
 cd next-app && npm run verify && npm test -- --run
 # Expected: both exit 0. `npm test` alone is watch mode — the `-- --run` is not
 #           optional in a non-interactive shell.
+
+# 19. THE WHOLE COURSE, IN ONE TREE. Every other check in these 117 lessons
+#     asserts one lesson's product. This is the only one that asserts the end
+#     state, and it is the last command in the course. A missing path here names
+#     a lesson you skipped or a step that silently did nothing — .lessons/PROJECT.md
+#     says which module owed it.
+cd ..
+for f in architecture api-contract content-model schema-notes testing-strategy \
+         accessibility quality-gates runbook perf-baseline agentic-qa \
+         code-review-checklist going-further; do
+  test -f "docs/$f.md" || echo "MISSING: docs/$f.md"
+done
+# Expected: no output. Twelve documents, and the count is the point: this course
+#           produces as much prose as configuration, and every one of the twelve
+#           is cited by a later lesson than the one that created it.
+
+ls .github/workflows/*.yml | wc -l
+# Expected: 8 — ci, _web, _php, _docker-wp, deploy-wp, deploy-web, ai-review,
+#           agentic-qa. Lesson 23.9 wrote the first; Lessons 24.4 to 24.8 the rest.
+
+test -d wordpress-headless/wp-content/plugins/blame-the-tech-core &&
+test -d wordpress-headless/wp-content/plugins/blame-the-tech-blocks &&
+test -f wordpress-headless/wp-content/mu-plugins/000-btt-hardening.php &&
+test -f wordpress-headless/wp-content/mu-plugins/blame-seeder-loader.php &&
+test -f wordpress-headless/Dockerfile && test -f wordpress-headless/fly.toml &&
+test -f next-app/vercel.json && echo "both applications complete"
+# Expected: both applications complete
+
+# The one end-state check that is about what is NOT here
+git ls-files | grep -cE '(^|/)\.env$|\.pem$|\.key$|wp-salts\.php$'
+# Expected: 0 — and this is the assertion to re-run for the rest of the project's
+#           life. `.env.example` is tracked and holds only NAMES; every real value
+#           lives in `fly secrets`, Vercel's environment or Actions secrets.
+git ls-files wordpress-headless/wp-config.php | wc -l
+# Expected: 1 — tracked on purpose since Lesson 24.6, because the production image
+#           COPYs it. Lesson 02.4's literal-free grep is what licenses that, and it
+#           is the one ignore rule in this repository with a documented expiry.
 ```
 
 Check 15 is the one worth arguing with a colleague about. The instinct on seeing `--no-verify`
@@ -1117,7 +1154,7 @@ has not run `npm install` has already skipped.
 - [GitHub — `pull_request_target` and untrusted code](https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/)
   — GitHub's own security lab on exactly the misconfiguration Key Concept 9 refuses; read it once
   and you will never reach for that trigger casually
-- [GitHub Actions — assigning permissions to jobs](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/control-permissions-for-github_token)
+- [GitHub Actions — assigning permissions to jobs](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)
   — the `permissions:` keys and their defaults, which are broader than most people assume
 - [GitHub — about pull request templates](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository)
   — where the file may live, and the multi-template directory form if one template stops fitting

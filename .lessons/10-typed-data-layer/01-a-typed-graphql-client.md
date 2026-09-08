@@ -1020,5 +1020,5 @@ assumes the endpoint is a server-side fact.
   — the one-line deadline, and what it does and does not abort
 - [MDN — `Error.cause`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/cause)
   — how to keep the original failure attached without putting it in a user-visible message
-- [WPGraphQL — Fragments](https://www.wpgraphql.com/docs/fragments) — worth re-skimming before
+- [WPGraphQL — GraphQL queries](https://www.wpgraphql.com/docs/graphql-queries) — worth re-skimming before
   Lesson 10.5 restructures the documents this lesson just moved into route files

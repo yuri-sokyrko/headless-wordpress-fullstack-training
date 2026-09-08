@@ -64,6 +64,27 @@ docker ps
 #           "Cannot connect to the Docker daemon" means Docker Desktop is not started.
 ```
 
+### Accounts and licences, and the first lesson that needs one
+
+Read this before Module 01, not during Module 16. Everything below has a free tier or a documented
+way to skip it, but **one of them costs money** and it arrives early.
+
+| What | First needed | Free path |
+|---|---|---|
+| **ACF PRO** | **Module 04** — Lesson 04.2 | The two Repeater field groups genuinely need PRO. Lesson 04.1 §8 says exactly which of the five groups do and why. WordPress's own fork, **Secure Custom Fields**, is free and covers the options page; the Repeater is unverified. This is the only paid item in the course. |
+| GitHub account | Module 23 | Free. Actions minutes on a public repository are free, and the pipeline is built for one. |
+| Cloudflare Turnstile | Module 16 | Free tier, no card. Lesson 16.3 also states plainly what the form is worth without it. |
+| Upstash Redis | Module 16 | Free tier. Lesson 16.2 has an explicit "no Upstash account? leave both unset" path — the limiter fails **closed**, on purpose. |
+| Resend | Module 16 | Optional. `wp_mail()` into Mailpit is the default and stays the default locally. |
+| Sentry | Module 24 | Free tier. |
+| Vercel | Module 24 | Free hobby tier. |
+| Fly.io | Module 24 | Needs a card on file, even on the free allowance. |
+| Codecov | Module 24 | Free for public repositories. |
+
+Modules 01 through 22 need **no account of any kind** apart from the ACF question. If you want to
+work the whole course locally and stop before deploying, Lesson 24.5 is the last lesson that runs
+entirely on your own machine.
+
 ## What you get, and what you build
 
 When you clone this repo you get **the course, not the code**:

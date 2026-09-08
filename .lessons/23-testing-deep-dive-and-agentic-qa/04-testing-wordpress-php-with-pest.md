@@ -177,12 +177,15 @@ hardest to notice:
 | Without `tearDown()` | Consequence |
 |---|---|
 | A `Functions\when('get_post_meta')->justReturn(99)` from test 1 survives | test 2 asserts arithmetic against 99 and passes without stubbing anything |
-| An unmet `Functions\expect('update_post_meta')->once()` from test 1 survives | test 2 fails, naming an expectation test 2 never wrote |
+| An unmet `Functions\expect('update_post_meta')->once()` from test 1 | still fails in **test 1** — Mockery is verified per test either way. `tearDown()` is not what catches this one |
 | Patchwork's redefinitions accumulate | the suite gets slower, then non-deterministic in file order |
 
-The second row is the diagnostic one: a leaked expectation makes a **later, unrelated** test fail
-with a message about a function it never mentions. That is the shape of the bug, and recognising it
-is how you know to look at `tearDown()` rather than at the failing test.
+The **first** row is the one to internalise, and it is the only one of the three that is silent. A
+leaked `when()` is a *definition* that survives, so the next test computes against a stub it never
+wrote and **passes**. Nothing goes red; the suite simply stops asserting what you think it asserts.
+Measured, so you do not have to take it on faith: a leaked unmet `expect()` does **not** surface in
+a later file, because Mockery's verification runs at the end of every test whether or not
+`Monkey\tearDown()` is there. Green is the failure mode here, which is why Step 9 exists.
 
 `->in('Unit')` is the other load-bearing detail. Brain Monkey and a real WordPress cannot coexist
 in one process — Brain Monkey redefines the functions core has already defined — so the `uses()`
@@ -413,7 +416,7 @@ five new keys marked:
     "wp-coding-standards/wpcs": "^3.1",
     "phpcompatibility/phpcompatibility-wp": "^2.1",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-    "pestphp/pest": "^3.0",
+    "pestphp/pest": "^1.0",
     "brain/monkey": "^2.6"
   },
   "autoload": {
@@ -451,15 +454,32 @@ Five changes, and one of them fixes something that was already broken:
 |---|---|
 | `require-dev`: `pestphp/pest`, `brain/monkey` | the runner and the doubles |
 | `autoload-dev` PSR-4 for `tests/` | so a helper class under `tests/` is autoloadable without a `require`. Pest's own files do not need it; a shared fixture builder does |
-| `config.allow-plugins` | **Composer 2.2+ refuses to execute a plugin that is not allowlisted**, and does so *silently* in a non-interactive run — which is every `docker compose run`. Both `phpcodesniffer-composer-installer` and `pest-plugin` are Composer plugins. Without this, `composer phpcs` reports zero installed standards and `pest` may not resolve its own binary |
+| `config.allow-plugins` | **Composer 2.2+ refuses to execute a plugin that is not allowlisted**, and it *throws* rather than warning — which is why the `config` command below has to run before the `require`. Both `phpcodesniffer-composer-installer` and `pest-plugin` are Composer plugins. Without this, `composer phpcs` reports zero installed standards and `pest` never resolves its own binary |
 | `scripts.test:unit` | the command Lesson 24.4's `_php.yml` calls verbatim |
-| — | `require.php` stays `>=8.1` while Pest 3 wants PHP ≥ 8.2. That is legal, because `config.platform.php` pins resolution to 8.3, and it is worth noticing: **the dev toolchain now has a higher floor than the plugin.** If you ever need to run this suite on PHP 8.1, pin `pestphp/pest:^2.0` instead and expect a different PHPUnit major underneath |
+| — | `pestphp/pest:^1.0` is deliberate and it is not conservatism. Pest 3 pins PHPUnit 11 and Pest 2 pins PHPUnit 10; WordPress core's own test library needs PHPUnit **9**, so Pest 1 is the newest major that lets one `composer.json` serve both suites. Lesson 23.5 Key Concept 4 has the measured reason. `config.platform.php` still pins resolution to 8.3 |
 
 ```bash
 cd wordpress-headless
-docker compose run --rm composer require --dev pestphp/pest:^3.0 brain/monkey:^2.6
+
+# ALLOWLIST FIRST. `composer require` executes pest-plugin as part of the install
+# step, so with the allowlist still empty the require THROWS — "pestphp/pest-plugin
+# contains a Composer plugin which is blocked by your allow-plugins config",
+# PluginManager.php line 821 — and exits non-zero having written composer.json and
+# composer.lock but no vendor/. Recoverable, but only if you know why.
 docker compose run --rm composer config --no-plugins allow-plugins.pestphp/pest-plugin true
+docker compose run --rm composer require --dev pestphp/pest:^1.0 brain/monkey:^2.6
 docker compose run --rm composer install
+
+# The resolved set, measured on PHP 8.3 — record it, because Lesson 23.5 depends on
+# every one of these numbers and the reason for the Pest major is in that lesson's
+# Key Concept 4:
+#   pestphp/pest 1.23.1   phpunit/phpunit 9.6.36   brain/monkey 2.7.0
+# Pest 1 runs on PHP 8.0-8.3 and DIES on 8.4+ with a wall of "Implicitly marking
+# parameter as nullable is deprecated". So the runner has to be PHP 8.3. If your
+# `composer` service is newer than that, run the suite in the `wordpress` container
+# instead — it is PHP 8.3, it sees vendor/ through the same bind mount, and a CLI
+# process there does NOT load WordPress, so Brain Monkey is still safe:
+#   docker compose exec -T -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest --testsuite=unit
 ```
 
 **Verify §1:**
@@ -512,9 +532,10 @@ separate `<testsuite>` elements.
 
 **Verify §2:**
 
-- [ ] `docker compose run --rm composer exec -- pest --list-test-suites` prints `unit` and nothing
-      else. If it errors on the XML, check that `.phpunit.cache` is gitignored — PHPUnit writes it
-      on first run and it must not be committed.
+- [ ] `docker compose run --rm composer exec -- pest --list-suites` prints `unit` and nothing
+      else. The flag is `--list-suites`; `--list-test-suites` is PHPUnit's XML element name and
+      Pest answers it with `Unknown option`. If it errors on the XML, check that `.phpunit.cache`
+      is gitignored — PHPUnit writes it on first run and it must not be committed.
 - [ ] `git check-ignore -v wp-content/plugins/blame-the-tech-core/.phpunit.cache` names a rule. If
       it does not, add one before the first run rather than after.
 
@@ -585,6 +606,16 @@ uses()
  * assertion about those calls.
  */
 function load_plugin_file( string $relative ): void {
+	// THE ONE THAT COSTS YOU AN AFTERNOON. Every includes/ file opens with
+	// WordPress's direct-access guard, `defined( 'ABSPATH' ) || exit;`. The unit
+	// suite has no WordPress, so without this the require EXITS THE PROCESS with
+	// status 0: Pest prints nothing, fails nothing, and `composer run test:unit`
+	// returns 0 having run no tests at all. CI reads that silence as green.
+	// Lazily, and guarded: Lesson 23.5's bootstrap defines the REAL ABSPATH
+	// (the Composer WordPress copy) before any integration test runs, and this
+	// must not pre-empt it.
+	defined( 'ABSPATH' ) || define( 'ABSPATH', dirname( __DIR__ ) . '/' );
+
 	require_once dirname( __DIR__ ) . '/' . $relative;
 }
 ```
@@ -802,10 +833,11 @@ it( 'NEGATIVE: an unknown ENUM name is null rather than a PHP warning', function
 
 **Verify §5:**
 
-- [ ] Eight dataset cases plus three explicit tests, so **eleven** more passing assertions and
-      seventeen tests overall.
-- [ ] If `dataset()` is unavailable, your Pest major is older than 2.x — use `->with(array(...))`
-      inline instead. The assertions do not change.
+- [ ] Eight dataset cases plus three explicit tests, so **eleven** more passing tests and
+      seventeen overall. Each dataset case is reported as its own test, with its arguments in
+      the name — that is the reason to prefer a named `dataset()` over a `foreach`.
+- [ ] `dataset()` is available on the pinned `pestphp/pest:^1.0` — it landed well before 2.x, and
+      all eight cases run. `->with(array(...))` inline is equivalent if you prefer it.
 - [ ] `grep -rn "expect( *current_user_can" tests/Unit/` returns nothing. See Verification check 5.
 
 ### Step 6: `RevalidateTest.php` — the signature, and the secret that never travels
@@ -1149,27 +1181,37 @@ it( 'NEGATIVE: leaves an anonymous request alone', function (): void {
 
 ### Step 9: Prove that `Monkey\tearDown()` is load-bearing
 
-The suite is green. Now break the thing that makes it trustworthy, on a probe copy, and watch the
-green become meaningless.
+The suite is green. Now break the thing that makes it trustworthy, on a probe copy — and note in
+advance what you are looking for, because it is **not** a red run. It is one extra pass.
 
 ```bash
 cd wordpress-headless
 PLUGIN=wp-content/plugins/blame-the-tech-core
 
+# A probe that stubs NOTHING and asks a WordPress function a question. It can only
+# succeed if a stub from an earlier test is still defined.
+printf '%s\n' '<?php' \
+  "it('leak probe: reads a stub it never wrote', function (): void {" \
+  "    expect(get_post_meta(1, 'blame_confidence', true))->toBe('');" \
+  '});' > $PLUGIN/tests/Unit/ZLeakProbeTest.php
+
 sed -i.bak 's|Monkey\\tearDown();|// Monkey\\tearDown();|' $PLUGIN/tests/Pest.php
-docker compose run --rm composer run test:unit; echo "exit=$?"
+docker compose run --rm composer run test:unit; echo "exit=$?"   # 31 passed, exit 0
 mv $PLUGIN/tests/Pest.php.bak $PLUGIN/tests/Pest.php
-docker compose run --rm composer run test:unit
+docker compose run --rm composer run test:unit; echo "exit=$?"   # 1 failed, 30 passed
+rm $PLUGIN/tests/Unit/ZLeakProbeTest.php
+docker compose run --rm composer run test:unit                   # 30 passed
 ```
 
 **Verify §9:**
 
-- [ ] With `tearDown()` commented out, the run is **not** cleanly green. Expect either a failure
-      naming an expectation a test never wrote — a leaked `Functions\expect('update_post_meta')`
-      from `CreateIncidentTest` surfacing inside `VerifiedGateTest` — or a risky-test warning from
-      `failOnRisky="true"`.
-- [ ] Read the failure message properly. It names the **wrong file**. That is the signature of a
-      leaked double, and recognising it is worth more than the test.
+- [ ] With `tearDown()` commented out the suite is **still green, and that is the finding.** The
+      leak is a surviving `Functions\when()` *definition*, so a later test computes against a stub
+      it never wrote and passes. Do not expect a red run; expect a run you can no longer trust.
+- [ ] Verification check 9 makes that visible with a throwaway probe that stubs nothing and asks
+      `get_post_meta` a question. Without `tearDown()` it answers `''`; with `tearDown()` the same
+      line fails with `Call to undefined function`. Deleting the safeguard made one MORE test
+      pass, which is the whole shape of the hazard.
 - [ ] With it restored, thirty passing tests and exit `0`.
 - [ ] `git status --short` shows six new files and one modified `composer.json`, plus
       `composer.lock`. No `vendor/`, no `.phpunit.cache`, no `.bak`.
@@ -1205,13 +1247,19 @@ docker compose exec -T $( echo wordpress ) sh -c 'command -v composer || echo "n
 #           a CI runner, where PHP and Composer are both native.
 
 # 4. Pest is really PHPUnit underneath, so every PHPUnit affordance still works
-docker compose run --rm composer exec -- pest --list-test-suites
-# Expected: unit    (Lesson 23.5 adds `integration` to the same list)
-docker compose run --rm composer exec -- pest --filter=BlameScore
-# Expected: 6 passed, the rest not run. NOTE: appendix 07 §5's example is
+docker compose run --rm composer exec -- pest --list-suites
+# Expected: "Available test suite(s):" then a single ` - unit` line. The flag is
+#           --list-suites; --list-test-suites is the XML element name and Pest
+#           rejects it with `Unknown option`. Lesson 23.5 adds `integration` here.
+docker compose run --rm composer exec -- pest --filter=BlameScore; echo "exit=$?"
+# Expected: 6 passed, the rest not run, exit=0. NOTE: appendix 07 §5's example is
 #           `--filter=ScapegoatStats`, and no such test exists anywhere in this
 #           course — the blame leaderboard is a Next-side read of term counts
 #           maintained by WordPress, not PHP. Use a filter that names a real file.
+#           AND READ THE COUNT, NOT THE EXIT CODE: a --filter that matches nothing
+#           prints `No tests executed!` and still exits 0, so every --filter check
+#           in this lesson and in 23.5 is a FALSE GREEN when the name is wrong.
+#           That is what made the ScapegoatStats example survive review.
 
 # 5. NEGATIVE — no unit test asserts a CAPABILITY OUTCOME. Grep for the assertion,
 #    not for the function: stubbing `current_user_can` is legitimate scaffolding
@@ -1251,26 +1299,41 @@ docker compose run --rm composer exec -- pest --filter="secret appears nowhere"
 #           array and greps it for the key. A shared secret that appears in a
 #           request is a shared secret that appears in an access log.
 
-# 9. NEGATIVE — the tearDown is load-bearing. Break it on a probe copy.
+# 9. NEGATIVE — the tearDown is load-bearing, and its absence is SILENT. Prove it.
 sed -i.bak 's|Monkey\\tearDown();|// Monkey\\tearDown();|' $PLUGIN/tests/Pest.php
-docker compose run --rm composer run test:unit; echo "exit=$?"
+printf '%s\n' '<?php' \
+  "it('leak probe: reads a stub it never wrote', function (): void {" \
+  "    expect(get_post_meta(1, 'blame_confidence', true))->toBe('');" \
+  '});' > $PLUGIN/tests/Unit/ZLeakProbeTest.php
+docker compose run --rm composer exec -- pest --testsuite=unit; echo "exit=$?"
 mv $PLUGIN/tests/Pest.php.bak $PLUGIN/tests/Pest.php
-# Expected: exit NON-ZERO. Either a failure naming an expectation the failing test
-#           never wrote — a leaked `Functions\expect('update_post_meta')` from
-#           CreateIncidentTest surfacing inside VerifiedGateTest — or a risky-test
-#           warning, because phpunit.xml.dist sets failOnRisky="true".
-#           READ THE MESSAGE: it names the WRONG FILE. That is the signature of a
-#           leaked double, and recognising it is worth more than this check.
+rm $PLUGIN/tests/Unit/ZLeakProbeTest.php
+# Expected: `31 passed` and exit=0 — AND THAT IS THE FAILURE. The probe stubs
+#           nothing, yet reads '' from `get_post_meta`, because the stub leaked out
+#           of BlameScoreTest's last test. Removing tearDown() does not turn the
+#           suite red; it makes one MORE thing pass. Put tearDown() back and the
+#           same probe fails with `Call to undefined function get_post_meta()` —
+#           `1 failed, 30 passed`, exit NON-ZERO — which is the correct answer to
+#           asking an un-stubbed WordPress function a question.
+#           Do NOT expect a leaked unmet `expect()` to surface in a later file:
+#           Mockery is verified at the end of every test whether tearDown() is
+#           there or not, so that one always fails where it was written. The silent
+#           row of Key Concept 3's table is the `when()` row, not the `expect()`.
 docker compose run --rm composer run test:unit; echo "exit=$?"
 # Expected: 30 passed, exit=0 — restored
 
 # 10. NEGATIVE — the static memo hazard is real. Prove it once.
-sed -i.bak 's/stub_incident( 302,/stub_incident( 301,/' $PLUGIN/tests/Unit/BlameScoreTest.php
+sed -i.bak 's/401/101/g' $PLUGIN/tests/Unit/BlameScoreTest.php
 docker compose run --rm composer exec -- pest --filter=BlameScore; echo "exit=$?"
 mv $PLUGIN/tests/Unit/BlameScoreTest.php.bak $PLUGIN/tests/Unit/BlameScoreTest.php
-# Expected: exit NON-ZERO — the boundary test now reads the memoised answer from
-#           the previous assertion in the same test. `static $memo` lives for the
+# Expected: exit NON-ZERO, 1 failed and 5 passed, and the failure is `returns null
+#           when the incident has no severity term` — which now reads the 297.0 the
+#           FIRST test memoised against post ID 101. `static $memo` lives for the
 #           PHP PROCESS, and PHPUnit runs every file in one. Key Concept 6.
+#           It has to be 401->101 and not 302->301: both halves of the boundary
+#           test assert 0.0, so a memo hit there is indistinguishable from a fresh
+#           computation and the collision cannot be observed. A demonstration that
+#           cannot fail demonstrates nothing.
 
 # 11. PHPCS is clean, and PHPCS finds its own ruleset with NO --standard flag
 docker compose run --rm composer run phpcs
@@ -1335,13 +1398,13 @@ should not believe at all.
 - [Pest — Datasets](https://pestphp.com/docs/datasets) — the `dataset()` and `->with()` forms used
   for the sixteen enum pairs, including why a named dataset gives you a better failure message than
   a `foreach`
-- [Brain Monkey — Functions API](https://giuseppe-mazzapica.gitbook.io/brain-monkey/functions-api)
+- [Brain Monkey — Functions API](https://giuseppe-mazzapica.gitbook.io/brain-monkey/functions-testing-tools/functions-when)
   — `when`, `expect` and `stubs` in the author's own words, and the paragraph that explains why
   `when` asserts nothing
-- [Brain Monkey — WordPress hooks API](https://giuseppe-mazzapica.gitbook.io/brain-monkey/wordpress-hooks-api)
+- [Brain Monkey — WordPress hooks API](https://giuseppe-mazzapica.gitbook.io/brain-monkey/wordpress-specific-tools/wordpress-hooks-added)
   — how `add_action` becomes inspectable, and the `Actions\has` / `expectAdded` distinction Key
   Concept 6 tells you not to lean on
-- [Brain Monkey — Setup and teardown](https://giuseppe-mazzapica.gitbook.io/brain-monkey/setup-and-tear-down)
+- [Brain Monkey — Setup and teardown](https://giuseppe-mazzapica.gitbook.io/brain-monkey/wordpress-specific-tools/wordpress-setup)
   — read this one properly. It is two pages and it is the whole of Key Concept 3
 - [PHPUnit — the XML configuration file](https://docs.phpunit.de/en/11.5/configuration.html) —
   `testsuites`, `failOnRisky`, `cacheDirectory` and `processIsolation`; Pest reads all of it

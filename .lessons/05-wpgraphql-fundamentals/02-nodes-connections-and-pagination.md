@@ -15,8 +15,9 @@ Every list in WPGraphQL is a **connection**, and connections follow the Relay sp
 `nodes` for the plain list, `edges` for the list with per-item metadata including a `cursor`,
 and `pageInfo` with `hasNextPage` and `endCursor`. The shape looks like ceremony until you need
 the thing it exists for — stable pagination over a dataset that changes while a user is reading
-it. This lesson builds `IncidentsList`, the query behind `/incidents`, with severity, scapegoat
-and tech-stack facets and a working "load more".
+it. This lesson builds `IncidentsList`, the query behind `/incidents`, with a working "load more"
+and its facets reached by traversing from the term — §6 is about why they are not `where`
+arguments.
 
 Cursor pagination is the concept to actually absorb. `offset`-based paging asks for "rows 20 to
 29", which is wrong the moment a row is inserted or deleted above the window — a user clicking
@@ -25,19 +26,20 @@ A cursor says "the ten after *this specific item*", which is stable under insert
 what lets the database use an index instead of counting rows it will discard. The trade is
 stated plainly: cursors do not give you numbered pages, so a "page 7 of 12" UI needs
 `offsetPagination` or a separate count, and this course chooses infinite-style paging on
-`/incidents` partly because of it. You also learn `where` arguments, which are the `tax_query`
-and `meta_query` you already write, expressed as connection inputs.
+`/incidents` partly because of it. You also learn `where` arguments, which are the parts of
+`WP_Query` WPGraphQL chose to expose as connection inputs — and §6 is about the parts it
+deliberately did not.
 
 By the end of this lesson you will have:
 
-- `IncidentsList` returning 10 incidents with `pageInfo`, filtered by severity, scapegoat and
-  tech stack
+- `IncidentsList` returning 10 incidents with `pageInfo`, plus a severity facet reached by
+  traversing from the term
 - A working "next page" round trip using `after: $endCursor`, proving pagination is stable
 - A demonstration of `offset` paging breaking when a post is inserted mid-read, and the same
   case handled correctly by a cursor
 - The `nodes` versus `edges` distinction written down, with a case where you genuinely need
   `edges`
-- A `where` argument reproducing a `tax_query` you wrote in Module 03, with matching results
+- A term traversal reproducing a `tax_query` you wrote in Module 03, with matching results
 - The query saved as a named operation in your scratch `queries.graphql`
 
 ## Classic WP Analogy
@@ -45,8 +47,9 @@ By the end of this lesson you will have:
 You have built this exact list many times. `WP_Query` with `posts_per_page => 10` and `paged =>
 get_query_var('paged')`, `tax_query` for the facets, `paginate_links()` at the bottom, and
 `found_posts` for the count. WPGraphQL's connection arguments map onto that almost one for one:
-`first` is `posts_per_page`, `where` carries `taxQuery`, `orderby`, `search`, `status` and
-`dateQuery`, and `pageInfo.hasNextPage` is `$query->max_num_pages > $paged`. The resolver builds
+`first` is `posts_per_page`, `where` carries `orderby`, `search`, `status`, `dateQuery` and the
+core taxonomy arguments — but **not** `tax_query`, which is §6 — and `pageInfo.hasNextPage` is
+`$query->max_num_pages > $paged`. The resolver builds
 a `WP_Query`, so the query plans you learned to read in Lesson 02.3 are the plans still running.
 
 `edges` and `nodes` are the one genuinely new vocabulary item. Think of `nodes` as
@@ -284,11 +287,23 @@ So how do you filter incidents by `severity` or `scapegoat`? Three routes, with 
 |---|---|---|
 | **Traverse from the term** | `scapegoat(id: $slug, idType: SLUG) { incidents(first: 10) { … } }` | ✅ **Use this for single-facet pages** — `/scapegoats/[slug]`, `/incidents?severity=…`. Zero extra plugins; core does an indexed `tax_query`. Cannot AND two taxonomies. |
 | **A generic `taxQuery` extension** | `where: { taxQuery: { taxArray: [ … ] } }` | ❌ Not installed. It re-opens exactly the surface core closed, and it is not in the plugin inventory in [appendix 03 §8](../appendix/03-content-model-reference.md#8-plugin-inventory). |
-| **Register narrow arguments yourself** | `where: { severitySlug: $s, scapegoatSlug: $g, techStackSlug: $t }` | ✅ **This project's choice for the multi-facet list.** Three named, allowlisted arguments, each translating to one `tax_query` clause in PHP. You register them in **Lesson 06.1**. |
+| **Register a narrow argument yourself** | `where: { severityIn: $severities }` | ✅ **What this project does, in Lesson 06.1** — but exactly **one** argument, not three. `register_graphql_fields()` on `RootQueryToIncidentConnectionWhereArgs`, plus a `graphql_post_object_connection_query_args` filter that intersects the incoming slugs with the closed severity set and maps them to one `tax_query` clause. |
 
-The third route is why [appendix 05](../appendix/05-graphql-cheatsheet.md#2-connections-and-pagination)
-shows `where: { scapegoatSlug: … }`: those are *your* arguments, not WPGraphQL's. Until Lesson
-06.1 registers them, facet by traversal — which is what you build in Step 5.
+Rows two and three look similar and are not. The extension hands out a *builder*: any taxonomy,
+any value, any operator, nested, from an anonymous caller. Row three hands out a *filter*: one
+taxonomy, four values, one operator, and a server-side intersection against the closed term set
+so no caller-supplied string reaches `WP_Query`. That is the difference between reviewing every
+query plan your endpoint can produce and reviewing none of them.
+
+**One argument and not three, and the reason is a defect class rather than taste.**
+`severityIn` has two callers — `HomepageFeeds` in Lesson 10.5 and `IncidentTicker` in
+Lesson 14.4, both of which need severity on a *root* connection, which traversal cannot give
+them. `scapegoatIn` and `techStackIn` would have none: `/incidents` narrows by those two in the
+client, in Lesson 09.2's `IncidentBrowser`, and every single-facet page traverses from the term.
+An argument nothing sends is schema you version, document and deprecate for free. Until
+Lesson 06.1, and for the whole of this lesson, facet by **traversal** — Step 5. Nothing else
+exists yet, and an unregistered input key is a validation error with `data: null`, not an empty
+list.
 
 ### 7. Ordering, and why it belongs in the query
 
@@ -592,7 +607,10 @@ curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json
 curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
   -d '{"query":"{ incidents(first:1, where:{ taxQuery: { relation: AND } }) { nodes{ slug } } }"}' \
   | jq -r '.errors[0].message'
-# Expected: a Field "taxQuery" is not defined error. Facet by traversal until Lesson 06.1.
+# Expected: Field "taxQuery" is not defined by type
+#           "RootQueryToIncidentConnectionWhereArgs". Did you mean "dateQuery"?
+#           That stays true forever — Lesson 06.1 §9 adds ONE argument, `severityIn`, to
+#           that same input type, and never a taxQuery. Until then, facet by traversal.
 
 # 9. Faceting by traversal works, and the term count agrees with the connection
 curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
@@ -630,8 +648,9 @@ cd .. && grep -c -E '^query (IncidentsList|IncidentsByScapegoat)' queries.graphq
    options in Key Concept 4 you would choose for a "40 incidents and counting" headline, and why.
 3. `incidents(first: 500)` returns 100 items and no error. Explain why silence is worse than an
    error here, and name the filter you would use to change the cap.
-4. Core WPGraphQL exposes `categoryName` but no `severitySlug`. Explain the security reasoning
-   behind that asymmetry, and describe how this project gets a three-facet list anyway.
+4. Core WPGraphQL exposes `categoryName` but no `severityIn`. Explain the security reasoning
+   behind that asymmetry, then say why Lesson 06.1 can safely register `severityIn` when the
+   generic `taxQuery` extension is refused, and how the other two facets get done without it.
 5. You hold an `endCursor` produced under `orderby: { field: DATE, order: DESC }` and reuse it
    with `TITLE, ASC`. What does the server do, what does the user see, and what should the client
    have done when the sort control changed?
@@ -644,9 +663,9 @@ cd .. && grep -c -E '^query (IncidentsList|IncidentsByScapegoat)' queries.graphq
 - [GraphQL — Pagination](https://graphql.org/learn/pagination/) — why the community converged on
   cursors, with the plain-offset alternatives shown honestly
 - [WPGraphQL — Connections](https://www.wpgraphql.com/docs/connections) — WPGraphQL's own
-  treatment, including the arguments available on each connection type
-- [WPGraphQL — Pagination and Cursors](https://www.wpgraphql.com/docs/pagination) — where
-  `arrayconnection:` and the keyset comparison come from
+  treatment, including the arguments available on each connection type. The separate
+  Pagination-and-Cursors page it used to link is gone; for where `arrayconnection:` actually comes
+  from, base64-decode a cursor from your own response, which Verification check 4 has you do
 - [`WP_Query` — Pagination Parameters](https://developer.wordpress.org/reference/classes/wp_query/#pagination-parameters) —
   `no_found_rows`, `offset`, `paged`; the Classic side of Key Concept 4
 - [MySQL — LIMIT Query Optimization](https://dev.mysql.com/doc/refman/8.0/en/limit-optimization.html) —

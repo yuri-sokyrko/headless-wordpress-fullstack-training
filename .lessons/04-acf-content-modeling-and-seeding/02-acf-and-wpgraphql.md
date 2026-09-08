@@ -393,7 +393,7 @@ One setting has to change before you can inspect anything from a terminal. WPGra
 administrator and never needed it; `curl` and `jq` do:
 
 ```bash
-docker compose run --rm wpcli wp option patch update graphql_general_settings public_introspection_enabled on
+docker compose run --rm wpcli wp option patch insert graphql_general_settings public_introspection_enabled on
 docker compose run --rm wpcli wp option pluck graphql_general_settings public_introspection_enabled
 # Expected: on
 ```

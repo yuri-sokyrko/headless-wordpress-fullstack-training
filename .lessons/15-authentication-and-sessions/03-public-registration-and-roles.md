@@ -1690,11 +1690,11 @@ you have to remember to write.
   the pluggable function, and the `wp_new_user_notification_email` filter that is the better hook
 - [`wp_set_password()`](https://developer.wordpress.org/reference/functions/wp_set_password/) — read
   it before using it anywhere else; the session destruction and reset-key clearing are not in the name
-- [OWASP — account enumeration via login error messages](https://owasp.org/www-community/attacks/Account_Enumeration_via_Login_Error_Messages) —
+- [OWASP — account enumeration via login error messages](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/03-Identity_Management_Testing/04-Testing_for_Account_Enumeration_and_Guessable_User_Account) —
   the attack Key Concept 1 defends against, with the response-timing variant most people forget
 - [OWASP — Forgot Password Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html) —
   the canonical rules for emailed single-use codes: hashed at rest, short TTL, single use, generic responses
 - [React — `useActionState`](https://react.dev/reference/react/useActionState) — the hook the form
   shell is built on, including why the action takes the previous state as its first argument
-- [Next.js — Server Actions and Mutations](https://nextjs.org/docs/app/getting-started/updating-data) —
+- [Next.js — Server Actions and Mutations](https://nextjs.org/docs/app/getting-started/mutating-data) —
   the `'use server'` rules, including the one that says every export must be an async function

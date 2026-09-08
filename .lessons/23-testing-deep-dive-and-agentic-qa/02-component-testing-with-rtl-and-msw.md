@@ -172,7 +172,7 @@ Four ways to give some files a DOM, and only one of them is stable enough to tea
 | `environment: 'jsdom'` globally | ❌ Lesson 23.3's Server Action tests want `node`, and every pure-function file pays jsdom's startup cost for nothing |
 | `environmentMatchGlobs` | ❌ **deprecated** in current Vitest in favour of `projects`. Teaching a deprecated key is teaching a migration |
 | `projects` (formerly `workspace`) | a real answer, and a moving target across Vitest 1→3. Two configs, two `include`s, two coverage merges — a lot of machinery for four files |
-| **`// @vitest-environment jsdom` at the top of the file** | ✅ **chosen.** One comment, stable across Vitest 1–3, and it keeps jsdom **opt-in** — which preserves 12.2's argument instead of overturning it |
+| **`// @vitest-environment jsdom` at the top of the file** | ✅ **chosen.** One comment, stable across Vitest 1–3, and it keeps jsdom **opt-in** — which preserves 12.2's argument instead of overturning it. Vitest finds it by regex over the whole file, so "at the top" is our convention, not a rule |
 
 The per-file docblock has a property the config-level answers do not: **the file that needs a
 fake DOM is the file that says so.** You can grep for it, and the grep tells you exactly how much
@@ -324,7 +324,8 @@ So be precise about what MSW is for here, because a fake with no consumer is a f
 |---|---|---|
 | `http.get('/api/auth/session')` | `SessionMenu`, in jsdom | the only client island with a network dependency, and its three states — pending, signed in, anonymous — are otherwise untestable |
 | `graphql.query('SiteChrome')`, `graphql.query('IncidentsList')` | **`src/lib/graphql/client.ts`**, in Node | Lesson 12.2 Step 8 said this file is 0% covered and "Lesson 23.2 covers it with MSW". This is that promise being paid |
-| the same handlers, overridden | Lesson 23.3's Server Action tests | an action's error path is the interesting path, and `server.use()` is how you produce it |
+| the same handlers, overridden | Lesson 23.3's Server Action tests | an action's error path is the interesting path, and `server.use()` is how you produce it here. Lesson 23.3 deliberately does **not** use MSW for
+Server Actions — it mocks the client module directly, and its Key Concept 2 argues the cost |
 
 MSW's node interceptor patches `fetch` wherever it runs, so one handler file serves a jsdom test
 and a plain-Node test identically. **The boundary from the Classic WP Analogy holds exactly as
@@ -494,7 +495,7 @@ leave everything else exactly as it is:
 ```
 
 `exclude` under `test` (not `coverage`) stays as Lesson 12.2 wrote it —
-`['e2e/**', 'node_modules/**', '.next/**', 'scratch/**']` — and still does the job it was written
+`['e2e/**', 'node_modules/**', '.next/**']` — and still does the job it was written
 for, because Vitest's `exclude` **replaces** its defaults rather than extending them.
 
 **Verify §2:**
@@ -627,9 +628,16 @@ import { handlers } from './handlers';
 export const server = setupServer(...handlers);
 
 beforeAll(() => {
-  // 'error', not the default 'warn'. An unmocked request must FAIL the test.
-  // A warning means a component that quietly started calling a second endpoint
-  // produces a green test and one line of output nobody read.
+  // 'error', not the default 'warn'. Measured, because the obvious phrasing is
+  // wrong: 'error' does not fail the test, it REJECTS the request — so it never
+  // leaves this process. Under the default 'warn' MSW passes the request through,
+  // and with WordPress actually up on :8080 a "unit" test reads real data and
+  // stays green. Containment is what this buys.
+  //
+  // The corollary, worth knowing before you trust a green run: a subject that
+  // CATCHES its own fetch error — which every component does, per Lesson 10.4 —
+  // still passes under 'error', with one [MSW] line on stderr. Check 6 in the
+  // Verification greps for that line rather than for a non-zero exit code.
   server.listen({ onUnhandledRequest: 'error' });
 });
 
@@ -884,9 +892,10 @@ describe('the incident island — provider, filters, search and list together', 
 - [ ] `npx vitest run src/components/incidents/IncidentFilters.test.tsx --reporter=verbose` lists
       the file by name and runs **eight** tests. If it says "No test files found", `include` is
       still Lesson 12.2's pattern — go back to Step 2.
-- [ ] If Vitest reports `document is not defined`, the `@vitest-environment` docblock is not being
-      read. Move it to **line 1**, above the path comment, and note the deviation: the course
-      convention puts a path comment first, and a runner requirement outranks a convention.
+- [ ] If Vitest reports `document is not defined`, the `@vitest-environment` comment is missing or
+      misspelled — **position is not the cause.** Vitest matches
+      `/@(?:vitest|jest)-environment\s+([\w-]+)\b/` against the raw file text, at any line, so
+      line 1 is this course's convention and not the runner's requirement. Do not move it.
 - [ ] If a prop name does not compile — `onSeverityChange`, `severity`, `scapegoat`, `onClear` —
       use the names **your** Lesson 08.3 file declares. The assertions do not change; only the
       call site does. Lesson 09.2 gave the same instruction about the context destructuring.
@@ -1263,17 +1272,24 @@ grep -rl '@vitest-environment jsdom' src | sort
 #           src/components/layout/MobileNav.test.tsx
 #           Everything else still runs in `node`, which is Lesson 12.2's decision
 #           surviving contact with component tests rather than being overturned.
+#           This grep is honest by accident and it is worth knowing why: Vitest
+#           reads the pragma with a regex over the raw file, so a file that merely
+#           MENTIONS it — in a string, in a comment about it — gets jsdom too. The
+#           grep is exactly as loose as the runner, so the number it prints is the
+#           number that ran. Do not "tighten" it to match only line 1.
 
 # 6. NEGATIVE — an unmocked request FAILS the test rather than hanging. Probe the
 #    operation-name matching by renaming a handler's operation on a throwaway copy.
 sed -i.bak "s/'SiteChrome'/'SiteChromo'/" tests/mocks/handlers.ts
 npx vitest run src/lib/graphql/client.test.ts 2>&1 | grep -ciE 'intercepted a request without a matching request handler|onUnhandledRequest'
 mv tests/mocks/handlers.ts.bak tests/mocks/handlers.ts
-# Expected: 1 or more. `graphql.query` matches by OPERATION NAME, so a one-character
-#           typo means nothing matches, and `onUnhandledRequest: 'error'` turns that
-#           into a failure that names the request. With MSW's default 'warn' the same
-#           run would hang until Vitest's timeout and report "test timed out", which
-#           names the wrong problem entirely.
+# Expected: 1 or more — measured: 4. `graphql.query` matches by OPERATION NAME, so a
+#           one-character typo means nothing matches, and `onUnhandledRequest: 'error'`
+#           rejects the request rather than letting it out. Note what this greps for:
+#           the [MSW] line, NOT an exit code. 'error' does not fail a test whose
+#           subject catches its own fetch error. Under the default 'warn' the request
+#           LEAVES — instant ECONNREFUSED with :8080 down, and a green test reading
+#           real data with :8080 up. Neither is a hang; the run takes ~400 ms either way.
 npx vitest run src/lib/graphql/client.test.ts
 # Expected: 5 passed — the file is restored
 
@@ -1404,7 +1420,7 @@ test suite to stop testing the thing it names.
   `advanceTimers` sections before you write a fake-timer test
 - [MSW — Getting started](https://mswjs.io/docs/getting-started) — the v2 API. Skim it once so
   the v1 `rest.get(req, res, ctx)` examples you will inevitably find are recognisable as obsolete
-- [MSW — GraphQL handlers](https://mswjs.io/docs/network-behavior/graphql) — operation-name
+- [MSW — GraphQL handlers](https://mswjs.io/docs/graphql/) — operation-name
   matching, `graphql.operation()` for a catch-all, and how a handler declares its result type
 - [MSW — `onUnhandledRequest`](https://mswjs.io/docs/api/setup-server/listen) — the four possible
   values and what each does; the argument for `'error'` is in the paragraph about silent passthrough

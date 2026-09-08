@@ -154,12 +154,23 @@ const { fakeSession } = vi.hoisted(() => ({ fakeSession: { isLoggedIn: false } }
 vi.mock('@/lib/auth/session', () => ({ getSession: () => fakeSession }));
 ```
 
-**Factories replace the module wholesale.** Whatever the factory returns *is* the module, so an
-export you forget is `undefined` at call time rather than an error at import time. That is also
-the property that gets you past `import 'server-only'` if you have not aliased it: with a factory,
-Vitest never loads the original at all. Lesson 23.2 aliased `server-only` in `vitest.config.ts`,
-so the choice here is no longer forced — and factories remain the right answer, because the mocks
-are the assertions.
+**Factories replace the module wholesale.** Whatever the factory returns *is* the module — so an
+export you forget does not exist, and Vitest says so in those words rather than handing you
+`undefined`:
+
+```
+Error: [vitest] No "cookies" export is defined on the "next/headers" mock.
+Did you forget to return it from "vi.mock"?
+```
+
+That is a good failure mode and it is worth knowing at 1am, because the factory below declares
+only `headers`. It is safe **only** because this lesson also mocks `@/lib/auth/cookies`, so the
+cookie jar is read through that module and the real `cookies()` is never reached. Point a factory
+like it at a module that calls `cookies()` directly and you get the error above, immediately.
+Replacing the module wholesale is also the property that gets you past `import 'server-only'` if
+you have not aliased it: with a factory, Vitest never loads the original at all. Lesson 23.2
+aliased `server-only` in `vitest.config.ts`, so the choice here is no longer forced — and
+factories remain the right answer, because the mocks are the assertions.
 
 **Typed spies.** `vi.mocked(fn)` gives you the mock API with the original signature attached, so
 `toHaveBeenCalledWith` is type-checked against the real parameters:
@@ -353,7 +364,7 @@ contains this, and so does `src/actions/incidents.ts`, **verbatim**:
 
 ```ts
 // (illustration) the same three lines, in two files
-if (chrome.siteSettings?.incidentSubmissionOpen === false) { … }
+if (chrome.siteSettings?.siteChrome?.incidentSubmissionOpen === false) { … }
 ```
 
 Two copies of one decision, in two files, one of which cannot be unit-tested at all. The rule's
@@ -381,7 +392,7 @@ watching it.
 ### 10. Writing down what is E2E-only, so a gap stays a gap
 
 Some of this lesson's findings are not "todo" items — they are structural, and they belong in
-`docs/testing-strategy.md` where Lesson 24.5 will read them.
+`docs/testing-strategy.md`, and the "Who owns it" column below is where each is discharged.
 
 | Behaviour | Why no unit test can reach it | Who owns it |
 |---|---|---|
@@ -465,7 +476,7 @@ vi.mock('@/lib/graphql/client', () => ({
   fetchGraphQL: vi.fn(() =>
     Promise.resolve({
       // read 1 — the kill switch (step 1b)
-      siteSettings: { incidentSubmissionOpen: state.submissionOpen },
+      siteSettings: { siteChrome: { incidentSubmissionOpen: state.submissionOpen } },
       // read 2 — the term allowlist Zod refines against (step 2)
       scapegoats: { nodes: [{ slug: 'dns' }, { slug: 'the-intern' }] },
       severities: { nodes: [{ slug: 's1-catastrophic' }, { slug: 's2-major' }] },
@@ -1152,12 +1163,12 @@ Then replace both call sites. The behaviour is unchanged; the decision now has o
 
 ```ts
 // next-app/src/actions/incidents.ts — anchored edit, replacing the 1b condition
-  if (!isSubmissionOpen(chrome.siteSettings)) {
+  if (!isSubmissionOpen(chrome.siteSettings?.siteChrome)) {
 ```
 
 ```tsx
 // next-app/src/app/[locale]/incidents/submit/page.tsx — anchored edit, same shape
-  if (!isSubmissionOpen(chrome.siteSettings)) {
+  if (!isSubmissionOpen(chrome.siteSettings?.siteChrome)) {
 ```
 
 **Verify §5:**
@@ -1331,13 +1342,17 @@ mv src/actions/auth.test.ts.bak src/actions/auth.test.ts
 #           one-character edit nobody reviews. Verify §2 has you delete BOTH and then
 #           add a real `token:` field, so you see the test go red at least once.
 
-# 5. NEGATIVE — no test imports the real next/cache. A single missed vi.mock means
-#    revalidateTag throws "Route ... used revalidateTag outside a request scope",
-#    which reads like a Next bug rather than a missing mock.
-grep -rl "from 'next/cache'" src --include='*.test.ts' | while read -r f; do
+# 5. NEGATIVE — no test reaches the real next/cache. A single missed vi.mock means
+#    revalidateTag throws "Invariant: static generation store missing in
+#    revalidateTag <tag>", which reads like a Next bug rather than a missing mock.
+#    Match `next/cache` in ANY form. These files reach it with `await import(...)`,
+#    never `from '...'`, because vi.mock is hoisted above static imports (Key
+#    Concept 3) — so a grep for `from 'next/cache'` matches nothing, the loop body
+#    never runs, and "no output" would be true whether or not anything were mocked.
+grep -rl "next/cache" src --include='*.test.ts' | while read -r f; do
   grep -q "vi.mock('next/cache'" "$f" || echo "UNMOCKED: $f"
 done
-# Expected: no output. Every file that names next/cache also mocks it.
+# Expected: no output, from a loop that DID run — the file list is non-empty.
 
 # 6. NEGATIVE — the replay window is enforced even for a VALID signature
 npx vitest run -t "rejects a STALE timestamp even with a perfect signature"
@@ -1455,7 +1470,7 @@ out again.
   factory, not after the `ReferenceError`
 - [Vitest — `vi.mocked`](https://vitest.dev/api/vi.html#vi-mocked) — how the original signature is
   preserved, which is what makes `toHaveBeenCalledWith` a compile-time check as well as a runtime one
-- [Next.js — Server Actions and Mutations](https://nextjs.org/docs/app/getting-started/updating-data)
+- [Next.js — Server Actions and Mutations](https://nextjs.org/docs/app/getting-started/mutating-data)
   — the framework's own security guidance, including the reminder that a Server Action is a public
   HTTP endpoint whether or not anything on your site calls it
 - [Next.js — `revalidateTag`](https://nextjs.org/docs/app/api-reference/functions/revalidateTag) —
@@ -1472,7 +1487,8 @@ out again.
 - [OWASP — Unvalidated Redirects and Forwards Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html)
   — why `?next=//evil.test` is the case people forget, and the allowlist-shaped defence the two
   `safeNextPath` implementations use
-- [OWASP — Webhook security](https://cheatsheetseries.owasp.org/cheatsheets/Webhook_Security_Cheat_Sheet.html)
-  — signature-over-raw-body, replay windows and constant-time comparison, which is the checklist
-  Lesson 18.3's handler was built against and this lesson's tests pin
+- [Standard Webhooks — the specification](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md)
+  — signature-over-raw-body, timestamp tolerance for replay, and constant-time comparison, which is
+  the checklist Lesson 18.3's handler was built against and this lesson's tests pin. OWASP has no
+  webhook cheat sheet; this is the closest thing to a normative source
 

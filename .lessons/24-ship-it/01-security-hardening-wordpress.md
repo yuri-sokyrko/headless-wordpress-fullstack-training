@@ -415,6 +415,13 @@ docker compose run --rm wpcli wp eval '
 - [ ] The environment type is `local`.
 - [ ] `introspection: on`, `max nodes: 50`, `depth const: 10`. All three come from
       `includes/graphql/performance.php`, which you are **not** editing in this lesson.
+- [ ] Note what `introspection: on` is really telling you. WPGraphQL's *own* default for
+      `public_introspection_enabled` is `off`, and `DisableIntrospection` also waves a request
+      through whenever `WPGraphQL::debug()` is true — which `WORDPRESS_DEBUG=1` in
+      `docker-compose.dev.yml` makes true. So the unauthenticated `__type` and `__schema` curls
+      back in Lessons 04.3, 14.1, 19.1 and 20.2 worked because of the **dev override**, not
+      because introspection ships open. This lesson's job here is to confirm it is off in
+      production and that nothing in the stack turns it back on — not to switch it off.
 - [ ] Both `DISALLOW_FILE_*` print `false`, and both are **already defined** in
       `wp-config.php`. Do not define either in the mu-plugin: a second `define()` emits a
       notice that lands in `wp-content/debug.log`, where nobody will correlate it with the
@@ -562,17 +569,17 @@ remove_action( 'wp_head', 'wp_generator' );
 
 /*
  * ─── 5. GraphQL: persisted-query allowlisting ──────────────────────────────────────
- * The setting section belongs to WPGraphQL Smart Cache. Its FIELD NAMES are read off your
- * own install in Task Step 5 — versions have renamed them — and the constant below is
- * what you set them to. Filtering the setting rather than writing a wp_options row is the
- * pattern Lesson 06.4 established: a policy in the database is a policy someone changes
- * by clicking.
+ * The setting section belongs to WPGraphQL Smart Cache. At 2.0.1 the field names in
+ * `graphql_persisted_queries_section` are `grant_mode` and `editor_display`; Task Step 5
+ * prints them off your own install. Filtering the setting rather than writing a
+ * wp_options row is the pattern Lesson 06.4 established: a policy in the database is a
+ * policy someone changes by clicking.
  */
 const SMART_CACHE_ALLOWLIST_FIELDS = array(
-	// name => value, in a hardened environment
-	'query_allowlist_enabled' => 'on',
-	'grant_public_access'     => 'off',
-	'editor_display'          => 'off',
+	// name => value, in a hardened environment. `grant_mode` is ONE radio, not a pair
+	// of booleans: 'public' | 'only_allowed' | 'some_denied', defaulting to 'public'.
+	'grant_mode'     => 'only_allowed',
+	'editor_display' => 'off',
 );
 
 function filter_smart_cache_settings( $value, $default_val, string $option_name ) {
@@ -724,24 +731,37 @@ BTT_PERSISTED_QUERIES_ENFORCED=false
 ### Step 5: Install WPGraphQL Smart Cache and read its real field names
 
 ```bash
-docker compose run --rm wpcli wp plugin install wp-graphql-smart-cache --activate
+# NOT `wp plugin install wp-graphql-smart-cache` — this plugin is not in the
+# wordpress.org directory, so a bare slug fails with `Plugin not found`. Install the
+# release asset, which is also the version pin. Note the asset drops the leading `wp-`.
+docker compose run --rm wpcli wp plugin install \
+  'https://github.com/wp-graphql/wp-graphql-smart-cache/releases/download/v2.0.1/wpgraphql-smart-cache.zip' \
+  --activate
 
 # The names your version uses. The mu-plugin's SMART_CACHE_ALLOWLIST_FIELDS must match
-# THESE, not the ones printed in this lesson — the section has been renamed across versions
-# and a filter keyed on a name that does not exist silently changes nothing.
+# THESE — a filter keyed on a name that does not exist silently changes nothing, which is
+# the whole failure mode this step exists to rule out.
 docker compose run --rm wpcli wp option get graphql_persisted_queries_section --format=json
 ```
 
 **Verify §5:**
 
-- [ ] The JSON prints a set of field names. Compare them to `SMART_CACHE_ALLOWLIST_FIELDS` in
-      your mu-plugin and **edit the constant to match**. If the option does not exist yet, open
-      **GraphQL → Settings → Saved Queries** in wp-admin once and save; the row appears then.
-- [ ] `docker compose run --rm wpcli wp eval 'echo get_graphql_setting( "grant_public_access", "unset" ), PHP_EOL;'`
-      prints `unset` locally — because `hardened()` is false and your filter returns `$value`
+- [ ] The JSON prints a set of field names — at 2.0.1 they are `grant_mode`, `editor_display`,
+      `query_garbage_collect` and `query_garbage_collect_age`. Compare them to
+      `SMART_CACHE_ALLOWLIST_FIELDS` in your mu-plugin and **edit the constant to match**. If the
+      option does not exist yet, open **GraphQL → Settings → Saved Queries** in wp-admin once and
+      save; the row appears then.
+- [ ] `docker compose run --rm wpcli wp eval 'echo get_graphql_setting( "grant_mode", "unset", "graphql_persisted_queries_section" ), PHP_EOL;'`
+      prints `public` — or `unset` before that option row exists. Either way it is **not**
+      `only_allowed`, because `hardened()` is false locally and your filter returns `$value`
       untouched. **That is the branch working**, and it is the positive that proves this file can
       be developed against.
+- [ ] There is no separate "enable persisted queries" toggle to find, and its absence is not a
+      missing step: the `graphql_document` post type and the `sha256Hash` lookup are live the
+      moment the plugin activates. `grant_mode` is the only thing standing between a hash-only
+      endpoint and an open one.
 - [ ] `docker compose run --rm wpcli wp plugin list --status=active | grep -c smart-cache` is `1`.
+      The installed directory is `wpgraphql-smart-cache`, which still matches that grep.
 
 > **Installing a plugin with `wp plugin install` works locally and will not work in
 > production**, because Step 4 set `DISALLOW_FILE_MODS`. That is not a bug in this step; it is

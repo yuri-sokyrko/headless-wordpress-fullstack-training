@@ -110,7 +110,7 @@ not exist in the deploy — which you discover on the deploy.
 |---|---|
 | `docker compose run --rm wpcli wp <cmd>` | ✅ **the only correct form in this course** |
 | `docker compose exec wordpress wp <cmd>` | ❌ `wp: not found` — the stock image ships no `wp` |
-| `docker compose run --rm wpcli wp <cmd> --allow-root` | ❌ the cli image runs as `www-data`; the flag is invalid |
+| `docker compose run --rm wpcli wp <cmd> --allow-root` | ❌ pointless, not invalid: WP-CLI accepts the flag and it does nothing, because the cli image runs as `www-data` (uid 33) and never as root |
 | `wp <cmd>` on your host | ❌ no WordPress, no database, wrong PHP |
 | `docker compose exec wordpress php -a` | ✅ fine — it is only `wp` and `composer` that are absent |
 
@@ -830,7 +830,7 @@ white screen on every URL.
   `--quiet`, `--format`, `--porcelain`, `--user`, `--skip-plugins`, all of which your command gets
   for free
 - [The `wordpress:cli` image](https://hub.docker.com/_/wordpress) — the "WP-CLI" section, which
-  documents the `www-data` user and why `--allow-root` is neither needed nor accepted
+  documents the `www-data` user and why `--allow-root`, though accepted, does nothing here
 - [WP-CLI — `wp eval` and `wp eval-file`](https://developer.wordpress.org/cli/commands/eval/) —
   the escape hatch from Key Concept 3, and the reasons its own documentation gives for preferring a
   registered command

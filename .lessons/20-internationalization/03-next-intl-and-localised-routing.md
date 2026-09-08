@@ -121,7 +121,7 @@ catalogue that is now missing.
 `toLocalePath()` conditional on which locale it was given. The prefix is worth one redirect.
 
 **`defaultLocale` is a literal, and `NEXT_PUBLIC_DEFAULT_LOCALE` still exists**
-([appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them)).
+([appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them)).
 A literal is required, because `defaultLocale` has to be a member of the `locales` tuple at the
 *type* level and an environment variable is `string | undefined`. So the env var stops being
 read and starts being **checked**: if the two disagree, every fallback in the application points
@@ -416,9 +416,12 @@ npm view next-intl license
       your middleware is not CI's choice. Write the version `npm ls` printed back without a caret:
 
 ```bash
-npm pkg set dependencies.next-intl=3.26.5   # substitute the version npm ls printed
+npm pkg set dependencies.next-intl=4.14.2   # substitute the version npm ls printed
 npm install
 npm pkg get dependencies.next-intl
+# 4.14.2 is what `npm install next-intl` resolved to in 2026-09 — a major above the
+# 3.x this lesson was drafted on. `defineRouting`'s accepted keys are identical on
+# 3.26.5 and 4.14.2, so Step 2's config does not care which side you land on.
 ```
 
 - [ ] That last command prints an exact version with no `^`, and
@@ -480,11 +483,8 @@ if (declaredDefault !== undefined && declaredDefault !== routing.defaultLocale) 
 }
 ```
 
-> **If your next-intl version rejects `localeDetection` or `alternateLinks` inside
-> `defineRouting`, pass them to `createMiddleware()` in Step 5 instead.** Both options moved
-> from the middleware call into the routing object during the 3.x line, and the behaviour is
-> identical either way. This is the one version-sensitive line in the module, which is the second
-> reason Step 1 pinned an exact version.
+> **`localeDetection` and `alternateLinks` belong in `defineRouting` from next-intl 3.22.0
+> onward** — before that they were `createMiddleware()` options. Verified on 3.26.5 and 4.14.2.
 
 Now `locale.ts` (Lesson 20.2) stops carrying its own copy of the list, and gains the text
 direction map that Lesson 20.4 will lean on:
@@ -576,8 +576,8 @@ export default withNextIntl(nextConfig);
 
 > **Lesson 21.3 adds a second wrapper.** `@next/bundle-analyzer` wraps the config too, and
 > wrappers compose: `withNextIntl(withBundleAnalyzer(nextConfig))`. Replacing this line rather
-> than nesting inside it removes i18n from the build with no error — the pages render, and every
-> `t()` call throws on the first request.
+> than nesting inside it removes i18n from the build: measured on Next 15.5, it compiles clean and
+> then dies at prerender with `Couldn't find next-intl config file`.
 
 **Verify §3:**
 
@@ -860,11 +860,10 @@ export function generateStaticParams(): Array<{ locale: string }> {
     </html>
 ```
 
-> **`lang` is not new; `dir` is.** `<html lang={locale}>` has been in this file since Lesson
-> 09.1, and Lesson 09.1's own Verification already asserts `<html lang="en"`. This is the lesson
-> where that value stops always being `en` — which is the cheapest possible demonstration of why
-> the `[locale]` segment existed from the first Next.js lesson. `dir` is the genuinely new
-> attribute, and Lesson 20.4 §7 explains what it buys.
+> **`lang` is not new; `dir` is.** `<html lang={locale}>` has been here since Lesson 09.1, whose
+> own Verification asserts `<html lang="en"`. This is the lesson where that value stops always
+> being `en` — the cheapest demonstration of why the `[locale]` segment existed from the first
+> Next.js lesson. `dir` is the new attribute, and Lesson 20.4 §7 says what it buys.
 
 Every page calling a server translation API needs `setRequestLocale(locale)` too — nine route
 files, and the rule is mechanical: **if the file awaits `params` and calls `getTranslations`, the
@@ -1167,7 +1166,7 @@ Reversal condition: Polylang Pro. `NextIntlClientProvider` receives six named na
 - [ ] On `/en/incidents/incident-40`, `Deutsch` and `Українська` are **disabled** buttons after
       hydration, with an accessible name that says why.
 - [ ] Clicking `Deutsch` on `/en/incidents?severity=s1-catastrophic` lands on
-      `/de/incidents?severity=s1-catastrophic` — the bug Lesson 23.8's charter hunts for.
+      `/de/incidents?severity=s1-catastrophic` — the assertion Lesson 23.8's finding F3 closes.
 
 ---
 

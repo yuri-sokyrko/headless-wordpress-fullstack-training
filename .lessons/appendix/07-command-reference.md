@@ -45,7 +45,8 @@ lsof -i :8080
 
 Always through the `wpcli` service. **The stock `wordpress` image has no WP-CLI** — that is why
 `docker-compose.yml` declares a separate `wpcli` service (Lesson 02.2). It runs as `www-data`, so
-`--allow-root` is neither needed nor valid.
+`--allow-root` is never needed. WP-CLI **accepts** the flag — it is a global option — and it does
+nothing when the process is not root. Needing it means the `user: '33:33'` pin is missing.
 
 ```bash
 # General shape
@@ -119,9 +120,12 @@ wpx db query "EXPLAIN SELECT p.ID FROM wp_posts p
   INNER JOIN wp_postmeta m ON p.ID = m.post_id
   WHERE p.post_type='incident' AND m.meta_key='downtime_minutes' AND m.meta_value > 60;"
 
+# WordPress 6.6 replaced the yes/no column with a value SET. `autoload='yes'`
+# returns NULL on 6.8 — measured. Core's own predicate is wp_autoload_values_to_autoload().
 wpx db query "SELECT SUM(LENGTH(option_value)) AS autoload_bytes
-  FROM wp_options WHERE autoload='yes';"
-# Expected: ideally under ~800000. This loads on EVERY GraphQL request.
+  FROM wp_options WHERE autoload IN ('yes','on','auto','auto-on');"
+# Expected: ideally under ~800000; a bare 6.8.3 install is ~26 KB across 118
+#           options. This loads on EVERY GraphQL request.
 
 # Moving a database between environments
 wpx search-replace 'https://old.example' 'http://localhost:8080' --all-tables --dry-run

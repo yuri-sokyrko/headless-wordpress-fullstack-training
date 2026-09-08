@@ -249,7 +249,8 @@ a single line of your resolver, it runs:
 ```
    POST /graphql
         │
-        ├─▶ SELECT option_name, option_value FROM wp_options WHERE autoload='yes'
+        ├─▶ SELECT option_name, option_value FROM wp_options
+        │      WHERE autoload IN ('yes','on','auto','auto-on')   ← 6.6+ is a SET
         │        ← the fixed tax. Paid on EVERY request, before anything else.
         ├─▶ plugins load, init fires, WPGraphQL builds the type registry
         └─▶ your query executes

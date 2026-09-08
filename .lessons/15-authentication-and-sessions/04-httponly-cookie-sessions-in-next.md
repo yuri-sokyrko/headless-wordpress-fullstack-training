@@ -1498,7 +1498,7 @@ Task Step 7's DevTools walkthrough covers what `curl` cannot.
   and write rules, the async signature, and the `delete` options object Control Question 1 is about
 - [MDN — `Set-Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie) —
   every attribute in Key Concept 2, including why an unset `Domain` is host-only
-- [MDN — `SameSite` cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie/SameSite) —
+- [MDN — `SameSite` cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#samesitesamesite-value) —
   the exact request shapes `Lax` and `Strict` differ on; read this before choosing either
 - [RFC 6265bis — cookie path matching](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis) —
   §5.1.4 is the path-match algorithm that makes a mismatched deletion silently do nothing

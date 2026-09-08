@@ -578,7 +578,11 @@ export const metadata: Metadata = {
 // One locale today. Module 20 adds 'uk' and 'de' — and the translated content to
 // justify them. A locale listed here with no content is an indexed English page
 // on a foreign URL.
-export function generateStaticParams(): ReadonlyArray<{ locale: string }> {
+// `Array`, not `ReadonlyArray`. Next validates this signature at build time and
+// accepts only `any[] | Promise<any[]>`; a readonly array is a build error, not a
+// type warning — "is not a valid generateStaticParams return type". It is the one
+// place in this codebase where the house preference for readonly types loses.
+export function generateStaticParams(): Array<{ locale: string }> {
   return [{ locale: 'en' }];
 }
 
@@ -650,11 +654,22 @@ export default async function HomePage({
 
 The Vite harness has been replaced by a real framework. Leaving it in place means two bundlers,
 two dev servers and two ways to render the same component — a genuine source of "which one am I
-looking at?" confusion.
+looking at?" confusion. Delete it in **four** parts, not one: the directory, the `scratch` npm
+script, the Vite packages, and the `scratch/**` block in `eslint.config.mjs` that Lesson 08.1 §3
+said this lesson would remove. A deleted directory with a surviving script is how a learner ends
+up running `npm run scratch` in Module 20 and getting a stack trace from a bundler nobody
+installed any more.
 
 ```bash
 rm -rf scratch
+npm pkg delete scripts.scratch
 npm uninstall vite @vitejs/plugin-react
+
+# And delete the `files: ['scratch/**/*.{ts,tsx}']` config object from
+# eslint.config.mjs by hand — Lesson 08.1 §3 added it and promised this lesson
+# would take it away. An override matching nothing is not an error; it is a
+# question the next reader has to answer.
+
 npm run type-check && npm run lint
 # Expected: both clean. If tsc complains about a missing scratch file, an import
 #           survived the delete — fix the import, do not restore the directory.
@@ -737,12 +752,16 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/incidents
 # Expected: 404 and 404
 
-# 7. NEGATIVE — the Vite harness is gone, in all three of its parts
+# 7. NEGATIVE — the Vite harness is gone, in all FOUR of its parts
 test -d scratch && echo 'STILL PRESENT' || echo 'scratch removed'
 # Expected: scratch removed
 npm pkg get scripts | grep -c vite
-# Expected: 0
+# Expected: 0. This is the one that survives a careless teardown: `npm uninstall`
+#           removes the dependency and never touches `scripts`, so the script
+#           keeps pointing at a binary that is no longer installed.
 npm ls vite 2>/dev/null | grep -c 'vite@'
+# Expected: 0
+grep -c "scratch/\*\*" eslint.config.mjs
 # Expected: 0
 
 # 8. NEGATIVE — your real env file is ignored and unstaged

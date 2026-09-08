@@ -99,8 +99,9 @@ Lesson 23.7 builds this. Every arrow that does not exist is as important as the 
 │  Playwright MCP server                                   │
 │  --isolated            no persisted profile              │
 │  --allowed-origins     localhost:3000;localhost:8080     │
-│  --blocked-origins *   everything else refused           │
-│  --save-trace          → .agent-artifacts/  (gitignored) │
+│    (an allowlist alone. --blocked-origins * was MEASURED  │
+│     to abort the allowlist too — Lesson 23.7 KC 6)        │
+│  --save-session        → .agent-artifacts/  (gitignored) │
 │  drives the ACCESSIBILITY TREE, not screenshots          │
 └────────────┬─────────────────────────────────────────────┘
              │ HTTP, localhost only

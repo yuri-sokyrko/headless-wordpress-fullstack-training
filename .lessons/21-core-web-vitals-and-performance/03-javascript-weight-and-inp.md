@@ -375,9 +375,12 @@ export default withNextIntl(withBundleAnalyzer(nextConfig));
 ```
 
 > **This is the single most expensive one-line mistake available in this module.** Writing
-> `export default withBundleAnalyzer(nextConfig)` removes next-intl's plugin from the build **with
-> no error**: the app compiles, the pages render, and every `t()` call throws on the first request
-> because the build-time alias for `next-intl/config` was never registered. Lesson 20.3 wrote the
+> `export default withBundleAnalyzer(nextConfig)` removes next-intl's plugin from the build,
+> because the build-time alias for `next-intl/config` is never registered. Measured on Next
+> 15.5: it **compiles clean** — `✓ Compiled successfully` — and then dies at `Generating static
+> pages (0/15)` with `Couldn't find next-intl config file`. Note what changed that: before
+> Lesson 18.1 made these routes static there would have been no build error at all, and every
+> `t()` call would simply have thrown on the first request. Lesson 20.3 wrote the
 > instruction into the course before this lesson existed, and the check is a count:
 > `grep -c 'withNextIntl' next.config.ts` must stay at **2** — the `createNextIntlPlugin` call and
 > the export.

@@ -639,6 +639,14 @@ function coverageByLine() {
       for (let n = loc.start.line; n <= loc.end.line; n++) {
         // A line is covered if ANY statement on it ran. `a && b()` on one line
         // is one line, and pretending otherwise reports noise.
+        //
+        // The same loop has an effect in the other direction, measured and
+        // accepted: a statement SPANNING lines 5-13 — a multi-line call — marks
+        // all nine hit once its first line executes. That can only inflate patch
+        // coverage, never deflate it, which is the right direction for a gate
+        // whose failure blocks a merge. Statement ids are also strings and
+        // NON-CONTIGUOUS (0, 2, 4, 5 …), which is why this walks
+        // Object.entries rather than counting up an index.
         lines.set(n, (lines.get(n) ?? false) || hit);
       }
     }

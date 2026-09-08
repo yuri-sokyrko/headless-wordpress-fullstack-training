@@ -33,7 +33,7 @@ By the end of this lesson you will have:
 - `wp-graphql-polylang` installed and pinned, with `LanguageCodeEnum` in the refreshed
   `schema.graphql`
 - `src/graphql/fragments/Translations.graphql` — the sibling-lookup fragment the switcher needs
-- Every localised document taking a required `$language: LanguageCodeEnum!` variable
+- Every localised document taking a required `$language: LanguageCodeFilterEnum!` variable
 - A single `localeToLanguageCode()` mapper — the only place `'de'` becomes `DE`
 - A decided, implemented and documented fallback policy for untranslated content
 - Proof from GraphiQL that `where: { language: DE }` returns German nodes only, and that omitting
@@ -92,8 +92,8 @@ has to change.
 |---|---|---|
 | `language` | every translatable content node | `{ code: LanguageCodeEnum, locale: String, slug: String, name: String }` |
 | `translations` | every translatable content node | a list of **sibling** nodes — never the node itself |
-| `where: { language: … }` | every content connection (`incidents`, `posts`, `pages`, `techReviews`) | `LanguageCodeEnum` |
-| `LanguageCodeEnum` | the schema | one value per configured language, plus `DEFAULT` and `ALL` |
+| `where: { language: … }` | every content connection (`incidents`, `posts`, `pages`, `techReviews`) | `LanguageCodeFilterEnum` — **not** `LanguageCodeEnum`; the filter type is a different enum with two extra members |
+| `LanguageCodeEnum` | the schema | one value per configured language. `DEFAULT` and `ALL` live on `LanguageCodeFilterEnum`, the where-arg type |
 
 And the fourth thing, which is an **absence** and which shapes half this lesson: **nothing is
 added to a single-node lookup.** `incident(id: $slug, idType: SLUG)` takes no language argument
@@ -150,7 +150,7 @@ both kinds of query, and pretending otherwise produces a document that will not 
 
 | Document kind | Example | Defence | Why that one |
 |---|---|---|---|
-| **connection** | `IncidentsList`, `PostsList`, `ReviewsList`, `PageUris`, `IncidentSlugs`, `HomepageFeeds`, `IncidentTicker` | a **required** `$language: LanguageCodeEnum!` variable | `tsc` refuses to build a call site that omits it |
+| **connection** | `IncidentsList`, `PostsList`, `ReviewsList`, `PageUris`, `IncidentSlugs`, `HomepageFeeds`, `IncidentTicker` | a **required** `$language: LanguageCodeFilterEnum!` variable | `tsc` refuses to build a call site that omits it |
 | **single node** | `IncidentBySlug`, `PostBySlug`, `ReviewBySlug`, `PageByUri`, `HobtPromo` | select `language { code }` and **assert at runtime** | there is no argument to make required |
 
 **Adding `$language` to a single-node document is not "belt and braces", it is a build failure.**
@@ -340,14 +340,17 @@ Packagist. `wp plugin install wp-graphql-polylang` therefore fails with `Plugin 
 which is a confusing error for a plugin that plainly exists.
 
 Open [the releases page](https://github.com/valu-digital/wp-graphql-polylang/releases), copy the
-`.zip` asset URL of the newest release, and install that:
+**source-code** `.zip` URL of the newest tag, and install that. This repository publishes **no
+release assets**, so the `releases/latest/download/…` form every other plugin in this course uses
+is a 404 here — `wp plugin install` reports `Download failed. "Not Found"`, and WP-CLI renames the
+tag archive's directory for you:
 
 ```bash
 cd wordpress-headless
 
 # Paste the URL you copied. A release URL is a VERSION PIN — a slug is not, which
 # is the second reason to prefer it here.
-BTT_WPGQL_POLYLANG='https://github.com/valu-digital/wp-graphql-polylang/releases/latest/download/wp-graphql-polylang.zip'
+BTT_WPGQL_POLYLANG='https://github.com/valu-digital/wp-graphql-polylang/archive/refs/tags/v0.7.1.zip'
 
 docker compose run --rm wpcli wp plugin install "$BTT_WPGQL_POLYLANG" --activate
 docker compose run --rm wpcli wp plugin list --name=wp-graphql-polylang --fields=name,status,version
@@ -369,9 +372,11 @@ curl -s -X POST http://localhost:8080/graphql \
   -d '{"query":"{ __type(name:\"LanguageCodeEnum\"){ enumValues { name } } }"}' | jq -c '.data'
 ```
 
-- [ ] The output lists `EN`, `UK`, `DE` plus `DEFAULT` and `ALL`. If it is `{"__type":null}`,
-      the plugin is active but Polylang has no languages — go back to Lesson 20.1 Step 3.
-- [ ] The two fields are on the **interface**, not only on the concrete types:
+- [ ] The output lists exactly `DE`, `EN`, `UK` — **no** `DEFAULT`, no `ALL`. Those two are on
+      `LanguageCodeFilterEnum`, which is the where-arg type and a different enum. If you get
+      `{"__type":null}`, the plugin is active but Polylang has no languages — go back to Lesson
+      20.1 Step 3.
+- [ ] The two fields are on the **concrete types**, not on the `ContentNode` interface:
 
 ```bash
 curl -s -X POST http://localhost:8080/graphql \
@@ -380,11 +385,13 @@ curl -s -X POST http://localhost:8080/graphql \
   | jq -r '.data.__type.fields[].name' | grep -E '^(language|translations)$'
 ```
 
-- [ ] That prints both names. **If it prints nothing**, your version of the plugin registers the
-      fields on each post type individually rather than on the interface — in which case Step 3's
-      fragment reads `on Incident` and you write one per post type instead of one shared
-      fragment. Everything else in this lesson is unchanged. Find out now; the alternative is
-      finding out from a codegen error with a confusing message.
+- [ ] That prints **nothing** — and nothing is the expected result. Measured on
+      `wp-graphql-polylang` 0.7.1: `ContentNode` carries only the *where-arg*, while `language`
+      and `translations` are registered on each post type individually and `translations` is
+      typed `[Incident]`. So Step 3's fragment reads `on Incident` and you write one per
+      translatable type rather than one shared fragment. Swap `ContentNode` for `Incident` in the
+      command above and both names appear. Finding this out here is cheaper than finding it out
+      from a codegen error with a confusing message.
 
 ### Step 2: Refresh the schema, read the diff, regenerate
 
@@ -409,8 +416,8 @@ git diff -- ../wordpress-headless/schema.graphql | grep '^+' | grep -vE 'languag
 |---|---|
 | `enum LanguageCodeEnum` and `type Language` | any change to an existing field's type |
 | `language: Language` and `translations: [...]` on the translatable post types | any change to `Incident`'s ACF field group |
-| `language: LanguageCodeEnum` inside each `…WhereArgs` input | a new root query field |
-| the same three on `ContentNode` and the term types | anything mentioning `menu` |
+| `language: LanguageCodeFilterEnum` inside each `…WhereArgs` input | a new root query field |
+| the same three on each translatable post type and term type | anything mentioning `menu` |
 
 That second command prints every added line that is **not** about language. It should be empty
 or near-empty; anything substantial in it is a plugin doing more than it advertised, and this is
@@ -459,10 +466,10 @@ git add ../wordpress-headless/schema.graphql src/gql
 # the consumer combines the two. Selecting only `translations` is how a page ends
 # up missing from its own hreflang cluster (Key Concept 4).
 #
-# Everything inside `translations` is a scalar-ish field that exists on every
-# content node, so this works whether your build of wp-graphql-polylang types the
-# field as the concrete post type or as the interface.
-fragment TranslationFields on ContentNode {
+# wp-graphql-polylang 0.7.1 registers `language` and `translations` on each CONCRETE
+# post type, NOT on ContentNode, and types `translations` as [Incident]. So this is
+# one fragment per translatable type — Verify §1 measures it on your install.
+fragment TranslationFields on Incident {
   language {
     code
     slug
@@ -506,7 +513,7 @@ on every **single-node** query. Do not fix the call sites yet.
 # there is nothing to make required, so they select the language and the route
 # asserts on it (Key Concept 3).
 
-query IncidentsList($first: Int!, $language: LanguageCodeEnum!, $after: String, $search: String) {
+query IncidentsList($first: Int!, $language: LanguageCodeFilterEnum!, $after: String, $search: String) {
   incidents(
     first: $first
     after: $after
@@ -534,7 +541,7 @@ query IncidentBySlug($slug: ID!) {
   }
 }
 
-query IncidentSlugs($first: Int!, $language: LanguageCodeEnum!) {
+query IncidentSlugs($first: Int!, $language: LanguageCodeFilterEnum!) {
   incidents(first: $first, where: { status: PUBLISH, language: $language }) {
     nodes {
       slug
@@ -542,13 +549,13 @@ query IncidentSlugs($first: Int!, $language: LanguageCodeEnum!) {
   }
 }
 
-query HomepageFeeds($featuredCount: Int!, $recentCount: Int!, $language: LanguageCodeEnum!) {
+query HomepageFeeds($featuredCount: Int!, $recentCount: Int!, $language: LanguageCodeFilterEnum!) {
   catastrophic: incidents(
     first: $featuredCount
     where: {
       status: PUBLISH
       language: $language
-      taxQuery: { taxArray: [{ taxonomy: SEVERITY, field: SLUG, terms: ["s1-catastrophic"] }] }
+      severityIn: ["s1-catastrophic"]
     }
   ) {
     nodes {
@@ -562,14 +569,14 @@ query HomepageFeeds($featuredCount: Int!, $recentCount: Int!, $language: Languag
   }
 }
 
-query IncidentTicker($first: Int!, $language: LanguageCodeEnum!, $severities: [String!]!) {
+query IncidentTicker($first: Int!, $language: LanguageCodeFilterEnum!, $severities: [String!]!) {
   incidents(
     first: $first
     where: {
       status: PUBLISH
       language: $language
       orderby: { field: DATE, order: DESC }
-      taxQuery: { taxArray: [{ taxonomy: SEVERITY, field: SLUG, terms: $severities }] }
+      severityIn: $severities
     }
   ) {
     nodes {
@@ -579,14 +586,16 @@ query IncidentTicker($first: Int!, $language: LanguageCodeEnum!, $severities: [S
 }
 ```
 
-Note `taxQuery` and `language` sitting side by side in `HomepageFeeds`. The severity term is
-shared across languages (Lesson 20.1 §6), so a taxonomy filter and a language filter compose
-without either knowing about the other — which is the practical payoff of leaving taxonomies
+Note `severityIn` and `language` sitting side by side in `HomepageFeeds` — two `where` keys on
+one input type, and neither of them a `taxQuery`, which this schema does not have. The severity
+term is shared across languages (Lesson 20.1 §6), and the two filters land on different
+`WP_Query` keys — `lang` for Polylang, `tax_query` for Lesson 06.1's argument — so they compose
+without either knowing about the other. That is the practical payoff of leaving taxonomies
 untranslated.
 
 The same two edits go into the other four document files:
 
-| File | Gains `$language: LanguageCodeEnum!` | Gains `...TranslationFields` |
+| File | Gains `$language: LanguageCodeFilterEnum!` | Gains `...TranslationFields` |
 |---|---|---|
 | `posts.graphql` | `PostsList`, `PostSlugs` | `PostBySlug` |
 | `reviews.graphql` | `ReviewsList`, `ReviewSlugs` | `ReviewBySlug` |
@@ -606,7 +615,7 @@ npm run type-check
 ```
 src/app/[locale]/incidents/page.tsx:24:5 - error TS2345: Argument of type
 '{ first: number; }' is not assignable to parameter of type 'Exact<{ first: number;
-language: LanguageCodeEnum; after?: ...; }>'.
+language: LanguageCodeFilterEnum; after?: ...; }>'.
   Property 'language' is missing in type '{ first: number; }' but required in type ...
 ```
 
@@ -1015,7 +1024,7 @@ Locales: `en` (default), `uk`, `de`. The URL segment is the single source of tru
 localised Next segment would disagree with every `uri` WordPress returns. Reversal condition:
 Polylang Pro. Lesson 20.3 argues it in full.
 
-**Every connection query takes a required `$language: LanguageCodeEnum!`.** Single-node lookups
+**Every connection query takes a required `$language: LanguageCodeFilterEnum!`.** Single-node lookups
 by slug or URI take no language argument — they select `language { code }` and
 `requireLocalisedNode()` asserts on it. Three documents deliberately take no language:
 `SiteChrome`, `PrimaryMenu` and `ScapegoatLeaderboard`, because options, menus and (in this
@@ -1125,7 +1134,7 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 # 11. NEGATIVE — deleting a `$language` variable is a COMPILE error, not a
 #     runtime one. Probed on a copy, so no tracked file is ever left broken.
 cp src/graphql/posts.graphql /tmp/btt-posts.graphql
-sed -i.tmp -e 's/, \$language: LanguageCodeEnum!//' -e 's/^ *language: \$language$//' src/graphql/posts.graphql
+sed -i.tmp -e 's/, \$language: LanguageCodeFilterEnum!//' -e 's/^ *language: \$language$//' src/graphql/posts.graphql
 npm run codegen >/dev/null && npm run type-check
 # Expected: an error naming src/app/[locale]/blog/page.tsx — `language` is not a
 #           known property of the variables type, because the document no longer
@@ -1173,7 +1182,7 @@ npm run build
 
 ## Control Questions
 
-1. `IncidentsList` takes `$language: LanguageCodeEnum!` and `IncidentBySlug` takes no language
+1. `IncidentsList` takes `$language: LanguageCodeFilterEnum!` and `IncidentBySlug` takes no language
    argument at all. Explain why adding one to `IncidentBySlug` would fail before TypeScript ever
    ran, and describe the defence that replaces it.
 2. `SiteChrome`, `PrimaryMenu` and `ScapegoatLeaderboard` deliberately do not pass a language,
