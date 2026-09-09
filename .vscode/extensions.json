@@ -1,0 +1,48 @@
+{
+  // Recommendations, not installs — the right level of pushiness for a file
+  // that follows every contributor around. VS Code shows these once, in a
+  // dismissible prompt, the first time the workspace is opened.
+  //
+  // The first four are Lesson 07.5's set: without them, the settings in
+  // settings.json that reference `esbenp.prettier-vscode` and `phpsab.*`
+  // configure nothing at all.
+  "recommendations": [
+    // Formatting and linting — Lesson 07.5
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    // PHP language intelligence and PHP_CodeSniffer — Lesson 07.5
+    "bmewburn.vscode-intelephense-client",
+    "ValeryanM.vscode-phpsab",
+
+    // Tailwind class completion inside cn() and cva() — Module 11
+    "bradlc.vscode-tailwindcss",
+    // .graphql completion and validation against wordpress-headless/schema.graphql,
+    // wired by graphql.config.yml at the repo root — Modules 05, 06, 10
+    "GraphQL.vscode-graphql",
+    "GraphQL.vscode-graphql-syntax",
+    // Compose stack management without leaving the editor — Module 02
+    "ms-azuretools.vscode-docker",
+    // Test explorers for the two JavaScript suites — Modules 12 and 23
+    "vitest.explorer",
+    "ms-playwright.playwright",
+    // .editorconfig is committed at the repo root and is what keeps PHP on
+    // tabs outside VS Code
+    "EditorConfig.EditorConfig",
+    // Highlighting for .env.example — the only env file in git, and the one
+    // Module 02.5 and appendix 04 spend the most time on. Without it the
+    // "*.env.example": "dotenv" association in settings.json does nothing.
+    "mikestead.dotenv"
+  ],
+
+  // Nothing here is banned outright; this list exists because these two cause
+  // silent, confusing conflicts in THIS repository specifically.
+  "unwantedRecommendations": [
+    // Formats PHP with its own rules, which WordPress Coding Standards then
+    // rejects. Lesson 07.5 turns formatOnSave off for PHP for the same reason.
+    "junstyle.php-cs-fixer",
+    // The unmaintained PHPCS extension. It reads `phpcs.*` settings; this
+    // workspace configures `phpsab.*`. Installing both means one of them is
+    // always silently doing nothing.
+    "ikappas.phpcs"
+  ]
+}
