@@ -178,7 +178,7 @@ factories remain the right answer, because the mocks are the assertions.
 ```ts
 // (illustration)
 import { revalidateTag } from 'next/cache';
-expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('incidents');
+expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('incidents', 'max');
 ```
 
 Rename `listTag`'s output and this line fails the **type check**, not just the test. That is worth
@@ -398,7 +398,7 @@ Some of this lesson's findings are not "todo" items — they are structural, and
 |---|---|---|
 | `HttpOnly`, `Secure`, `SameSite`, `Path`, `Max-Age` on the two session cookies | the constants live in a `server-only` module and are not exported | 23.6, reading `context.cookies()` |
 | Any `async` Server Component's rendered output | the RSC rule | 23.6 and the `smoke` project |
-| `src/middleware.ts` and its redirect decisions | it is a decision about a real request; asserting it in isolation asserts your own `NextRequest` | 23.6 |
+| `src/proxy.ts` and its redirect decisions | it is a decision about a real request; asserting it in isolation asserts your own `NextRequest` | 23.6 |
 | `redirect()` actually navigating | mocked here, so only the *argument* is asserted | 23.6 |
 | Whether WordPress accepts `CreateIncidentInput` | the client is mocked; a shape mismatch is invisible | 23.5, in-process `graphql()` |
 | Whether the ISR cache really served a stale page | there is no cache in a Vitest worker | 23.6 |
@@ -778,7 +778,7 @@ describe('logout', () => {
     await logout();
 
     expect(vi.mocked(clearSessionCookies)).toHaveBeenCalledTimes(1);
-    // `'/'`, not `'/en'` — middleware normalises it, and hard-coding a locale in
+    // `'/'`, not `'/en'` — proxy normalises it, and hard-coding a locale in
     // a logout would send a German editor to an English page (Lesson 15.4).
     expect(vi.mocked(redirect)).toHaveBeenCalledWith('/');
   });
@@ -873,7 +873,7 @@ describe('POST /api/auth/refresh — 204 or 401, and never a body', () => {
 
     await POST();
 
-    // Lesson 15.5's middleware hands off to this route whenever `btt_at` is near
+    // Lesson 15.5's proxy hands off to this route whenever `btt_at` is near
     // expiry. A failed refresh that left `btt_at` in place would be handed off
     // again on the very next request — forever. Deleting the cookie terminates it.
     expect(vi.mocked(clearSessionCookies)).toHaveBeenCalledTimes(1);
@@ -1012,8 +1012,8 @@ describe('POST /api/revalidate — the happy path, so the negatives mean somethi
 
     // WordPress sends IDENTIFIERS; the route derives every tag from tags.ts. That
     // is what turned a two-sided contract into a one-sided one (Lesson 18.2).
-    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('incident:incident-01');
-    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('incidents');
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('incident:incident-01', 'max');
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('incidents', 'max');
   });
 });
 
@@ -1283,7 +1283,7 @@ that owns it. When a reviewer asks "is that tested?", the answer is a row.
 |---|---|---|
 | `HttpOnly`, `Secure`, `SameSite`, `Path`, `Max-Age` on `btt_at` and `btt_rt` | the values are unexported constants inside a `server-only` module | 23.6, reading `context.cookies()` |
 | Any `async` Server Component's rendered output | the RSC rule — `react-dom` cannot await a component function | 23.6, `smoke` project |
-| `src/middleware.ts` redirect decisions | TODO |
+| `src/proxy.ts` redirect decisions | TODO |
 | `redirect()` actually navigating | mocked here, so only the ARGUMENT is asserted | 23.6 |
 | Whether WordPress accepts `CreateIncidentInput` | TODO |
 | Whether ISR really served a stale page | TODO |

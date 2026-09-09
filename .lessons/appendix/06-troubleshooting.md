@@ -181,8 +181,8 @@ A hit means either the variable is prefixed `NEXT_PUBLIC_`, or a server-only mod
 imported into a client component. Add `import 'server-only'` to the module so this fails at
 build time instead of shipping.
 
-**`middleware.ts` does not run**
-It must be at `next-app/src/middleware.ts` (or the project root, next to `app/`) — not inside
+**`proxy.ts` does not run**
+It must be at `next-app/src/proxy.ts` (or the project root, next to `app/`) — not inside
 `app/`. Check the `matcher` too.
 
 **Preview shows the published version, not my draft**
@@ -206,7 +206,7 @@ The cookie is not reaching the server, or you are reading it in a client compone
 read with `cookies()` on the server. There is deliberately no session React context.
 
 **Session drops after five minutes**
-That is the access-token TTL. The middleware refresh is not firing — check that `btt_rt` exists
+That is the access-token TTL. The proxy refresh is not firing — check that `btt_rt` exists
 and that its `Path=/api/auth` matches the refresh route exactly. A `Path` mismatch means the
 browser never sends it.
 

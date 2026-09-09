@@ -1,4 +1,4 @@
-# Module 09 — Next.js 15 App Router Foundations
+# Module 09 — Next.js 16 App Router Foundations
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ next-app/
                                            IncidentFilterProvider, fixtures)
 ```
 
-There is no `src/app/`, no `next.config.ts` and no `middleware.ts`. Lesson 09.1 creates them
+There is no `src/app/`, no `next.config.ts` and no `proxy.ts`. Lesson 09.1 creates them
 and removes the Vite harness.
 
 ## What You'll Learn
@@ -47,14 +47,14 @@ and removes the Vite harness.
 - **Client Components** — `'use client'` as a bundle boundary, not a feature flag
 - **`async` components** — `await` a GraphQL query directly inside a component
 - **`next/link` and `next/navigation`** — client-side navigation, `useRouter`, `notFound()`
-- **Route Handlers and `middleware.ts`** — the Next equivalents of a REST controller and a `template_redirect` hook
+- **Route Handlers and `proxy.ts`** — the Next equivalents of a REST controller and a `template_redirect` hook
 
 ## What You'll Build
 
 The first version of Blame The Tech you can open in a browser: a home page, `/en/incidents`,
 `/en/incidents/[slug]`, `/en/blog`, `/en/blog/[slug]`, `/en/reviews`, `/en/reviews/[slug]` and
 `/en/scapegoats`, all rendering **live WordPress data** over HTTP from a Server Component,
-plus `/api/health` and a `middleware.ts` that normalises the locale prefix.
+plus `/api/health` and a `proxy.ts` that normalises the locale prefix.
 
 After this module the site exists. It is unstyled, its GraphQL response types are hand-written
 by eye, and page bodies are an HTML blob. Modules 10, 11 and 14 fix exactly those three things,
@@ -64,11 +64,11 @@ in that order.
 
 | #  | Lesson | New Technology | What You Build |
 |----|--------|----------------|----------------|
-| 01 | [The App Router & File Conventions](01-app-router-and-file-conventions.md) | `next` 15, Turbopack, `app/[locale]/` | The scaffold by hand, root layout, home page, `.env.example` |
+| 01 | [The App Router & File Conventions](01-app-router-and-file-conventions.md) | `next` 16, Turbopack, `app/[locale]/` | The scaffold by hand, root layout, home page, `.env.example` |
 | 02 | [Server vs Client Components](02-server-vs-client-components.md) | RSC, `'use client'`, the server/client boundary | `/incidents` as a server page with the M08 filter as an island |
 | 03 | [Fetching WordPress Data in a Server Component](03-fetching-wordpress-data-in-a-server-component.md) | `async` components, `fetch`, hand-written response types | Live incidents, and a type that lies |
 | 04 | [Navigation, Linking & Layouts](04-navigation-linking-and-layouts.md) | `next/link`, `generateStaticParams`, `notFound()` | Blog, reviews and scapegoat routes, plus site nav |
-| 05 | [Route Handlers & Middleware](05-route-handlers-and-middleware.md) | `route.ts`, `middleware.ts`, `NEXT_PUBLIC_` boundary | `/api/health`, locale middleware, a secrets-in-bundle check |
+| 05 | [Route Handlers & Proxy](05-route-handlers-and-proxy.md) | `route.ts`, `proxy.ts`, `NEXT_PUBLIC_` boundary | `/api/health`, locale proxy, a secrets-in-bundle check |
 
 ## Route inventory after this module
 

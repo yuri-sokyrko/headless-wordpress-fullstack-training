@@ -146,7 +146,7 @@ The object form is four independent narrowings, and using fewer of them is a dec
         │
         ├── 1. is `url`'s host in remotePatterns?   no → 400
         ├── 2. is `w` in deviceSizes/imageSizes?    no → 400
-        ├── 3. is `q` in qualities?                 no → 400
+        ├── 3. is `q` in qualities?                 no → nearest allowed q
         ├── 4. cache HIT?  → serve, x-nextjs-cache: HIT
         └── 5. MISS → fetch the original from WordPress
                     → transcode to the best format the Accept header allows
@@ -323,24 +323,28 @@ format.
 Listing both is the whole point: modern browsers get the smaller file, everything else gets a
 file that works, and neither branch is a special case in your code.
 
-**`qualities: [75, 90]`** — Next 15 wants the permitted `q` values declared, and an undeclared
-one is a 400. That is a cache-integrity feature as much as a config one: without it, `q=1`
-through `q=100` are a hundred distinct cache keys per width per format, which anyone can walk to
-inflate your cache. Declare the two you use. 75 is `next/image`'s default and is right for
+**`qualities: [75, 90]`** — the permitted `q` values, declared. That is a cache-integrity
+feature as much as a config one: with `q` unrestricted, `q=1` through `q=100` are a hundred
+distinct cache keys per width per format, which anyone can walk to inflate your cache. **Next 16
+closed that hole by default** — the default narrowed from "all qualities" to `[75]`, and a `q`
+outside the list is now *coerced to the nearest permitted value* rather than refused. So the key
+is still worth writing, for a different reason than on Next 15: without it, the `quality={90}`
+this course uses on artefact-prone images would silently come back as 75 and the config would
+look like it worked. Declare the two you use. 75 is `next/image`'s default and is right for
 photographic content; 90 exists for anything where the artefacts show.
 
-**`minimumCacheTTL`** — the default is 60 seconds, which is far too short here. A WordPress
-upload has a **permanent URL**: `wp-content/uploads/2024/09/hero.jpg` is that file forever, and
-editing the image in WordPress produces a new filename rather than new bytes at the old one. So
-a derived variant can be cached for a month, and re-transcoding it every minute is CPU spent on
-nothing.
+**`minimumCacheTTL`** — Next 16 raised the default from 60 seconds to 4 hours, which is a real
+improvement and still not right here. A WordPress upload has a **permanent URL**:
+`wp-content/uploads/2024/09/hero.jpg` is that file forever, and editing the image in WordPress
+produces a new filename rather than new bytes at the old one. So a derived variant can be cached
+for a month, and re-transcoding it four times a day is CPU spent on nothing.
 
 The two knobs **not** turned, and why declining is also a decision:
 
 | Key | Default | Why leave it |
 |---|---|---|
 | `deviceSizes` | `[640, 750, 828, 1080, 1200, 1920, 2048, 3840]` | Eight widths that match real device classes. Trimming it saves cache storage and risks the blurry case from Key Concept 4. Module 21 may trim it **with measurements**; guessing now is worse than the default |
-| `imageSizes` | `[16, 32, 48, 64, 96, 128, 256, 384]` | The widths used for fixed-size images. The 40 px avatar picks 48 and 96 from this list, which is exactly right |
+| `imageSizes` | `[32, 48, 64, 96, 128, 256, 384]` | The widths used for fixed-size images. Next 16 dropped `16` from this default — a 16 px entry was almost never served, because a `devicePixelRatio: 2` screen fetches 32 to stay sharp. The 40 px avatar picks 48 and 96 from this list, which is exactly right |
 
 ### 8. Module 24 moves the media, and only this file changes
 
@@ -421,8 +425,8 @@ grep -n -A 12 'images:' next.config.ts
 #           port and pathname all present.
 
 npx next --version
-# Expected: 15.x — note the minor version. `images.qualities` needs 15.2 or newer;
-#           if you are older, drop that key rather than guessing.
+# Expected: 16.x. `images.qualities` is not optional on 16: the default narrowed
+#           to [75], so an undeclared `q` is coerced rather than served.
 ```
 
 Then one anchored addition **inside** the existing `images` object. `remotePatterns` is not
@@ -438,19 +442,23 @@ retyped and not moved.
     // every browser gets something better than the original. Key Concept 7.
     formats: ['image/avif', 'image/webp'],
 
-    // Next 15 wants the permitted `q` values declared, and an undeclared one is a
-    // 400. That is cache integrity as much as configuration: without it, q=1..100
+    // REQUIRED on Next 16 in practice: the default narrowed from "any quality" to
+    // [75], and a `quality` outside the list is COERCED to the nearest allowed
+    // value rather than refused. Leave this out and every quality={90} below
+    // silently comes back as 75. It is cache integrity too: unrestricted, q=1..100
     // are a hundred cache keys per width per format that anyone can walk.
     // 75 is next/image's default; 90 is for anything where artefacts show.
     qualities: [75, 90],
 
-    // The default is 60 SECONDS, which is wrong for WordPress uploads: an upload
-    // has a permanent URL, and editing an image in WordPress produces a new
-    // filename rather than new bytes at the old one. 31 days.
+    // The Next 16 default is 4 HOURS (14400), up from 60 seconds on 15 — better,
+    // and still wrong for WordPress uploads: an upload has a permanent URL, and
+    // editing an image in WordPress produces a new filename rather than new bytes
+    // at the old one. 31 days.
     minimumCacheTTL: 2678400,
 
     // NOT set, deliberately: deviceSizes and imageSizes. Their defaults are eight
-    // real device-class widths and eight fixed-size widths, and trimming them
+    // real device-class widths and seven fixed-size widths (Next 16 dropped the
+    // 16px entry, which a 2x screen never used anyway), and trimming them
     // without measurements trades cache storage for the blurry-image failure in
     // Key Concept 4. Module 21 may trim them, with numbers.
 ```
@@ -458,8 +466,9 @@ retyped and not moved.
 ```bash
 npm run type-check
 npm run build 2>&1 | grep -i 'invalid\|unrecognized\|warn' | head
-# Expected: no output. An "Invalid next.config.ts options detected: qualities"
-#           warning means your Next version predates the key — remove it.
+# Expected: no output. An "Invalid next.config.ts options detected" warning names
+#           the key it did not recognise — check it against the Next 16 docs
+#           rather than deleting it.
 ```
 
 **Verify §1:**
@@ -953,12 +962,13 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 #           A 200 here means somebody widened the allowlist. Treat it as an
 #           incident, not a lint failure.
 
-# 8. NEGATIVE — an undeclared quality is refused too, which is what `qualities`
-#    buys: q=1..100 are not a hundred cache keys per width per format.
-curl -s -o /dev/null -w '%{http_code}\n' \
-  "http://localhost:3000/_next/image?url=$ENC&w=640&q=42"
-# Expected: 400. If it is 200, `qualities` is not in your config or your Next
-#           version predates the key — check Task §1.
+# 8. `qualities` is declared, which is what stops q=1..100 from being a hundred
+#    cache keys per width per format. Note what Next 16 changed: an out-of-list
+#    quality is COERCED to the nearest allowed value, not refused, so there is no
+#    400 to assert here — assert the config, and assert that 90 survives.
+grep -cE '^[[:space:]]*qualities: \[75, 90\],' next.config.ts
+# Expected: 1. Delete the key and quality={90} comes back as 75 with no warning,
+#           which is the whole reason it is written down.
 
 # 9. NEGATIVE — CoreImage does NOT take a priority prop. LCP priority is a
 #    route-level decision, because a block does not know where on the page it is.

@@ -27,7 +27,7 @@ because the sitemap must reflect *your* routing (locale prefixes from Module 20,
 generate is a maintenance tax with no upside. The same logic decides the redirect question:
 you source permanent redirects from a WordPress-managed list so editors can add one without a
 deploy, then
-serve them from `next.config.ts` — or from middleware, if the list is long enough that
+serve them from `next.config.ts` — or from proxy, if the list is long enough that
 bundling it stops being reasonable.
 
 By the end of this lesson you will have:
@@ -51,7 +51,7 @@ You already know the pieces; they were just distributed differently.
 | Yoast writes `/sitemap_index.xml` | `app/sitemap.ts` returns an array of `MetadataRoute.Sitemap` entries |
 | A physical or virtual `robots.txt` | `app/robots.ts` returns rules and a `sitemap` URL |
 | Redirection plugin table in the DB | A WP-managed list read at build/revalidate time, served from `next.config.ts` |
-| `.htaccess` `RewriteRule` | `redirects()` and `rewrites()` in `next.config.ts`, or `middleware.ts` |
+| `.htaccess` `RewriteRule` | `redirects()` and `rewrites()` in `next.config.ts`, or `proxy.ts` |
 | `home_url()` decides the canonical host | `metadataBase` and `NEXT_PUBLIC_SITE_URL` decide it |
 | WordPress adds trailing slashes to permalinks by default | `trailingSlash` is a config flag you must choose deliberately |
 
@@ -308,10 +308,10 @@ editor who adds a redirect does not get it until the next build.
      an editor's 4pm redirect lands ──────────────────▶ at the NEXT build
 ```
 
-The alternative is middleware: a lookup on every request, or a cached list held in memory per
+The alternative is proxy: a lookup on every request, or a cached list held in memory per
 instance. Its costs are real and different.
 
-| | `redirects()` at build time | `middleware.ts` at request time |
+| | `redirects()` at build time | `proxy.ts` at request time |
 |---|---|---|
 | Latency per request | none — the rule set is compiled | a map lookup, or a fetch on a cold instance |
 | Editor's change is live | at the next build | within the cache TTL |
@@ -319,11 +319,11 @@ instance. Its costs are real and different.
 | Staleness | bounded by deploy frequency | bounded per instance, so two instances can disagree |
 | Failure mode | a bad fetch is a build-time decision you control | a bad fetch is a request-time decision under load |
 
-**The verdict: build time, for this list.** Where the line is: move to middleware when the list
+**The verdict: build time, for this list.** Where the line is: move to proxy when the list
 outgrows a few hundred entries, **or** when "live within minutes" becomes a requirement — and if
 you do, the cache is a `revalidateTag`-driven read using the tag vocabulary from Module 18, not a
 bare in-memory map. And note the constraint that decides it for you here: Lesson 15.5 froze
-`middleware.ts` at zero `fetch` calls, and `grep -c 'fetch(' src/middleware.ts` returning `0` is
+`proxy.ts` at zero `fetch` calls, and `grep -c 'fetch(' src/proxy.ts` returning `0` is
 an assertion Module 20 still relies on.
 
 Two more details that bite:
@@ -332,7 +332,7 @@ Two more details that bite:
   307 for temporary, both of which preserve the request method. Google treats 301 and 308
   identically for canonicalisation, so 308 is the right default; `statusCode: 301` is available
   per-rule if something in your estate mishandles 308. This is a different status from Lesson
-  09.5's middleware redirects, which are 307 because that is `NextResponse.redirect()`'s default.
+  09.5's proxy redirects, which are 307 because that is `NextResponse.redirect()`'s default.
 - **A redirect whose `source` equals its `destination` is an infinite loop.** Validate it, in
   code, before the rule reaches the config — an editor typing the same path into both fields is
   not a hypothetical.
@@ -573,7 +573,7 @@ Then the file:
 // next-app/src/app/sitemap.ts
 // /sitemap.xml, generated from WPGraphQL. It sits OUTSIDE the [locale] segment
 // because /sitemap.xml is one URL for the whole site — and that placement is safe
-// because the path has a file extension, so Lesson 09.5's middleware matcher
+// because the path has a file extension, so Lesson 09.5's proxy matcher
 // excludes it (Key Concept 10).
 import type { MetadataRoute } from 'next';
 
@@ -1017,7 +1017,7 @@ curl -s http://localhost:3000/sitemap.xml | grep -o '<loc>[^<]*</loc>' | grep -v
 # 10. NEGATIVE — this is YOUR sitemap, not Yoast's. There is no index, no paginated
 #     children, and the Yoast URL is gone from both hosts.
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/sitemap_index.xml
-# Expected: 404 — Next has no such route, and middleware let the request through
+# Expected: 404 — Next has no such route, and proxy let the request through
 #           because the path contains a dot
 curl -s http://localhost:3000/sitemap.xml | grep -c '<sitemapindex'
 # Expected: 0 — one flat urlset, not an index of children
@@ -1032,7 +1032,7 @@ for p in /robots.txt /sitemap.xml /icon.svg; do
   curl -s -o /dev/null -w '%{http_code}  redirect="%{redirect_url}"\n' "http://localhost:3000$p"
 done
 # Expected: 200 and an EMPTY redirect for all three
-# And the contrast that makes the rule visible — no dot, so middleware DOES match:
+# And the contrast that makes the rule visible — no dot, so proxy DOES match:
 curl -s -o /dev/null -w '%{http_code}  %{redirect_url}\n' http://localhost:3000/opengraph-image
 # Expected: 307 to /en/opengraph-image. Same directory, opposite answer, and the dot
 #           is what decides. Key Concept 10.
@@ -1077,10 +1077,10 @@ grep -c 'bttRedirects' src/graphql/siteSettings.graphql
 grep -rc 'bttRedirects' src/ | grep -v ':0$' ; echo "exit=$?"
 # Expected: no matches, exit=1 — the only reader is next.config.ts, outside src/
 
-# 15. Middleware is still untouched, and still does no I/O
-grep -c 'fetch(' src/middleware.ts
+# 15. Proxy is still untouched, and still does no I/O
+grep -c 'fetch(' src/proxy.ts
 # Expected: 0 — Lesson 15.5's assertion, which Module 20 still relies on
-grep -c 'favicon' src/middleware.ts
+grep -c 'favicon' src/proxy.ts
 # Expected: 1 — the matcher is unchanged. Three modules have agreed not to edit it.
 
 # 16. Leave the tree clean and the redirect list live again
@@ -1110,7 +1110,7 @@ is the most expensive thing in this lesson and it is entirely silent.
    Give both reasons, and describe precisely what a crawler sees if `/en/incidents/incident-01`
    and `/en/incidents/incident-01/` both return `200`.
 3. `redirects()` is evaluated once, at build time. State the consequence for the editor who added
-   a redirect at 4pm, describe the middleware alternative with its own two costs, and say where
+   a redirect at 4pm, describe the proxy alternative with its own two costs, and say where
    the line between them is for this application.
 4. The redirect fetch has a five-second timeout and returns `[]` on any failure. Explain why the
    simulation in Verification check 13 breaks the *query* rather than stopping WordPress, and say

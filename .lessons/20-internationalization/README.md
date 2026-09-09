@@ -41,7 +41,7 @@ ls next-app/src/app/\[locale\]/
   a per-language site or a duplicated content tree for this project
 - **WPGraphQL Polylang** — the `language` and `translations` fields, `where: { language: DE }`
   filtering, and sibling lookup for the switcher
-- **next-intl** — routing, middleware, message catalogues, and the `useTranslations` vs
+- **next-intl** — routing, proxy, message catalogues, and the `useTranslations` vs
   `getTranslations` split that follows the server/client boundary
 - **Localised formatting** — dates, numbers, currencies and plurals through the `Intl` APIs,
   with the ICU message syntax next-intl uses
@@ -57,8 +57,8 @@ ls next-app/src/app/\[locale\]/
 - Polylang configured for `en`, `uk` and `de`, with `en` as default, bootstrapped idempotently by
   `wp blame ensure-languages` so a fresh database is never a manual click-through
 - Seeder support that links translation groups **last**, with `pll_save_post_translations()`
-- `src/lib/i18n/{routing,request,navigation}.ts` and next-intl middleware composed with the
-  existing auth gate in `middleware.ts` — one middleware, two responsibilities, in a defined order
+- `src/lib/i18n/{routing,request,navigation}.ts` and next-intl proxy composed with the
+  existing auth gate in `proxy.ts` — one proxy, two responsibilities, in a defined order
 - `src/messages/{en,uk,de}.json` — every user-visible UI string, with a lint rule that catches
   the next hard-coded one
 - `LocaleSwitcher` that navigates to the translated slug, preserving query parameters

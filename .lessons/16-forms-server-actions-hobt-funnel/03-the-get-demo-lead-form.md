@@ -140,7 +140,7 @@ no-op, and you find out from a slow-query log or not at all.
 Lowercase type names are the third thing this lesson copies from the appendix, and the honest reason
 is narrower than you might expect: **core's own `wp_get_db_schema()` is written that way**, older
 WordPress required it, and matching the convention costs nothing. Modern `dbDelta()` normalises case
-before comparing field types, so on the `wordpress:6.8` image this course pins, uppercase types are
+before comparing field types, so on the `wordpress:7.1` image this course pins, uppercase types are
 unlikely to cause a spurious `ALTER` on their own. Write it lowercase because it is the house style
 of the function you are calling — not because you have been told it will break. (The one rule that
 fails *loudly*: without `require_once ABSPATH . 'wp-admin/includes/upgrade.php'`, `dbDelta()` is not

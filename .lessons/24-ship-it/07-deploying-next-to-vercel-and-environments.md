@@ -226,7 +226,7 @@ Almost everything Vercel can be told is better told somewhere else in this repos
 | Security headers | `next.config.ts` `async headers()` — 18.4, extended by 24.2 | two sources of headers is a debugging afternoon; `vercel.json` wins silently in production only |
 | Redirects | `next.config.ts` `async redirects()` — 19.4 | the same, and 19.4's are tested locally |
 | `trailingSlash` | `next.config.ts` — 19.4 | a mismatch between the two produces a redirect loop |
-| Rewrites for i18n | `middleware.ts` + next-intl — 9.5, 20.3 | `config.matcher` is frozen for a reason (15.5 §4) |
+| Rewrites for i18n | `proxy.ts` + next-intl — 9.5, 20.3 | `config.matcher` is frozen for a reason (15.5 §4) |
 | **Regions** | `vercel.json` | there is nowhere else. This is a platform fact |
 | **Whether `main` deploys itself** | `vercel.json` | and it is the key that enforces Key Concept 1 |
 

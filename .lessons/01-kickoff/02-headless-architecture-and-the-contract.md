@@ -49,7 +49,7 @@ By the end of this lesson you will have:
 | `admin_post_` handler + nonce | A Server Action + a guarded GraphQL mutation | Modules 06, 16 |
 | `wp_enqueue_style` / `_script` | The bundler decides; you `import` | Modules 07, 11 |
 | Object cache flush on save | `revalidateTag()` triggered by a signed webhook | Module 18 |
-| `is_user_logged_in()` | A JWT in an httpOnly cookie, checked in `middleware.ts` | Module 15 |
+| `is_user_logged_in()` | A JWT in an httpOnly cookie, checked in `proxy.ts` | Module 15 |
 
 The most useful way to read that table is as a *relocation* list, not a replacement list.
 Almost nothing in it is a new idea — `WP_Query` with `tax_query` becomes a connection with a
@@ -167,7 +167,7 @@ HEADLESS — two processes, one network hop between them
 Browser
   │  GET /en/incidents/dns            :3000 in dev, the Vercel edge in prod
   ▼
-middleware.ts                         locale resolution + auth gate
+proxy.ts                              locale resolution + auth gate
   │
   ▼
 ISR cache lookup, tag 'incident:dns'
@@ -218,7 +218,7 @@ expensive class of error in Module 02.
 │                                                                          │
 │   ┌─────────────────────────────────────────────────────┐                │
 │   │ next-app     `npm run dev`     NOT in Docker        │                │
-│   │ Next.js 15 · Node 22 · owns routing and rendering   │                │
+│   │ Next.js 16 · Node 22 · owns routing and rendering   │                │
 │   └─────────┬────────────────────────▲──────────────────┘                │
 │             │ POST /graphql          │ POST /api/revalidate              │
 │             │ server-to-server       │ from                              │
@@ -230,7 +230,7 @@ expensive class of error in Module 02.
 │   │      │                │              ▲  :1025       │                │
 │   │      └────────┬───────┘              │              │                │
 │   │               ▼ db:3306              │ wp_mail()    │                │
-│   │          mysql:8.0  ─────────────────┘              │                │
+│   │          mysql:8.4  ─────────────────┘              │                │
 │   │                                                     │                │
 │   │ wpcli   run on demand, zero containers idle         │                │
 │   └─────────────────────────────────────────────────────┘                │
@@ -365,7 +365,7 @@ The last row on trust deserves its own statement, because it is the one people g
 > **Authorisation did not move.** `current_user_can()` still runs inside WordPress, on every
 > mutation, exactly as it always did. Next.js reads a session to decide **what to show** —
 > whether to render a "Submit an incident" link, whether to redirect `/account` to `/login`.
-> WordPress decides **what is allowed**. Never the other way round. A middleware guard is a UX
+> WordPress decides **what is allowed**. Never the other way round. A proxy guard is a UX
 > affordance; it is not a security boundary, and Module 23 writes tests that call the mutation
 > directly, with no front end involved, to prove the boundary holds. This is the single most
 > important row in
@@ -434,7 +434,7 @@ template_redirect, template hierarchy, the Loop, wp_head/wp_footer.
 
 ```
 TODO — redraw the headless lifecycle, including the ISR cache hit branch.
-Stage names must match: middleware.ts, page.tsx, fetchGraphQL, POST /graphql,
+Stage names must match: proxy.ts, page.tsx, fetchGraphQL, POST /graphql,
 WPGraphQL, WP_Query, JSON, React Server Components, HTML + RSC payload.
 ```
 
@@ -628,7 +628,7 @@ than a minute here.
 3. `NEXT_PUBLIC_WORDPRESS_URL` is the named anti-pattern, yet the course also admits that the
    WordPress host is discoverable anyway from media URLs. Reconcile those two statements, then
    name two of the controls that actually reduce risk on `/graphql`.
-4. Next.js checks a session in `middleware.ts` and WordPress checks `current_user_can()` in the
+4. Next.js checks a session in `proxy.ts` and WordPress checks `current_user_can()` in the
    mutation. Both look like authorisation. Explain which one is the security boundary, and
    describe the test in Module 23 that would catch you if you got it backwards.
 5. Pick the two entries in the cost table you consider permanent losses rather than deferred

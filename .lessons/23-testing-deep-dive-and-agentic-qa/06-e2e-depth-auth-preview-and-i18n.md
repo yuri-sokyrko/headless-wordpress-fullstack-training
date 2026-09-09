@@ -97,7 +97,7 @@ headless stack lives in a seam between two of them, and a seam has no page to vi
 |---|---|
 | Moderation | Next form → Server Action → WPGraphQL mutation → MySQL → wp-admin → `transition_post_status` → HMAC webhook → `revalidateTag` → the public archive |
 | Draft preview | wp-admin → `preview_post_link` → `/api/preview` → `/wp-json/btt/v1/preview/verify` → a preview JWT in an httpOnly cookie → `draftMode()` → `asPreview: true` |
-| Locale routing | Polylang's translation table → WPGraphQL Polylang → a Server Component's redirect decision → next-intl's middleware → the `hreflang` cluster → a client island reading it after hydration |
+| Locale routing | Polylang's translation table → WPGraphQL Polylang → a Server Component's redirect decision → next-intl's proxy → the `hreflang` cluster → a client island reading it after hydration |
 
 Nobody unit-tests those, because there is nothing there to unit-test: the logic is correct in
 every file and the *composition* is what breaks. Nobody clicks through them by hand every release

@@ -4,7 +4,7 @@
 
 Before starting this module you should have completed:
 
-- **Module 09** — every route in the route inventory renders live WordPress data, `/api/health` answers, `middleware.ts` normalises the locale
+- **Module 09** — every route in the route inventory renders live WordPress data, `/api/health` answers, `proxy.ts` normalises the locale
 - **Module 06** — `schema.graphql` is committed in `wordpress-headless/`, and the API is a designed contract with enums and depth limits
 - **Module 07** — you can read a TypeScript union, a generic and a `type` alias without looking them up
 
@@ -30,7 +30,7 @@ npm run type-check
 next-app/
 ├── next.config.ts  .env.example
 └── src/
-    ├── middleware.ts
+    ├── proxy.ts
     ├── app/[locale]/{layout,page}.tsx  incidents/  blog/  reviews/  scapegoats/
     ├── app/api/health/route.ts
     ├── components/incidents/                       (M08, wired to live data in M09)

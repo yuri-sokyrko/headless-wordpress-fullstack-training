@@ -139,9 +139,25 @@ This is why "static and fresh" is a real combination here rather than a slogan. 
 be pre-rendered HTML, and one publish event can correctly expire exactly the seven of them that
 showed that incident, without anybody having enumerated the seven.
 
-### 3. The strings are the engineering problem; the API is trivial
+### 3. The strings are the engineering problem; the API is nearly trivial
 
-`revalidateTag(tag: string)`. That is the whole API surface, and it is not where the difficulty is.
+`revalidateTag(tag: string, profile: string)`. That is very nearly the whole API surface, and it is
+not where the difficulty is.
+
+The second argument is a Next 16 change and it is not optional — the one-argument call every
+pre-16 tutorial shows is deprecated and produces a TypeScript error. It names a
+[`cacheLife`](https://nextjs.org/docs/app/api-reference/functions/cacheLife) profile, which is how
+long a cached entry may still be served *while* the fresh one is fetched. This course passes
+`'max'` everywhere: a publish in WordPress means "this is stale now", the visitor who arrives
+during the refetch gets the previous HTML rather than a spinner, and the next one gets the new
+page. Stale-while-revalidate is the correct trade for public content.
+
+Its sibling matters for the shape of Module 16. `updateTag(tag)` is Server-Actions-only and gives
+**read-your-writes**: it expires *and* refetches inside the same request, so the user who just
+submitted the form sees their own change rather than a cached page that is one revalidation
+behind. This application never needs it — Key Concept 7 explains why no Server Action here expires
+a public tag — but "webhook → `revalidateTag`, own-mutation → `updateTag`" is the rule to carry to
+the next codebase.
 
 ```
    THE OBVIOUS DESIGN — TWO TAG BUILDERS, NO COMPILER BETWEEN THEM
@@ -729,7 +745,9 @@ export async function GET(request: Request): Promise<Response> {
   const tags = sendList ? [incidentTag(slug), listTag('incident')] : [incidentTag(slug)];
 
   for (const tag of tags) {
-    revalidateTag(tag);
+    // 'max' is the cacheLife profile — required since Next 16, and the reason
+    // a one-argument call you copied from a tutorial will not type-check.
+    revalidateTag(tag, 'max');
   }
 
   return Response.json({ revalidated: tags });
@@ -995,7 +1013,7 @@ import { incidentTag } from '@/lib/graphql/tags';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request): Promise<Response> {
   const slug = new URL(request.url).searchParams.get('slug') ?? '';
-  revalidateTag(incidentTag(slug));
+  revalidateTag(incidentTag(slug), 'max');
   return Response.json({ revalidated: [incidentTag(slug)] });
 }
 EOF

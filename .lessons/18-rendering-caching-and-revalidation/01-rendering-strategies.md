@@ -307,7 +307,7 @@ They sound like one thing. They are not, and conflating them is how a disclosure
 |---|---|---|
 | The **route** is not cached as HTML | `export const dynamic = 'force-dynamic'` on `account/{layout,page}.tsx` | the Full Route Cache holding one user's rendered account page and serving it to the next |
 | The **data** is not cached | `fetchGraphQLAuthed` hard-codes `cache: 'no-store'` and takes no options parameter | the Data Cache holding one user's GraphQL response and handing it to a different render |
-| No **shared cache** in front holds it | `Cache-Control: private, no-store`, set by middleware on guarded paths (Lesson 15.5) | a CDN or corporate proxy caching the HTML |
+| No **shared cache** in front holds it | `Cache-Control: private, no-store`, set by proxy on guarded paths (Lesson 15.5) | a CDN or corporate proxy caching the HTML |
 
 Delete the first and the second still holds. Delete the second and the first still holds. Neither
 one is a substitute for the other, which is why Lesson 15.5 §10 lists all three and calls only the
@@ -320,7 +320,7 @@ not an outage, a disclosure. It is unrepresentable today because there is no par
 
 Note also what does **not** move in Step 1. `/account` and `/incidents/submit` still call
 `requireSession()` server-side, still export `force-dynamic`, and Lesson 15.5's thesis still holds
-in full: delete `src/middleware.ts` and nothing becomes reachable that was not reachable before.
+in full: delete `src/proxy.ts` and nothing becomes reachable that was not reachable before.
 Only the *chrome* moved out of the layout. The security boundary is where it was.
 
 ### 10. The cost of Next's model versus a page-cache plugin
@@ -342,7 +342,7 @@ heard of it.
 
 Next's caching is expressed *in* your code. The upside is that it is reviewable, granular and
 tag-invalidatable. The cost, stated plainly: **every new route file is a fresh opportunity to
-forget**, and a route that forgets gets whatever Next 15 infers today — which is not necessarily
+forget**, and a route that forgets gets whatever Next 16 infers today — which is not necessarily
 what Next 16 will infer. That is why Step 2 writes the table into `docs/architecture.md` and Step 3
 makes every route say its policy out loud, including the ones where the export is redundant.
 
@@ -375,7 +375,7 @@ new, two edited.
 // capability list, and the smallest answer that works is the one to publish.
 import { getSession } from '@/lib/auth/session';
 
-// Redundant in Next 15 for a handler that reads cookies, and written anyway:
+// Redundant in Next 16 for a handler that reads cookies, and written anyway:
 // a statement of intent that survives a future default change, exactly as
 // /api/health does (Lesson 09.5 §4).
 export const dynamic = 'force-dynamic';
@@ -543,9 +543,11 @@ If `Button` is now unused in `Header.tsx`, remove that import too — `npm run l
 - [ ] `npm run type-check` is silent, and `npm run lint` reports no unused import in `Header.tsx`.
 
 > **The two alternatives, and why neither is taken.** **Partial Prerendering** is the right answer
-> to this problem and it is experimental in Next 15 — a course cannot take a dependency on a flag
-> whose shape changes between minors, and the whole point of this module would evaporate the day it
-> did. **Accepting a fully dynamic application** is the other option, and it forfeits Lesson 18.2,
+> to this problem, and on Next 16 it is no longer a flag called `experimental.ppr` — it ships as
+> part of `cacheComponents: true`, which is a different and larger commitment: uncached data
+> outside a `<Suspense>` boundary becomes a build error, so adopting it is a rewrite of how every
+> route in this application declares its data, not a switch. A course cannot hand you that in one
+> aside, and the whole point of this module would evaporate the day it did. **Accepting a fully dynamic application** is the other option, and it forfeits Lesson 18.2,
 > Lesson 18.3 and Lesson 18.4 along with it: there is nothing to invalidate if nothing is cached.
 > The cost of what you are doing instead, stated plainly: **one extra HTTP request per page load,
 > and one frame in which a signed-in user sees the anonymous affordance.** The width reservation
@@ -608,7 +610,7 @@ export default async function IncidentsPage({
   searchParams,
 }: {
   readonly params: Promise<{ locale: string }>;
-  // Next 15: both are Promises, and reading EITHER of these makes the route
+  // Next 16: both are Promises, and reading EITHER of these makes the route
   // render per request. That is correct here and it costs nothing, because the
   // expensive part is the query below and the query is cached.
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -1161,12 +1163,12 @@ grep '\[btt\] prerender' /tmp/btt-build-final.log
 
 # 5. Static output actually landed on disk. THIS CHECK IS THE ARBITER, not
 #    check 4, and that ordering was measured rather than assumed. On Next
-#    15.5.25 a layout that reads `cookies()` prerenders ZERO pages and still
+#    16.3.4 a layout that reads `cookies()` prerenders ZERO pages and still
 #    prints the same `●` symbol, the same child slug rows, and the same check-4
 #    receipt — because `generateStaticParams` runs either way, and `●` means
 #    "this route has generateStaticParams", not "HTML exists". Only the disk
 #    tells them apart. Do not grep the build table for the literal SSG either:
-#    Next 15 prints symbols and they move between minors.
+#    Next 16 prints symbols and they move between minors.
 find .next/server/app -name 'incident-*.html' | wc -l
 # Expected: 40. If this is 0, nothing was prerendered — whatever check 4 said.
 #           The second tell is the build table's `Revalidate` column: Next only
@@ -1242,7 +1244,7 @@ curl -s -b "btt_at=$JWT_EDITOR" http://localhost:3000/en/account | grep -c 'Dana
 
 # 13. NEGATIVE — and that response is not cacheable by anything in front of it
 curl -si -b "btt_at=$JWT_REPORTER" http://localhost:3000/en/account | grep -i '^cache-control'
-# Expected: a Cache-Control containing no-store (middleware sets `private, no-store`
+# Expected: a Cache-Control containing no-store (proxy sets `private, no-store`
 #           on guarded paths — Lesson 15.5). Never `s-maxage`, never `public`.
 
 # 14. NEGATIVE — mounting draftMode() in the same layout did NOT undo Step 1.
@@ -1252,7 +1254,7 @@ grep -c 'PreviewBanner' 'src/app/[locale]/layout.tsx'
 # Expected: 1
 find .next/server/app -name 'incident-*.html' | wc -l
 # Expected: still 40 files, WITH PreviewBanner mounted. Measured on Next
-#           15.5.25: this passes, and the two builds' route tables are
+#           16.3.4: this passes, and the two builds' route tables are
 #           byte-identical. Check 4's receipt is NOT the arbiter here — it
 #           prints 40 pages either way. If this count is 0, reading draftMode()
 #           in a layout is opting your Next version out of static rendering —
@@ -1266,24 +1268,24 @@ grep -c 'PRERENDER_LIMIT: number | null = null' 'src/app/[locale]/incidents/[slu
 test -f 'src/app/[locale]/incidents/[slug]/page.tsx.bak' && echo 'BAK STILL PRESENT' || echo clean
 # Expected: clean — Step 7 moved it back
 
-# 16. NEGATIVE — THE THESIS, still true. Delete the middleware and nothing new
+# 16. NEGATIVE — THE THESIS, still true. Delete the proxy and nothing new
 #     is reachable. A /tmp copy, never a git restore: this file changed in
 #     Lesson 15.5 and the module commits AFTER verification, so git would hand
 #     you the previous module's version.
-cp src/middleware.ts /tmp/btt-middleware-181.ts
-rm src/middleware.ts
+cp src/proxy.ts /tmp/btt-proxy-181.ts
+rm src/proxy.ts
 kill "$SERVER_PID"
 npm run build >/dev/null 2>&1
 npm run start & SERVER_PID=$!
 sleep 6
 curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:3000/en/account
 # Expected: 307 http://localhost:3000/en/login?next=/en/account
-#           Same answer as with middleware. account/layout.tsx's requireSession()
+#           Same answer as with proxy. account/layout.tsx's requireSession()
 #           produced it. Only the CHROME moved out of the layout in this lesson;
 #           the boundary is exactly where Lesson 15.5 left it.
 kill "$SERVER_PID"
-cp /tmp/btt-middleware-181.ts src/middleware.ts
-rm /tmp/btt-middleware-181.ts
+cp /tmp/btt-proxy-181.ts src/proxy.ts
+rm /tmp/btt-proxy-181.ts
 
 # 17. The strategy table and the measurements are written down
 grep -c 'Rendering strategy, per route' ../docs/architecture.md

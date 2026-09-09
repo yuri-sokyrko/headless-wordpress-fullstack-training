@@ -24,11 +24,11 @@ layer on top, and a **volume** is storage that outlives the container. Getting t
 straight now prevents the two mistakes every newcomer makes — expecting file edits inside a
 container to survive `docker compose down`, and expecting a database to vanish when it does not.
 You will pull the exact WordPress image this course pins, look inside it, and see that "PHP
-8.3 with the right extensions" is a fact you can now cite rather than hope for.
+8.4 with the right extensions" is a fact you can now cite rather than hope for.
 
 By the end of this lesson you will have:
 
-- The `wordpress:6.8-php8.3-apache` and `mysql:8.0` images pulled and inspected locally
+- The `wordpress:7.1-php8.4-apache` and `mysql:8.4` images pulled and inspected locally
 - A written distinction between image, container, layer, bind mount and named volume
 - Proof that a file written inside a container's writable layer disappears on recreate, and
   that a file in a named volume does not
@@ -40,7 +40,7 @@ By the end of this lesson you will have:
 
 Your MAMP setup and a Docker image solve the same problem — "give me Apache, PHP and MySQL,
 configured the way WordPress wants" — and they solve it at the same layer. MAMP is a bundle
-someone assembled and shipped you as an application; the `wordpress:6.8-php8.3-apache` image is
+someone assembled and shipped you as an application; the `wordpress:7.1-php8.4-apache` image is
 a bundle someone assembled and shipped you as a filesystem. `htdocs/` maps almost exactly onto
 a bind mount: the directory you actually edit, visible to the server process. MAMP's PHP
 version dropdown maps onto the image tag. `php.ini` is still `php.ini` — you will write one in
@@ -81,11 +81,11 @@ thin **writable layer** on top. Nothing you do inside a container ever modifies 
    ├──────────────────────┴───┴──────────────────────┤     on `docker rm`
    │ layer 25  docker-entrypoint.sh, CMD, ENV        │
    │ layer 24  WordPress core → /usr/src/wordpress   │  ← read-only, shared,
-   │ layer ..  PHP 8.3 + mysqli gd exif imagick      │     content-addressed by digest.
+   │ layer ..  PHP 8.4 + mysqli gd exif imagick      │     content-addressed by digest.
    │ layer ..  Apache 2.4 + mod_rewrite              │     ONE copy on disk no matter
    │ layer  1  debian:bookworm-slim                  │     how many containers run it.
    └─────────────────────────────────────────────────┘
-              image: wordpress:6.8-php8.3-apache   (25 layers)
+              image: wordpress:7.1-php8.4-apache   (25 layers)
 ```
 
 Three nouns, three lifetimes. An image is created by `docker pull` and destroyed by
@@ -125,24 +125,24 @@ every single build.
 You will not write a `Dockerfile` until Module 24, and when you do it copies `composer.json` and
 `composer.lock` before anything else, for exactly this reason.
 
-Layer sharing is observable today: when Lesson 02.2 pulls `wordpress:cli-php8.3` after you have
-already pulled `wordpress:6.8-php8.3-apache`, the second pull is dramatically faster — not
+Layer sharing is observable today: when Lesson 02.2 pulls `wordpress:cli-php8.4` after you have
+already pulled `wordpress:7.1-php8.4-apache`, the second pull is dramatically faster — not
 because it is smaller, but because both share base layers already on your disk.
 
 ### 3. Tags are pointers; digests are identity
 
-`wordpress:6.8-php8.3-apache` is a **tag**: a mutable, human-friendly name pointing at whatever
+`wordpress:7.1-php8.4-apache` is a **tag**: a mutable, human-friendly name pointing at whatever
 the publisher most recently pushed under it. `wordpress@sha256:<64 hex chars>` is a **digest**:
 the content hash of a specific image, and it can never point at anything else.
 
 | | Tag | Digest |
 |---|---|---|
-| Example | `wordpress:6.8-php8.3-apache` | `wordpress@sha256:…` |
+| Example | `wordpress:7.1-php8.4-apache` | `wordpress@sha256:…` |
 | Mutable | **yes** — the publisher can re-push it | no, mathematically |
 | `docker pull` twice, a month apart | may give you different bytes | always identical bytes |
 | Use it for | local development, and as documentation of intent | **production deploys and CI** |
 
-This course pins the minor version in the tag — `6.8`, `php8.3`, `8.0` — rather than `latest`,
+This course pins the minor version in the tag — `7.1`, `php8.4`, `8.4` — rather than `latest`,
 which pins nothing and is how a WordPress 6.9 breaking change arrives on a Tuesday morning
 without you touching a file. Module 24 goes further and deploys by digest, so a rollback is a
 re-deploy of a byte-identical artifact rather than a hope.
@@ -155,7 +155,7 @@ which without checking".
 
 ### 4. The registry, and the honest limits of "works on my machine"
 
-`docker pull wordpress:6.8-php8.3-apache` resolves a name against a **registry** — Docker Hub by
+`docker pull wordpress:7.1-php8.4-apache` resolves a name against a **registry** — Docker Hub by
 default — downloads each layer the local store lacks, and verifies each against its digest. That
 is why "works on my machine" changes meaning: the machine is now an artifact with a name and a
 hash that you can hand to a colleague, to CI, and to Fly.io. Be precise about what that
@@ -204,7 +204,7 @@ docker run -d --name btt-wordpress --network btt-net -p 8080:80 \
   -v btt-uploads:/var/www/html/wp-content/uploads \
   -v "$PWD/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro" \
   --add-host host.docker.internal:host-gateway --restart unless-stopped \
-  wordpress:6.8-php8.3-apache
+  wordpress:7.1-php8.4-apache
 ```
 
 And here is the same thing declared:
@@ -213,7 +213,7 @@ And here is the same thing declared:
 # wordpress-headless/docker-compose.yml (illustrative — the real one is Lesson 02.2)
 services:
   wordpress:
-    image: wordpress:6.8-php8.3-apache
+    image: wordpress:7.1-php8.4-apache
     ports: ['8080:80']
     env_file: [.env]
     environment:
@@ -272,7 +272,7 @@ the course: `wp-content/{plugins,themes,mu-plugins}` are bind mounts on your dis
 core, `wp-config.php`, `wp-content/languages`, `wp-content/upgrade`. Those come from the image
 or are generated at boot, and treating them as disposable is the point rather than an oversight.
 
-### 7. What is actually inside `wordpress:6.8-php8.3-apache`
+### 7. What is actually inside `wordpress:7.1-php8.4-apache`
 
 You are about to pin your local backend to this image, so know what you are pinning.
 
@@ -280,7 +280,7 @@ You are about to pin your local backend to this image, so know what you are pinn
 |---|---|
 | Base OS | Debian (`bookworm`) |
 | Web server | Apache 2.4 with `mod_rewrite` enabled — permalinks work out of the box |
-| Language | PHP 8.3 (currently 8.3.28), with `mysqli`, `gd`, `exif`, `imagick`, `opcache`, `intl`, `bcmath`, `sodium` and `zip` installed as extensions |
+| Language | PHP 8.4 (currently 8.4.25), with `mysqli`, `gd`, `exif`, `imagick`, `opcache`, `intl`, `bcmath`, `sodium` and `zip` installed as extensions |
 | Application | WordPress core, staged at **`/usr/src/wordpress`** — not at `/var/www/html` |
 | Configuration | `docker-entrypoint.sh` (`CMD` is `apache2-foreground`); PHP drop-ins go in `/usr/local/etc/php/conf.d/`, where Lesson 02.2 mounts `php.ini` and `uploads.ini` |
 
@@ -307,7 +307,7 @@ prove with your own hands:
 > **The stock `wordpress` image ships no `wp` binary and no `composer`.** Not a broken one — no
 > binary at all. This is not a defect; the image is a web server, and WP-CLI is a separate
 > official image. It means `docker compose exec wordpress wp …` can never work, and it is why
-> Lesson 02.2 declares a fifth service, `wpcli`, on `wordpress:cli-php8.3`, sharing the same
+> Lesson 02.2 declares a fifth service, `wpcli`, on `wordpress:cli-php8.4`, sharing the same
 > network, volumes and credentials. **Every WP-CLI command in this course is
 > `docker compose run --rm wpcli wp <command>`** — and `--allow-root` is never needed, because that
 > image already runs as `www-data`. WP-CLI does **accept** the flag; it is simply a no-op when the
@@ -363,33 +363,33 @@ docker info --format '{{.Architecture}} {{.OperatingSystem}}'
 
 ```bash
 # Roughly 700 MB together on a first run
-docker pull wordpress:6.8-php8.3-apache
-docker pull mysql:8.0
+docker pull wordpress:7.1-php8.4-apache
+docker pull mysql:8.4
 ```
 
 Now inspect them rather than trusting the tags:
 
 ```bash
 # The environment the image DEFAULTS to. Note PHP_VERSION — that is the pin.
-docker image inspect --format '{{.Config.Env}}' wordpress:6.8-php8.3-apache
-# Expected: a long line including PHP_VERSION=8.3.x and PHP_INI_DIR=/usr/local/etc/php
+docker image inspect --format '{{.Config.Env}}' wordpress:7.1-php8.4-apache
+# Expected: a long line including PHP_VERSION=8.4.x and PHP_INI_DIR=/usr/local/etc/php
 
 # How many layers this image is made of
 docker image inspect --format '{{range .RootFS.Layers}}{{println .}}{{end}}' \
-  wordpress:6.8-php8.3-apache | wc -l
+  wordpress:7.1-php8.4-apache | wc -l
 # Expected: about 25 — each one a build instruction
 
 # The DIGEST behind the tag, and what runs if you give the image no command
-docker image inspect --format '{{index .RepoDigests 0}}' wordpress:6.8-php8.3-apache
+docker image inspect --format '{{index .RepoDigests 0}}' wordpress:7.1-php8.4-apache
 # Expected: wordpress@sha256:<64 hex chars>
 docker image inspect --format 'entrypoint={{.Config.Entrypoint}} cmd={{.Config.Cmd}}' \
-  wordpress:6.8-php8.3-apache
+  wordpress:7.1-php8.4-apache
 # Expected: entrypoint=[docker-entrypoint.sh] cmd=[apache2-foreground]
 ```
 
 **Verify §2:**
 
-- [ ] Both `wordpress:6.8-php8.3-apache` and `mysql:8.0` appear in `docker image ls`.
+- [ ] Both `wordpress:7.1-php8.4-apache` and `mysql:8.4` appear in `docker image ls`.
 - [ ] The digest starts `wordpress@sha256:` followed by 64 hex characters. That string, not the
       tag, is what Module 24 deploys.
 - [ ] The layer count is around 25, not 1 — a stack, not a disk image.
@@ -404,21 +404,21 @@ exits. It is the cheapest way to interrogate an image.
 
 ```bash
 # PHP's version and the extensions WordPress, ACF and WPGraphQL rely on
-docker run --rm wordpress:6.8-php8.3-apache php -v | head -1
-# Expected: a line beginning "PHP 8.3."
-docker run --rm wordpress:6.8-php8.3-apache php -m | grep -E '^(mysqli|gd|exif|imagick)$'
+docker run --rm wordpress:7.1-php8.4-apache php -v | head -1
+# Expected: a line beginning "PHP 8.4."
+docker run --rm wordpress:7.1-php8.4-apache php -m | grep -E '^(mysqli|gd|exif|imagick)$'
 # Expected: exactly four lines — exif, gd, imagick, mysqli
 #           (opcache reports itself as "Zend OPcache", in two of php -m's sections)
 
 # THE SURPRISE: the document root is nearly EMPTY, and core is staged elsewhere
-docker run --rm wordpress:6.8-php8.3-apache ls /var/www/html
+docker run --rm wordpress:7.1-php8.4-apache ls /var/www/html
 # Expected: wp-content — and nothing else
-docker run --rm wordpress:6.8-php8.3-apache ls /usr/src/wordpress | head -5
+docker run --rm wordpress:7.1-php8.4-apache ls /usr/src/wordpress | head -5
 # Expected: index.php, license.txt, readme.html, wp-activate.php, wp-admin
 
 # THE HOUSE RULE. Prove it yourself.
-docker run --rm wordpress:6.8-php8.3-apache sh -c 'command -v wp || echo "no wp binary in this image"'
-docker run --rm wordpress:6.8-php8.3-apache sh -c 'command -v composer || echo "no composer in this image"'
+docker run --rm wordpress:7.1-php8.4-apache sh -c 'command -v wp || echo "no wp binary in this image"'
+docker run --rm wordpress:7.1-php8.4-apache sh -c 'command -v composer || echo "no composer in this image"'
 # Expected: "no wp binary in this image", then "no composer in this image"
 ```
 
@@ -429,7 +429,7 @@ docker run --rm wordpress:6.8-php8.3-apache sh -c 'command -v composer || echo "
       the only correct invocation in this course is `docker compose run --rm wpcli wp <command>`
       (Lesson 02.2 creates that service). There is no `composer` either — Module 03 adds a
       `composer` service for the same reason.
-- [ ] `php -v` reported `PHP 8.3.` — the version is now a fact you can cite, not hope for.
+- [ ] `php -v` reported `PHP 8.4.` — the version is now a fact you can cite, not hope for.
 - [ ] All four extensions were present. `imagick` is what makes image resizing work, and it is
       missing from a surprising number of hand-rolled PHP setups.
 - [ ] `/var/www/html` contained only `wp-content`, while `/usr/src/wordpress` was a full
@@ -441,7 +441,7 @@ docker run --rm wordpress:6.8-php8.3-apache sh -c 'command -v composer || echo "
 docker run -d --name btt-throwaway-db \
   -e MYSQL_ROOT_PASSWORD="$(openssl rand -base64 24)" \
   -e MYSQL_DATABASE=btt \
-  mysql:8.0
+  mysql:8.4
 
 # MySQL 8 needs ~15 seconds to initialise an empty data directory. Then:
 docker logs btt-throwaway-db 2>&1 | grep 'ready for connections' | tail -1
@@ -464,7 +464,7 @@ docker run -d --name btt-throwaway-wp -p 8080:80 \
   -e WORDPRESS_DB_NAME=btt \
   -e WORDPRESS_DB_USER=btt \
   -e WORDPRESS_DB_PASSWORD="$(openssl rand -base64 24)" \
-  wordpress:6.8-php8.3-apache
+  wordpress:7.1-php8.4-apache
 
 # Wait about twenty seconds, then read the logs and check whether it is alive
 docker logs btt-throwaway-wp 2>&1 | head -8
@@ -532,7 +532,7 @@ alive without a database:
 
 ```bash
 # 1. A long-running container (no database required), then write into its writable layer
-docker run -d --name btt-layer-demo wordpress:6.8-php8.3-apache sleep 600
+docker run -d --name btt-layer-demo wordpress:7.1-php8.4-apache sleep 600
 docker exec btt-layer-demo sh -c 'echo hi > /var/www/html/ephemeral.txt'
 
 # 2. Restart the SAME container — the writable layer belongs to it and survives
@@ -542,7 +542,7 @@ docker exec btt-layer-demo cat /var/www/html/ephemeral.txt
 
 # 3. Now DELETE the container and make a fresh one from the same image
 docker rm -f btt-layer-demo
-docker run --rm wordpress:6.8-php8.3-apache \
+docker run --rm wordpress:7.1-php8.4-apache \
   sh -c 'cat /var/www/html/ephemeral.txt 2>/dev/null || echo "GONE — it was in the writable layer"'
 # Expected: GONE — it was in the writable layer
 ```
@@ -552,12 +552,12 @@ Now the same experiment with a **named volume**:
 ```bash
 # 1. Create the volume, then write into a path backed by it, in a throwaway container
 docker volume create btt-volume-demo
-docker run --rm -v btt-volume-demo:/data wordpress:6.8-php8.3-apache \
+docker run --rm -v btt-volume-demo:/data wordpress:7.1-php8.4-apache \
   sh -c 'echo persisted > /data/proof.txt'
 
 # 2. Brand-new container, same volume — the file is still there, and the volume
 #    exists independently of any container
-docker run --rm -v btt-volume-demo:/data wordpress:6.8-php8.3-apache cat /data/proof.txt
+docker run --rm -v btt-volume-demo:/data wordpress:7.1-php8.4-apache cat /data/proof.txt
 # Expected: persisted
 docker volume ls --filter name=btt-volume-demo
 # Expected: one row — DRIVER local, VOLUME NAME btt-volume-demo
@@ -600,7 +600,7 @@ Consequences is the section that matters.
 
 ## Context
 
-Local development needs a pinned PHP 8.3 with `mysqli`, `gd`, `exif`, `imagick` and `opcache`,
+Local development needs a pinned PHP 8.4 with `mysqli`, `gd`, `exif`, `imagick` and `opcache`,
 a real MySQL 8, an SMTP sink and a SQL console. None of that is reliably available from a host
 package manager; all of it is available as an image. Next.js needs Node 22 — which `.nvmrc` plus
 `nvm` already pins — plus a watcher firing thousands of times an hour across `node_modules`.
@@ -658,20 +658,20 @@ docker ps >/dev/null 2>&1 && echo "daemon: up" || echo "daemon: DOWN"
 # Expected: a version line (27.x.x or newer), then "daemon: up"
 
 # 2. Both pinned images are in the local store — Lesson 02.2 needs them
-docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E 'wordpress:6.8-php8.3-apache|mysql:8.0'
-# Expected: two lines — mysql:8.0 and wordpress:6.8-php8.3-apache
+docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E 'wordpress:7.1-php8.4-apache|mysql:8.4'
+# Expected: two lines — mysql:8.4 and wordpress:7.1-php8.4-apache
 
 # 3. PHP's version, its extensions, and the staged-not-installed document root
-docker run --rm wordpress:6.8-php8.3-apache php -v | head -1
-# Expected: a line beginning "PHP 8.3."
-docker run --rm wordpress:6.8-php8.3-apache php -m | grep -cE '^(mysqli|gd|exif|imagick)$'
+docker run --rm wordpress:7.1-php8.4-apache php -v | head -1
+# Expected: a line beginning "PHP 8.4."
+docker run --rm wordpress:7.1-php8.4-apache php -m | grep -cE '^(mysqli|gd|exif|imagick)$'
 # Expected: 4
-docker run --rm wordpress:6.8-php8.3-apache ls /var/www/html
+docker run --rm wordpress:7.1-php8.4-apache ls /var/www/html
 # Expected: wp-content, nothing else — the entrypoint copies core in at boot (KC 7)
 
 # 5. THE NEGATIVE that carries this lesson: there is no WP-CLI in this image
-docker run --rm wordpress:6.8-php8.3-apache sh -c 'command -v wp; echo "wp exit=$?"'
-docker run --rm wordpress:6.8-php8.3-apache sh -c 'command -v composer; echo "composer exit=$?"'
+docker run --rm wordpress:7.1-php8.4-apache sh -c 'command -v wp; echo "wp exit=$?"'
+docker run --rm wordpress:7.1-php8.4-apache sh -c 'command -v composer; echo "composer exit=$?"'
 # Expected: no paths printed, and exit=127 twice ("command not found").
 #           This is why the ONLY correct WP-CLI invocation in this course is
 #           `docker compose run --rm wpcli wp <command>`, and why
@@ -703,7 +703,7 @@ correctly configured, unable to find each other — with `docker ps` reporting `
 1. You edit one line in a plugin PHP file and rebuild an image whose `Dockerfile` runs
    `COPY . .` before `RUN composer install`. Explain, in terms of layer digests, why
    `composer install` runs again — and what reordering two lines would change.
-2. `wordpress:6.8-php8.3-apache` and `wordpress@sha256:…` refer to the same bytes today. Describe
+2. `wordpress:7.1-php8.4-apache` and `wordpress@sha256:…` refer to the same bytes today. Describe
    a sequence of events after which they do not, and say which belongs in a production deploy.
 3. In Step 5 `docker ps` said `Up` and the logs looked clean, yet the site returned 500. Explain
    what that gap tells you about what container status measures, and name the one command that

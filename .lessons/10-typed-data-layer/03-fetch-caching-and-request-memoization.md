@@ -153,15 +153,15 @@ What it is **not**:
 > layout and a header each asking once is memoized to one request per document per render, no
 > extra WordPress traffic at all.
 
-### 3. The data cache, and the Next 15 default that broke everyone's notes
+### 3. The data cache, and the Next 16 default that broke everyone's notes
 
 Say this part out loud, because it is the single most common piece of stale knowledge in the
-ecosystem: **in Next 15, `fetch` is not cached by default.** In Next 14 it was — `force-cache`
-was the default and you opted *out* with `no-store`. Next 15 reversed it. Every Next 14 tutorial
+ecosystem: **in Next 16, `fetch` is not cached by default.** In Next 14 it was — `force-cache`
+was the default and you opted *out* with `no-store`. Next 16 reversed it. Every Next 14 tutorial
 you find, and a large fraction of the blog posts you will search for while debugging, describe
 the opposite behaviour.
 
-| | Next 14 | **Next 15** |
+| | Next 14 | **Next 16** |
 |---|---|---|
 | `fetch` with no options | cached indefinitely | **not cached** |
 | To cache | nothing to do | `cache: 'force-cache'` or `next: { revalidate: N }` |
@@ -178,7 +178,7 @@ listed explicitly in the policy table with a reason.
 
 | Written as | Means | Route becomes | Use for |
 |---|---|---|---|
-| nothing (Next 15 default) | never cached | dynamic | nothing in this app — always be explicit |
+| nothing (Next 16 default) | never cached | dynamic | nothing in this app — always be explicit |
 | `cache: 'no-store'` | never cached, stated | dynamic | authenticated reads, health checks |
 | `next: { revalidate: 300 }` | cached, stale after 300 s | static with ISR | **almost everything here** |
 | `next: { revalidate: 0 }` | never cached | dynamic | the same as `no-store`, spelled worse |
@@ -295,7 +295,7 @@ this app does not need them yet.
 | `next: { revalidate, tags }` | one `fetch` | across requests | everywhere |
 | `unstable_cache(fn, keys, opts)` | any async function's result | across requests, taggable | Module 18, if a non-`fetch` read appears |
 | `cache(fn)` from React | any function's result | **one render pass** | not needed — every read here is a `fetch`, and `fetch` is already memoized |
-| `'use cache'` | a function or component | across requests | experimental in Next 15; not used here |
+| `'use cache'` | a function or component | across requests | needs `cacheComponents: true` on Next 16; not used here |
 
 `React.cache` is the memoization of Key Concept 2 applied to something that is not `fetch`. If
 this app ever reads a file, hits the REST base at `WP_REST_BASE`, or computes something
@@ -303,7 +303,13 @@ expensive per render, that is the tool. Today, every WordPress read goes through
 so the mechanism you already have covers it.
 
 The name `unstable_cache` is doing real work — the API is expected to change, and the course
-prefers a tagged `fetch` for exactly that reason.
+prefers a tagged `fetch` for exactly that reason. Next 16 is where some of that change landed:
+`cacheLife` and `cacheTag` dropped their `unstable_` prefixes and became stable, the
+`experimental.dynamicIO` and `experimental.useCache` flags were removed in favour of one
+top-level `cacheComponents: true`, and `revalidateTag` grew a required second argument
+(Lesson 18.2 §3). None of that is enabled here — `cacheComponents` is not a rename, it is an
+opt-in to a different caching model that makes uncached data outside `<Suspense>` a build error —
+but knowing the flag exists is what stops you reading a 2025 blog post as current.
 
 ### 9. An authenticated response must never be cached
 
@@ -333,7 +339,7 @@ Getting this wrong makes the rest of the lesson unreproducible, so here it is ex
 | An error boundary in production mode | ❌ dev shows the real message | ✅ Lesson 10.4 |
 
 The development server reloads server code between requests, disables the full route cache, and
-in Next 15 keeps its own short-lived cache for hot-module reloads. None of that is production
+in Next 16 keeps its own short-lived cache for hot-module reloads. None of that is production
 behaviour, and none of it is a bug — dev is optimised for seeing your edits, not for observing
 caches. **Every data-cache measurement in this lesson runs against a production build.**
 Memoization is a per-render mechanism, so it behaves the same in both.
@@ -768,7 +774,7 @@ If check 6 prints `1`, the `sed` did not match — open the route file and confi
 ## Learn More
 
 - [Next.js — `fetch` API reference](https://nextjs.org/docs/app/api-reference/functions/fetch) —
-  `cache` and `next.revalidate` in the framework's own words, including the Next 15 default
+  `cache` and `next.revalidate` in the framework's own words, including the Next 16 default
 - [Next.js — `revalidateTag`](https://nextjs.org/docs/app/api-reference/functions/revalidateTag)
   — the function Module 18 calls with the strings you just made constructible
 - [Next.js — route segment config](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config)

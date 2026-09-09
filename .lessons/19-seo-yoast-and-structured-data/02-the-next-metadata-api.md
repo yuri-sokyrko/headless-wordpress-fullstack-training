@@ -106,7 +106,7 @@ replaces the parent's whole `openGraph` object rather than patching one field of
 The cost, stated plainly: you lose the escape hatch. A `wp_head()` hook is a place any code can
 intervene, which is horrible for correctness and occasionally the only way to fix something you
 do not own. Here the only place to fix a value is the function that returned it — which is what
-you want, and which means metadata cannot be patched from a component or a middleware.
+you want, and which means metadata cannot be patched from a component or a proxy.
 
 ### 2. `metadataBase` already exists, and this is what it resolves
 
@@ -228,7 +228,7 @@ production it is your Fly.io hostname (Module 24). So the obvious fix is to swap
                                             the [locale] segment WordPress knows nothing about
 ```
 
-The host-swapped URL is not your page. It is a `307` to your page — Lesson 09.5's middleware
+The host-swapped URL is not your page. It is a `307` to your page — Lesson 09.5's proxy
 prefixes the default locale — and Lesson 19.4 sets `trailingSlash: false`, so the slash is a
 second redirect. **A canonical tag pointing at a redirect is a canonical tag pointing at
 nothing**, and it is the single worst thing this module could ship: it is invisible in a
@@ -305,7 +305,7 @@ with mismatched ones, and reading the difference.
 
 ### 7. `generateMetadata` must not throw — a bad slug is a 404, not a 500
 
-`notFound()` inside `generateMetadata` is legal in Next 15 and it is the wrong tool here,
+`notFound()` inside `generateMetadata` is legal in Next 16 and it is the wrong tool here,
 because a *throw* inside `generateMetadata` is not. Compare the three ways a nonexistent slug can
 end:
 
@@ -353,7 +353,7 @@ content and stays indexable, with a canonical pointing at **itself** rather than
 Pointing every page at page 1 was the received wisdom for years and Google explicitly retired
 it; a self-canonical is now the recommendation.
 
-### 9. `opengraph-image.tsx` lives **inside** `[locale]`, and a middleware regex is the reason
+### 9. `opengraph-image.tsx` lives **inside** `[locale]`, and a proxy regex is the reason
 
 Next's image file conventions turn a component into a real PNG at request time. Put
 `opengraph-image.tsx` in a segment and every route at or below that segment gets `og:image` and
@@ -367,10 +367,10 @@ the three files:
 ```
 matcher: ['/((?!api|_next|favicon\.ico|.*\..*).*)']
 
-  /sitemap.xml        contains a dot → matches  .*\..*  → EXCLUDED from middleware  ✅
-  /robots.txt         contains a dot → matches  .*\..*  → EXCLUDED from middleware  ✅
-  /icon.svg           contains a dot → matches  .*\..*  → EXCLUDED from middleware  ✅
-  /opengraph-image    NO DOT         → middleware RUNS
+  /sitemap.xml        contains a dot → matches  .*\..*  → EXCLUDED from proxy  ✅
+  /robots.txt         contains a dot → matches  .*\..*  → EXCLUDED from proxy  ✅
+  /icon.svg           contains a dot → matches  .*\..*  → EXCLUDED from proxy  ✅
+  /opengraph-image    NO DOT         → proxy RUNS
                         │
                         ├─ first segment is "opengraph-image", not in LOCALES
                         └─ 307 → /en/opengraph-image  … which would not exist
@@ -1035,7 +1035,7 @@ function describeIncident(incident: {
 export async function generateMetadata({
   params,
 }: {
-  // Next 15: params is a Promise here too, including inside generateMetadata.
+  // Next 16: params is a Promise here too, including inside generateMetadata.
   readonly params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
   const { locale, slug } = await params;
@@ -1282,9 +1282,10 @@ export default async function OpengraphImage({
 
 - [ ] The file is at `src/app/[locale]/opengraph-image.tsx`. If you put it at `src/app/`, check
       13 in the Verification block catches it — go and read that check now rather than later.
-- [ ] `npm run type-check` is silent. If it objects to `params` being a `Promise` here, your
-      Next minor release types the image conventions with a plain object: drop the `Promise<>`
-      and the `await`, and change nothing else.
+- [ ] `npm run type-check` is silent. The `Promise<>` is not belt and braces: **Next 16 made the
+      image conventions async**, so `params` — and the `id` from `generateImageMetadata`, which
+      this course does not use — arrive as Promises here just as they do in a page. Next 15 passed
+      a plain object, which is why every example you find online omits the `await`.
 - [ ] `npm run build` lists `/[locale]/opengraph-image` in the route table.
 
 ### Step 7: Run the whole toolchain, then read the head you actually shipped
@@ -1483,7 +1484,7 @@ curl -s http://localhost:3000/en/incidents/incident-03 | grep -o 'property="og:i
 #           because incident-03 has no editor upload and the mapper omitted the key.
 
 # 15. NEGATIVE — the check that would have caught the placement bug. The root-level
-#     path has no file extension, so middleware matches it and 307s it away.
+#     path has no file extension, so proxy matches it and 307s it away.
 curl -s -o /dev/null -w '%{http_code}  %{redirect_url}\n' http://localhost:3000/opengraph-image
 # Expected: 307 and a redirect_url of http://localhost:3000/en/opengraph-image
 #           A file at src/app/opengraph-image.tsx would have made that 307 land on

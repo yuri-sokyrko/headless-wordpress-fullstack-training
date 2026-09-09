@@ -18,7 +18,7 @@ and licences table, which is worth five minutes now rather than a surprise in Mo
 
 - **WordPress as a typed content API** — WPGraphQL, custom post types and taxonomies designed
   for a front end that isn't PHP, ACF field groups as version-controlled code
-- **A modern JavaScript front end** — TypeScript, React 19, Next.js 15 App Router, React
+- **A modern JavaScript front end** — TypeScript, React 19, Next.js 16 App Router, React
   Server Components, Tailwind and shadcn/ui
 - **Gutenberg blocks that survive the trip** — six custom blocks queried as structured data
   and rendered by real React components, not HTML blobs
@@ -53,7 +53,7 @@ are fetching is data you modelled yourself.
 | # | Module | Lessons | New Technology | What You Build |
 |---|---|---|---|---|
 | 08 | [React Fundamentals for WordPress Developers](08-react-fundamentals/) | 5 | React 19, JSX, hooks, context | `IncidentCard`, `IncidentList`, a filter island |
-| 09 | [Next.js 15 App Router Foundations](09-nextjs-app-router/) | 5 | Next 15, RSC, file conventions, route handlers | **The first site you can visit**, on live WP data |
+| 09 | [Next.js 16 App Router Foundations](09-nextjs-app-router/) | 5 | Next 16, RSC, file conventions, route handlers | **The first site you can visit**, on live WP data |
 | 10 | [The Typed Data Layer](10-typed-data-layer/) | 5 | graphql-codegen, cache tags, Suspense | Fully typed, tagged, error-bounded queries |
 | 11 | [UI System: Tailwind & shadcn/ui](11-ui-system-tailwind-shadcn/) | 5 | Tailwind 4, shadcn/ui, Radix, `cva` | Design system, app shell, the `/hobt` shell |
 | 12 | [Your First Tests](12-your-first-tests/) | 4 | Vitest, Playwright, WP-CLI seeding | Green unit + smoke suites, deterministic fixtures |
@@ -64,7 +64,7 @@ are fetching is data you modelled yourself.
 
 | # | Module | Lessons | New Technology | What You Build |
 |---|---|---|---|---|
-| 15 | [Authentication & Sessions](15-authentication-and-sessions/) | 5 | WPGraphQL JWT, httpOnly cookies, middleware | Dual auth, protected routes |
+| 15 | [Authentication & Sessions](15-authentication-and-sessions/) | 5 | WPGraphQL JWT, httpOnly cookies, proxy | Dual auth, protected routes |
 | 16 | [Forms, Server Actions & the HOBT Funnel](16-forms-server-actions-hobt-funnel/) | 4 | react-hook-form, Zod, Server Actions | **Submit → moderate → publish**, lead capture |
 | 17 | [Faust.js, Preview & Draft Mode](17-faustjs-preview-and-draft-mode/) | 4 | Faust.js, `draftMode()` | Editor preview, and a written verdict on Faust |
 | 18 | [Rendering, Caching, ISR & Revalidation](18-rendering-caching-and-revalidation/) | 4 | ISR, `revalidateTag`, HMAC webhooks | Publish in WordPress → live in seconds |

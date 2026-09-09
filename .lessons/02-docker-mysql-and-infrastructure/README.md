@@ -73,7 +73,7 @@ No secret is in git, and you can read a query plan against your own database.
 
 | # | Lesson | New Technology | What You Build |
 |---|---|---|---|
-| 1 | [Why Docker Replaces MAMP](01-why-docker-replaces-mamp.md) | Docker images, layers, volumes | A pulled, inspected `wordpress:6.8-php8.3-apache` image |
+| 1 | [Why Docker Replaces MAMP](01-why-docker-replaces-mamp.md) | Docker images, layers, volumes | A pulled, inspected `wordpress:7.1-php8.4-apache` image |
 | 2 | [The Compose Stack](02-the-compose-stack.md) | Docker Compose, service DNS, healthchecks | `docker-compose.yml`, `docker-compose.dev.yml`, `php.ini`, `uploads.ini` |
 | 3 | [MySQL & the WordPress Schema](03-mysql-and-the-wordpress-schema.md) | MySQL 8, Adminer, `EXPLAIN` | Query plans for a `tax_query` and a `meta_query`, side by side |
 | 4 | [wp-config for Headless](04-wp-config-for-headless.md) | `getenv()`, `WP_HOME`, theme redirect | `wp-config.php`, the `btt-headless` theme stub |
@@ -88,8 +88,8 @@ containerised.
 
 | Service | Image | Published | What it is for |
 |---|---|---|---|
-| `wordpress` | `wordpress:6.8-php8.3-apache` | `8080` → `80` | `/wp-admin`, `/graphql`, WP-CLI |
-| `db` | `mysql:8.0` | `3306` | The database — published **on purpose**, so Lesson 02.3 can run `EXPLAIN` from a host client too |
+| `wordpress` | `wordpress:7.1-php8.4-apache` | `8080` → `80` | `/wp-admin`, `/graphql`, WP-CLI |
+| `db` | `mysql:8.4` | `3306` | The database — published **on purpose**, so Lesson 02.3 can run `EXPLAIN` from a host client too |
 | `adminer` | `adminer` | `8081` | Raw SQL and query plans in a browser |
 | `mailpit` | `axllent/mailpit` | `8025` UI, `1025` SMTP | Every `wp_mail()` captured, none delivered |
 

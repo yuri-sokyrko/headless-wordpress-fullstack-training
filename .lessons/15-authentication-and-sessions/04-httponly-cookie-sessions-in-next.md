@@ -89,7 +89,7 @@ and the leak becomes unrepresentable rather than merely unlikely.
 
 ### 1. `cookies()` from `next/headers`: where you may read, and where you may write
 
-One function, several behaviours depending on where you call it. In Next 15 it is **async**, so
+One function, several behaviours depending on where you call it. In Next 16 it is **async**, so
 every call is `await cookies()`.
 
 | Called from | Read | Write | Notes |
@@ -97,7 +97,7 @@ every call is `await cookies()`.
 | Server Action | ✅ | ✅ | the main write path; this is where `login` and `logout` live |
 | Route Handler | ✅ | ✅ | `/api/auth/refresh` writes here |
 | Server Component / layout / page | ✅ | ❌ | reading is fine and makes the route dynamic |
-| Middleware | ❌ | ❌ | uses `request.cookies` and `response.cookies` instead — a different API entirely |
+| Proxy | ❌ | ❌ | uses `request.cookies` and `response.cookies` instead — a different API entirely |
 | Client Component | ❌ | ❌ | there is no such API, and `document.cookie` cannot see an `httpOnly` cookie |
 
 The write-from-a-Server-Component error is worth causing once, because the reason is architectural
@@ -283,19 +283,19 @@ through: the worst outcome of lying to `decodeExpiry()` is one wasted request. T
 it safe to write by hand rather than pulling in a library.
 
 > **`decodeExpiry()` and the two cookie names live in `src/lib/auth/jwt.ts`, which does NOT carry
-> `import 'server-only'`.** That is not an oversight. `src/middleware.ts` runs in a restricted
+> `import 'server-only'`.** That is not an oversight. `src/proxy.ts` runs in a restricted
 > runtime that is not a React Server Component context, and the `server-only` package throws
 > outside the `react-server` condition — the same reasoning that keeps the guard off
 > `src/lib/graphql/tags.ts` and `errors.ts`. So the auth library is split in two: `jwt.ts` is pure,
-> runtime-agnostic and importable from middleware; `cookies.ts` and `session.ts` touch credentials,
-> carry the guard, and re-export what the frozen surface promises. Lesson 15.5's middleware imports
+> runtime-agnostic and importable from proxy; `cookies.ts` and `session.ts` touch credentials,
+> carry the guard, and re-export what the frozen surface promises. Lesson 15.5's proxy imports
 > from `jwt.ts` and the invariant "one module owns the cookie names" holds.
 
 ### 7. Refresh rotation: the sequence, the race, and the part this design does not do
 
 ```
   t=0     login                      Set-Cookie btt_at (300s), btt_rt (30d, Path=/api/auth)
-  t=290   middleware sees exp is 10s away on a guarded route          (Lesson 15.5)
+  t=290   proxy sees exp is 10s away on a guarded route          (Lesson 15.5)
           └─▶ 307 /api/auth/refresh?next=/en/account
   t=290   GET /api/auth/refresh      the ONLY path the browser sends btt_rt to
           └─▶ mutation refreshJwtAuthToken { jwtRefreshToken }
@@ -421,7 +421,7 @@ walkthrough that is not optional — DevTools is the only place you see `httpOnl
 
 Two files, and the split between them is the point. `jwt.ts` is pure: two string constants and one
 decoder, no `next/headers`, no credentials, **no `import 'server-only'`** — because Lesson 15.5's
-middleware has to import it and the middleware runtime is not a React Server Component context.
+proxy has to import it and the proxy runtime is not a React Server Component context.
 
 ```bash
 cd next-app
@@ -431,11 +431,11 @@ mkdir -p src/lib/auth src/app/api/auth/refresh
 ```ts
 // next-app/src/lib/auth/jwt.ts
 // The runtime-agnostic half of the auth library. Importable from a Server
-// Component, a Server Action, a Route Handler, src/middleware.ts and a Vitest
+// Component, a Server Action, a Route Handler, src/proxy.ts and a Vitest
 // test in plain Node.
 //
 // DELIBERATELY NO `import 'server-only'`: the package throws outside the
-// react-server condition, and src/middleware.ts is not a react-server context.
+// react-server condition, and src/proxy.ts is not a react-server context.
 // Same reasoning as src/lib/graphql/tags.ts and errors.ts (Lesson 10.3).
 // Nothing in this file touches a credential store, so there is nothing to guard.
 
@@ -634,8 +634,8 @@ import { readAccessToken } from './cookies';
 import { decodeExpiry } from './jwt';
 
 // Re-exported so `@/lib/auth/session` exposes the surface Lesson 15.5's
-// middleware and Module 16 were promised. The implementation is in jwt.ts,
-// which has no server-only guard and is therefore importable from middleware.
+// proxy and Module 16 were promised. The implementation is in jwt.ts,
+// which has no server-only guard and is therefore importable from proxy.
 export { decodeExpiry };
 
 /**
@@ -923,7 +923,7 @@ export async function login(
 export async function logout(): Promise<void> {
   await clearSessionCookies();
 
-  // '/' rather than '/en': Lesson 09.5's middleware normalises the locale
+  // '/' rather than '/en': Lesson 09.5's proxy normalises the locale
   // prefix, so the two gates compose instead of duplicating the locale list.
   redirect('/');
 }
@@ -956,7 +956,7 @@ The only endpoint the browser ever sends `btt_rt` to, by construction.
 ```ts
 // next-app/src/app/api/auth/refresh/route.ts
 // The ONLY path the browser sends btt_rt to, because of the cookie's
-// Path=/api/auth. That has a consequence Lesson 15.5 leans on: middleware
+// Path=/api/auth. That has a consequence Lesson 15.5 leans on: proxy
 // running on /en/account never sees the refresh token and therefore CANNOT
 // refresh. This route is the only place in the application that can.
 import { NextResponse, type NextRequest } from 'next/server';
@@ -965,7 +965,7 @@ import { RefreshTokenDocument } from '@/gql/graphql';
 import { clearSessionCookies, readRefreshToken, setAccessCookie } from '@/lib/auth/cookies';
 import { fetchGraphQL } from '@/lib/graphql/client';
 
-// A refresh is never a cached answer. Next 15 does not cache GET handlers by
+// A refresh is never a cached answer. Next 16 does not cache GET handlers by
 // default; this states the intent so no future default can change it.
 export const dynamic = 'force-dynamic';
 
@@ -1044,7 +1044,7 @@ export async function POST(): Promise<Response> {
   if ((await rotateAccessToken()) !== 'ok') {
     // Clear BOTH cookies on ANY failure, whatever the cause. Two reasons, and
     // the second is the one that matters. The browser should stop presenting a
-    // credential nothing will accept — and Lesson 15.5's middleware hands off
+    // credential nothing will accept — and Lesson 15.5's proxy hands off
     // to this route whenever `btt_at` is near expiry, so a failed refresh that
     // left `btt_at` in place would be handed off again on the very next
     // request. That is an infinite redirect loop, and deleting the cookie is
@@ -1058,7 +1058,7 @@ export async function POST(): Promise<Response> {
 }
 
 /**
- * The BROWSER hand-off. Lesson 15.5's middleware redirects a navigation here
+ * The BROWSER hand-off. Lesson 15.5's proxy redirects a navigation here
  * when the access cookie on a guarded route is missing or nearly expired.
  *
  * A GET that changes state is normally wrong, so here is the argument. What it
@@ -1086,7 +1086,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 
   // A browser NAVIGATING gets a page, not a JSON 401. Same 307 target shape the
-  // guards and the middleware use: /{locale}/login?next={pathname}.
+  // guards and the proxy use: /{locale}/login?next={pathname}.
   //
   // `search =` rather than `searchParams.set()`, and this is not a style choice.
   // URLSearchParams serialises with form-urlencoding, which percent-encodes `/`
@@ -1311,7 +1311,7 @@ npm test -- --run
 
 Then, in the browser: sign in, land on `/en`, read the header. Your display name is there. Reload.
 Still there. Wait six minutes without touching anything, reload again, and the header says **Sign
-in** — `btt_at` expired and nothing refreshed it. Not a bug: the middleware that closes the gap is
+in** — `btt_at` expired and nothing refreshed it. Not a bug: the proxy that closes the gap is
 Lesson 15.5, and watching the gap exist first is why it lands in that order.
 
 **Verify §8:**
@@ -1409,7 +1409,7 @@ curl -si -X POST -b "btt_rt=$RT" http://localhost:3000/api/auth/refresh | grep -
 # 11. NEGATIVE — ONE MODULE OWNS THE COOKIE NAMES
 grep -rn "'btt_at'\|'btt_rt'" src/ | grep -v 'src/lib/auth/jwt.ts'
 # Expected: no output. cookies.ts imports the constants; nothing hand-types a name.
-#           jwt.ts holds them rather than cookies.ts because src/middleware.ts
+#           jwt.ts holds them rather than cookies.ts because src/proxy.ts
 #           (Lesson 15.5) has to import them and cannot import a server-only
 #           module. Key Concept 6.
 

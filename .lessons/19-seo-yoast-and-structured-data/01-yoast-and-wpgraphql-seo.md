@@ -370,16 +370,22 @@ cd wordpress-headless
 #    pin, and on this stack it does not even install.
 curl -s https://api.wordpress.org/plugins/info/1.0/wordpress-seo.json \
   | jq -r '"latest \(.version)  requires WP \(.requires)"'
-# Measured 2026-09: `latest 28.4  requires WP 6.9`. This course pins WordPress 6.8,
-# so the newest Yoast REFUSES to install:
+# Measured 2026-09: `latest 28.4  requires WP 6.9`, tested up to 7.1. This course
+# pins WordPress 7.1, so the newest Yoast installs cleanly and the pin below is
+# ordinary version discipline rather than a compatibility workaround.
+#
+# It has not always been so, and the failure is worth recognising: on the 6.8 this
+# course pinned until recently, the same command produced
 #   Warning: wordpress-seo: This plugin does not work with your version of
 #            WordPress. Minimum WordPress requirement is 6.9
-# 27.9 is the last release whose header says `Requires at least: 6.8`; 28.0 moved to
-# 6.9. So the pin is not caution, it is the only version that runs here.
+# and the fix was to pin 27.9, the last release whose header said 6.8. **Yoast's
+# floor moves faster than most plugins'**, so read command 1's output rather than
+# trusting this comment: if `requires` is above your core version, walk back until
+# you find the last release that fits.
 
-# 2. Install 27.9. If you have moved this course to WordPress 6.9 or later, read the
-#    version from command 1 instead and pin that.
-YOAST_VERSION=27.9
+# 2. Install 28.4 — the version command 1 printed on the day this was written. Read
+#    yours from command 1 and pin that; never install unpinned.
+YOAST_VERSION=28.4
 docker compose run --rm wpcli wp plugin install wordpress-seo \
   --version="$YOAST_VERSION" --activate
 ```
@@ -407,10 +413,11 @@ docker compose run --rm wpcli wp plugin list --status=active --fields=name,versi
 
 **Verify §1:**
 
-- [ ] Both plugins appear with `status=active` and a **concrete version number** — `27.9` and
+- [ ] Both plugins appear with `status=active` and a **concrete version number** — `28.4` and
       `5.1.0` if you pasted the pins. Write both into `docs/schema-notes.md`, *with the
-      WordPress version beside them*: Yoast's floor moves, and "27.9 because core is 6.8" is
-      the note that saves the next upgrade. Lesson 10.2 established the habit.
+      WordPress version beside them*: Yoast's floor moves, and "28.4, on core 7.1" is the note
+      that saves the next upgrade — it is what tells you whether a refused install is a Yoast
+      problem or a core one. Lesson 10.2 established the habit.
 - [ ] `docker compose logs --tail=40 wordpress` shows no PHP fatal. The bridge requires both
       WPGraphQL and Yoast to be active; with either missing you get a notice on load, not a
       silent no-op.

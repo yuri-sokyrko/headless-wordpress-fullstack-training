@@ -11,7 +11,7 @@ requires: [24.4, 24.1, 20.1]
 
 ## Quick Overview
 
-Module 02 built a development stack on the `wordpress:6.8-php8.3-apache` image with bind mounts,
+Module 02 built a development stack on the `wordpress:7.1-php8.4-apache` image with bind mounts,
 `WP_DEBUG` on, no opcache and every dev tool available. That was correct for developing and is
 wrong for production, and every deferred decision comes due now. The production `Dockerfile` is
 **multi-stage**: a Composer stage installing with `--no-dev`, a Node stage building the block
@@ -114,7 +114,7 @@ technologies.
 | No opcache — every request recompiles | opcache on with `validate_timestamps=0` | roughly 40% of your request time, which you never noticed locally |
 | Everything runs as root | a **non-root** user, and Apache moved off port 80 to prove it | a container escape is a host root escape |
 | Composer and WP-CLI both available | Composer out of the runtime; WP-CLI kept **on purpose** — see Key Concept 8 | a 40 MB dependency resolver with network access, in production |
-| `wordpress:6.8-php8.3-apache`, a moving tag, pulled at run time | the **exact patch tag plus its digest**, resolved at build time | two builds of the same commit could be different WordPresses |
+| `wordpress:7.1-php8.4-apache`, a moving tag, pulled at run time | the **exact patch tag plus its digest**, resolved at build time | two builds of the same commit could be different WordPresses |
 | Media in a named volume | offloaded to R2/S3 **from day one** — Key Concept 10 | one machine, forever |
 
 The row that pays off best is the second one. `WORDPRESS_DEBUG` living in
@@ -140,7 +140,7 @@ Each `FROM` starts a new filesystem; only what you explicitly `COPY --from` surv
   └───────┬──────────────┘
           ▼
   ┌── runtime ───────────────────────────────────────────────────┐
-  │  wordpress:6.8.2-php8.3-apache  (core is the base image)     │
+  │  wordpress:7.1.0-php8.4-apache  (core is the base image)     │
   │  COPY --from=vendor   vendor/                                │
   │  COPY --from=assets   build/                                 │
   │  COPY --from=plugins  third-party plugins                    │
@@ -224,7 +224,7 @@ pure waste inside an immutable image where they cannot.
 with no indication why. That is precisely why Module 02 left opcache off entirely rather than
 tuning it — and it is why this setting lives in a file that only the production image copies.
 
-JIT stays **off**, deliberately. PHP 8.3's tracing JIT helps CPU-bound numerical code; WordPress
+JIT stays **off**, deliberately. PHP 8.4's tracing JIT helps CPU-bound numerical code; WordPress
 is I/O-bound on MySQL and its measured gain is close to zero, while the JIT buffer costs memory
 and has historically produced the hardest-to-diagnose class of PHP bug. Turn it on if you measure
 a reason; do not turn it on because it is available.
@@ -291,7 +291,7 @@ an attacker exactly which CVE lists to read. So the response is split:
 | Holding `X-BTT-App-Token` | the same, plus `detail`: expected versus actual versions, the DB error code, the schema exception message |
 
 `status` and `checkedAt` are the same two keys `/api/health` returns
-([Lesson 09.5](../09-nextjs-app-router/05-route-handlers-and-middleware.md)), on purpose: one
+([Lesson 09.5](../09-nextjs-app-router/05-route-handlers-and-proxy.md)), on purpose: one
 uptime monitor configuration, two tiers.
 
 ### 8. `release_command`: once, before traffic, and it can stop the deploy
@@ -469,12 +469,12 @@ tidiness:
 #
 # Four stages; only `runtime` ships. Key Concept 2.
 
-# Pin core by EXACT PATCH TAG. `6.8-php8.3-apache` is a MOVING tag — Module 02
+# Pin core by EXACT PATCH TAG. `7.1-php8.4-apache` is a MOVING tag — Module 02
 # used it deliberately for development and it is wrong here. Resolve the digest
 # once and pass it in CI as
-#   --build-arg WP_IMAGE=wordpress:6.8.2-php8.3-apache@sha256:<digest>
-# Get it with: docker buildx imagetools inspect wordpress:6.8.2-php8.3-apache
-ARG WP_IMAGE=wordpress:6.8.2-php8.3-apache
+#   --build-arg WP_IMAGE=wordpress:7.1.0-php8.4-apache@sha256:<digest>
+# Get it with: docker buildx imagetools inspect wordpress:7.1.0-php8.4-apache
+ARG WP_IMAGE=wordpress:7.1.0-php8.4-apache
 
 # ----------------------------------------------------------- 1. vendor
 FROM composer:2.8 AS vendor
@@ -1377,9 +1377,9 @@ docker run --rm --entrypoint sh btt-wp:dev -c \
 # 9. Core is the version you pinned, and the tag is not a moving one
 docker run --rm --entrypoint sh btt-wp:dev -c \
   'grep -m1 "wp_version =" /var/www/html/wp-includes/version.php'
-# Expected: 6.8.2 (or whatever you pinned). Not "6.8", which is a tag that
-#           means a different WordPress next month.
-grep -c "wordpress:6.8-php8.3-apache" Dockerfile
+# Expected: 7.1.0 (or whatever patch you pinned). The bare "7.1" tag would mean
+#           a different WordPress next month; the patch tag plus digest does not.
+grep -c "wordpress:7.1-php8.4-apache" Dockerfile
 # Expected: 0 — that is Module 02's development tag
 
 # 10. Trivy, with the qualifier from Lesson 24.5 Key Concept 8

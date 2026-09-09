@@ -241,7 +241,7 @@ wrote this file, which suite owes it a test?**
 | Server Action | `submitIncident`, `login` | **2** — Vitest node + `vi.mock` | Playwright cannot count how many times the GraphQL client was called, and that count is the assertion |
 | Route handler | `/api/revalidate`, `/api/auth/refresh` | **2** — construct a real `Request`, call the exported `POST` | E2E cannot forge a stale timestamp with a valid signature |
 | `async` Server Component | every `page.tsx`, `Header`, `SkipLink` | **5** — Playwright, **never 1 or 2** | the RSC rule. Lift the logic out and the lifted function goes to suite 1 |
-| Middleware | `src/middleware.ts` | **5** — Playwright | it is a redirect decision made on a real request; asserting it in isolation asserts your own mock |
+| Proxy | `src/proxy.ts` | **5** — Playwright | it is a redirect decision made on a real request; asserting it in isolation asserts your own mock |
 | PHP arithmetic and branching | `incident_blame_breakdown`, `normalize_stored_value`, `deny_create_incidents_until_verified` | **3** — Pest + Brain Monkey | needs no WordPress; adding one costs eight seconds per run and buys nothing |
 | PHP that asks WordPress a question | `register_post_type` results, `user_can`, `map_meta_cap`, `register_block_type` | **4** — `wp-phpunit` | mocking `current_user_can()` to return `true` tests your `if`, not authorisation |
 | A GraphQL resolver | `blameScore`, `createIncident` | **4** — in-process `graphql()` | an HTTP round trip in a test adds a server, a port and a flake source, and asserts the same thing |
@@ -332,8 +332,8 @@ Composer scripts 23.4 and 23.5 define. The Task writes them all into §11 with w
 needs, so this Key Concept can spend its space on the interesting part.
 
 The two PHP entry points are **Composer scripts**, and locally they are invoked differently from
-each other: `docker compose run --rm composer run test:unit` for the unit suite,
-`docker compose exec … wordpress php vendor/bin/pest --testsuite=integration` for the integration
+each other: `docker compose run --rm phptest vendor/bin/pest --testsuite=unit` for the unit suite,
+`docker compose run --rm phptest vendor/bin/pest --testsuite=integration` for the integration
 one. That asymmetry is deliberate and Lesson 23.4 explains it. A Composer script documents a
 command; it does not guarantee every host can run it.
 
@@ -461,7 +461,7 @@ question answered with all five suites in existence. §1 still stands; nothing h
 |---|---|---|---|---|
 | 1 | Vitest unit (`node`, jsdom per file) | `npm run test:run` | pure `lib/` functions; sync client components by role and accessible name | async Server Components; real layout, focus, scrolling |
 | 2 | Vitest + MSW v2 | `npm run test:run` | TODO | TODO |
-| 3 | Pest + Brain Monkey | `docker compose run --rm composer run test:unit` | TODO | TODO |
+| 3 | Pest + Brain Monkey | `docker compose run --rm phptest vendor/bin/pest --testsuite=unit` | TODO | TODO |
 | 4 | `wp-phpunit` | see §11 — it is not a Composer invocation locally | TODO | TODO |
 | 5 | Playwright | `npm run test:e2e` | TODO | TODO |
 
@@ -528,7 +528,7 @@ worker is not. Three ways past it, all recorded here because the second one is a
 | Client component that fetches | 2 | the interesting cases are failures you cannot make WordPress produce |
 | Server Action / route handler | 2 | TODO |
 | `async` Server Component | 5 | TODO |
-| `src/middleware.ts` | 5 | TODO |
+| `src/proxy.ts` | 5 | TODO |
 | PHP arithmetic and branching | 3 | TODO |
 | PHP that asks WordPress a question | 4 | TODO |
 | A GraphQL resolver | 4 | TODO |
@@ -635,16 +635,16 @@ more than a disabled test, because somebody reads this document.
 | `npm run test:run` | suites 1 and 2, single pass | nothing |
 | `npm run test:coverage` | the same, with the v8 report | nothing |
 | `npm run test:e2e` | suite 5, every Playwright project | Docker up; `npm run e2e:reset` first |
-| `docker compose run --rm composer run test:unit` | suite 3 | nothing — no WordPress at all |
-| `docker compose exec -T -w /var/www/html/wp-content/plugins/blame-the-tech-core wordpress php vendor/bin/pest --testsuite=integration` | suite 4 | a real WordPress and the `wp_test` database |
+| `docker compose run --rm phptest vendor/bin/pest --testsuite=unit` | suite 3 | nothing — no WordPress at all |
+| `docker compose run --rm -w /var/www/html/wp-content/plugins/blame-the-tech-core phptest vendor/bin/pest --testsuite=integration` | suite 4 | a real WordPress and the `wp_test` database |
 | `npm run verify` | `type-check`, `lint`, `format:check` | nothing |
 | `npm run codegen:check` | regenerate types, `git diff --exit-code` | nothing — the schema is a committed file |
 
 `composer test:unit` and `composer test:integration` are both declared as Composer scripts, and
-only the first runs from the `composer` service: the container that has Composer has no
-WordPress, and the container that has WordPress has no Composer. A Composer script documents a
-command; it does not guarantee every host can run it. On a CI runner, which has PHP and
-Composer natively, both forms work verbatim.
+locally **neither runs from the `composer` service**: that image installs on a PHP newer than the
+Pest major WordPress core forces on us, so both suites execute in the `phptest` container instead
+(Lesson 23.4 §1.1). A Composer script documents a command; it does not guarantee every host can
+run it. On a CI runner, which has PHP 8.3 and Composer natively, both forms work verbatim.
 
 ### There is no one command, and that is the honest answer
 
@@ -658,8 +658,8 @@ success while testing nothing, and a wrapper is exactly where you stop reading o
 - **Locally**, it is this sequence, pasted, with four visible exit codes:
 
     cd next-app && npm run verify && npm run test:run
-    cd ../wordpress-headless && docker compose run --rm composer run test:unit
-    docker compose exec -T -w /var/www/html/wp-content/plugins/blame-the-tech-core wordpress php vendor/bin/pest --testsuite=integration
+    cd ../wordpress-headless && docker compose run --rm phptest vendor/bin/pest --testsuite=unit
+    docker compose run --rm -w /var/www/html/wp-content/plugins/blame-the-tech-core phptest vendor/bin/pest --testsuite=integration
     cd ../next-app && npm run e2e:reset && npm run test:e2e
 
 TODO: if you write the wrapper anyway, the test of whether it is honest is that
@@ -847,8 +847,8 @@ most, because everything Lesson 12.1 decided disappears without an error anywher
    the file becomes testable, then argue the case against — and say which of the five suites you
    would make responsible for the cookie contract instead, and what that suite cannot tell you
    that a unit test could.
-3. Your decision table sends `src/middleware.ts` to Playwright. A reviewer proposes a Vitest test
-   that constructs a `NextRequest`, calls the exported `middleware`, and asserts the `Location`
+3. Your decision table sends `src/proxy.ts` to Playwright. A reviewer proposes a Vitest test
+   that constructs a `NextRequest`, calls the exported `proxy`, and asserts the `Location`
    header. Say what that test would genuinely prove, name the specific thing it would fail to
    prove that made you choose Playwright, and decide whether you would accept it as a *second*
    test rather than a replacement.

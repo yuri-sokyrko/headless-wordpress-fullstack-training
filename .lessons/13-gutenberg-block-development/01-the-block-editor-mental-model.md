@@ -697,12 +697,12 @@ share **nothing**. Not a dependency, not a config, not a module.
 
 | | `blame-the-tech-blocks` | `next-app` |
 |---|---|---|
-| Bundler | webpack, via `@wordpress/scripts` | Turbopack / webpack, via Next 15 |
+| Bundler | webpack, via `@wordpress/scripts` | Turbopack, the Next 16 default |
 | Language | JavaScript | TypeScript, `strict` |
 | React resolution | `wp.element`, a global enqueued by WordPress core | `react` from its own `node_modules` |
 | React version | whatever WordPress core ships | whatever `package.json` pins |
 | Module resolution | `@wordpress/*` rewritten to `wp.*` externals | `@/…` alias to `src/` |
-| Lint config | `wp-scripts lint-js` (WordPress ESLint) | `next lint` / the repo ESLint config |
+| Lint config | `wp-scripts lint-js` (WordPress ESLint) | `eslint .` against the repo ESLint config |
 | Formatting | `wp-scripts format` — tabs, WordPress brace style | Prettier — spaces |
 | Test runner | Jest (`wp-scripts test-unit-js`, unused here) | Vitest + Playwright |
 | Output | `build/`, gitignored, one directory per block | `.next/`, gitignored |

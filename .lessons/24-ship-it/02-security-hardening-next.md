@@ -41,7 +41,7 @@ per directory.
 
 By the end of this lesson you will have:
 
-- A split CSP set in `middleware.ts` — static for prerendered routes, nonce-based for the
+- A split CSP set in `proxy.ts` — static for prerendered routes, nonce-based for the
   personalised ones — report-only first, then enforcing —
   plus the full security-header set, verified against the deployed response, not the config file
 - A validation audit: every route handler, Server Action and webhook, each with a Zod schema at
@@ -112,7 +112,7 @@ deleting it is as defensible as keeping it.
 
 ### 2. The CSP collides with Module 18, and the collision is the lesson
 
-The naive plan: generate a nonce per request in middleware, put it in the CSP, let Next attach it
+The naive plan: generate a nonce per request in proxy, put it in the CSP, let Next attach it
 to its own `<script>` tags. Every guide says this. **It would forfeit every statically-rendered
 route in this application.**
 
@@ -153,7 +153,7 @@ that satisfies both a prerendered page and a per-request nonce. It has to be two
 | Rendering | prerendered, Full Route Cache | already dynamic — Lesson 15.5 guards them and 18.4 sets `private, no-store` |
 | `script-src` | `'self' 'unsafe-inline'` | `'self' 'nonce-<per-request>'` |
 | Cost | inline script is permitted | none; these routes were never cacheable |
-| Who sets it | `middleware.ts`, one constant string | `middleware.ts`, one minted value |
+| Who sets it | `proxy.ts`, one constant string | `proxy.ts`, one minted value |
 
 The personalised list is not a new decision: Lesson 18.4's `headers()` already excludes those
 paths from any shared cache and Lesson 15.5's gate already forces a session on them. They are
@@ -187,7 +187,7 @@ is "a strict CSP and no static rendering", and Module 21's budgets are what woul
 
 ### 4. One owner for the CSP, because two headers are an intersection
 
-`next.config.ts`'s `headers()` and `middleware.ts` can both set a response header, and if both
+`next.config.ts`'s `headers()` and `proxy.ts` can both set a response header, and if both
 set `Content-Security-Policy` the browser enforces **both** — the intersection, not the last one
 written. That is a rule almost nobody remembers at 2am, so this lesson does not create the
 situation:
@@ -195,16 +195,16 @@ situation:
 | Header | Owner | Why there |
 |---|---|---|
 | the five static headers | `next.config.ts` `headers()` — **appended to Lesson 18.4's function** | one entry, every path, no per-request input |
-| `Content-Security-Policy` | `middleware.ts`, and nowhere else | the nonce variant needs a **request** header, which only middleware can set |
+| `Content-Security-Policy` | `proxy.ts`, and nowhere else | the nonce variant needs a **request** header, which only proxy can set |
 
 The third column of the second row is decisive. Next propagates a nonce to its own script tags by
 reading the `Content-Security-Policy` header off the **incoming request**, so the nonce path
-structurally requires middleware — and splitting the CSP across two files would let the two
+structurally requires proxy — and splitting the CSP across two files would let the two
 halves disagree. One file, one string builder.
 
 **What that costs, and it is a real cost.** `config.matcher` is
 `'/((?!api|_next|favicon\.ico|.*\..*).*)'` and **no lesson may edit it** — Lesson 15.5 §4 spends
-a whole Key Concept forbidding it and Lesson 20.3 obeyed it. So middleware never runs for:
+a whole Key Concept forbidding it and Lesson 20.3 obeyed it. So proxy never runs for:
 
 | Path | Gets a CSP? | Is that acceptable? |
 |---|---|---|
@@ -226,7 +226,7 @@ A CSP you have not observed is a CSP that breaks something you cannot predict. S
 violation, and blocks nothing.
 
 ```js
-// eslint.config.mjs and next.config.ts are elsewhere; this is the switch, in middleware.ts
+// eslint.config.mjs and next.config.ts are elsewhere; this is the switch, in proxy.ts
 const CSP_MODE = 'report-only'; // → 'enforce', in a PR whose only content is this line
 ```
 
@@ -252,9 +252,9 @@ endpoint accepts CSP reports, so `report-uri` is added there rather than here �
 report-only with reports going to the browser console, which is enough for the two weeks of
 first-party debugging and nowhere near enough for real traffic. Named rather than hidden.
 
-### 6. Middleware's fourth concern, and why the order is frozen
+### 6. Proxy's fourth concern, and why the order is frozen
 
-`middleware.ts` will hold four concerns in this order, and the order is not negotiable:
+`proxy.ts` will hold four concerns in this order, and the order is not negotiable:
 
 ```
 1. mint a request id                 ← Lesson 24.3 adds this, FIRST
@@ -385,7 +385,7 @@ the existing `headers()` array. Not a second function, and do not retype the fil
 // This source OVERLAPS the /_next and /api entries above it, and that is fine:
 // Next merges entries from every matching source, and a collision only matters
 // when two entries set the same KEY. These five keys appear nowhere else.
-// NO Content-Security-Policy here — middleware.ts is its only owner (§4).
+// NO Content-Security-Policy here — proxy.ts is its only owner (§4).
       {
         source: '/:path*',
         headers: [
@@ -403,7 +403,7 @@ the existing `headers()` array. Not a second function, and do not retype the fil
             value: 'strict-origin-when-cross-origin',
           },
           {
-            // The header that matters most for the paths middleware cannot
+            // The header that matters most for the paths proxy cannot
             // reach: /sitemap.xml, /robots.txt, /api/*, /_next/*. See §4.
             key: 'X-Content-Type-Options',
             value: 'nosniff',
@@ -436,12 +436,12 @@ the existing `headers()` array. Not a second function, and do not retype the fil
       else. If it grew, you cached HTML at the edge and 18.3's webhook cannot purge it.
 - [ ] `grep -c 'Content-Security-Policy' next.config.ts` is `0`. One owner (§4).
 
-### Step 2: Write the policy builder and give middleware its fourth concern
+### Step 2: Write the policy builder and give proxy its fourth concern
 
 Two edits to one file. The builder first, at module scope so nothing is recomputed per request:
 
 ```ts
-// next-app/src/middleware.ts — ADD above the existing middleware() function.
+// next-app/src/proxy.ts — ADD above the existing proxy() function.
 // The imports (createMiddleware, NextResponse, NextRequest, AT_COOKIE,
 // secondsUntilExpiry, routing) are already there from Lessons 15.5 and 20.3.
 
@@ -507,7 +507,7 @@ Then the fourth concern. Concerns 1 to 3 are unchanged; this replaces the last t
 the existing function:
 
 ```ts
-// next-app/src/middleware.ts — the tail of the existing middleware() body.
+// next-app/src/proxy.ts — the tail of the existing proxy() body.
 // Concerns 1-3 (locale, near-expiry hand-off, the gate) are UNCHANGED from
 // Lessons 20.3 and 15.5. Lesson 24.3 inserts request-id minting ABOVE them.
 
@@ -519,13 +519,13 @@ the existing function:
     : 'Content-Security-Policy-Report-Only';
 
   if (isNoncePath(pathname, locale)) {
-    // crypto.randomUUID() is available in the edge runtime and needs no import.
+    // crypto.randomUUID() is a global in the Node runtime proxy runs in — no import.
     // A nonce must be unguessable and per-request; it does not need to be long.
     const nonce = crypto.randomUUID();
     const policy = nonceCsp(nonce);
 
     // Next reads the CSP off the INCOMING REQUEST to attach the nonce to its own
-    // <script> tags, which is why only middleware can do this half. A route
+    // <script> tags, which is why only proxy can do this half. A route
     // component that renders its own <Script> reads headers().get('x-btt-nonce').
     request.headers.set('x-btt-nonce', nonce);
     request.headers.set(header, policy);
@@ -540,21 +540,21 @@ the existing function:
 
 > **`response` is next-intl's object, not `NextResponse.next()`.** Lesson 20.3 returns
 > next-intl's response on every non-redirect path because it carries the `NEXT_LOCALE` cookie and
-> next-intl's internal request headers. `grep -c 'NextResponse.next()' src/middleware.ts` must
+> next-intl's internal request headers. `grep -c 'NextResponse.next()' src/proxy.ts` must
 > stay `0`. Building a fresh response here to hang a header on would produce a locale that
 > resolves inconsistently, with no error.
 
 **Verify §2:**
 
-- [ ] `git diff src/middleware.ts | grep -E '^[-+].*matcher'` prints **nothing**.
+- [ ] `git diff src/proxy.ts | grep -E '^[-+].*matcher'` prints **nothing**.
       `config.matcher` is `'/((?!api|_next|favicon\.ico|.*\..*).*)'` and no lesson may edit it —
       Lesson 15.5 §4 spends a Key Concept forbidding it and Lesson 20.3 obeyed it.
-- [ ] `grep -c "'unsafe-eval'" src/middleware.ts` is `0`. Verification check 4 asserts it against
+- [ ] `grep -c "'unsafe-eval'" src/proxy.ts` is `0`. Verification check 4 asserts it against
       a response as well, because a config file is not evidence.
-- [ ] `grep -c 'unsafe-inline' src/middleware.ts` is `2` — `script-src` on the static variant and
+- [ ] `grep -c 'unsafe-inline' src/proxy.ts` is `2` — `script-src` on the static variant and
       `style-src` in the shared block. Three means it is in `nonceCsp` too, where the browser
       ignores it and the diff misleads the next reader.
-- [ ] `grep -c 'NextResponse.next()' src/middleware.ts` and `grep -c 'fetch(' src/middleware.ts`
+- [ ] `grep -c 'NextResponse.next()' src/proxy.ts` and `grep -c 'fetch(' src/proxy.ts`
       are both `0`, and `CSP_MODE` is `'report-only'` — enforcing on the first commit skips §5.
 
 ### Step 3: One ESLint config object, and delete the script it replaces
@@ -814,13 +814,13 @@ git commit -m "feat(web): CSP, security headers, lint-enforced sanitisation and 
 
 **Verify §8:**
 
-- [ ] The diff touches `next.config.ts`, `src/middleware.ts`, `eslint.config.mjs`,
+- [ ] The diff touches `next.config.ts`, `src/proxy.ts`, `eslint.config.mjs`,
       `package.json`, `src/app/api/auth/refresh/route.ts`, `docs/quality-gates.md`, and
       **deletes** `scripts/check-tag-literals.mjs`.
 - [ ] The diff does **not** touch `src/app/[locale]/layout.tsx`. If it does, you put a nonce read
       in the root layout and forfeited every static route — Lesson 18.1, Key Concept 2, and
       Module 21's budgets, all at once.
-- [ ] `git diff HEAD~1 -- src/middleware.ts | grep -c matcher` is `0`.
+- [ ] `git diff HEAD~1 -- src/proxy.ts | grep -c matcher` is `0`.
 
 ---
 
@@ -851,7 +851,7 @@ curl -sI http://localhost:3000/en/account | grep -ci 'content-security-policy'
 # 4. NEGATIVE — no 'unsafe-eval', anywhere, in the policy a browser receives
 curl -sI http://localhost:3000/en | grep -i 'content-security-policy' | grep -c "unsafe-eval"
 # Expected: 0
-grep -c "unsafe-eval" src/middleware.ts
+grep -c "unsafe-eval" src/proxy.ts
 # Expected: 0
 
 # 5. The strict directives that do the work are all present on a real response
@@ -918,7 +918,7 @@ grep -c "'localhost:3000'" next.config.ts
 # Expected: 1 — both entries, as Lesson 15.5 Step 5 wrote them
 
 # 13. NEGATIVE — config.matcher did not move
-git diff HEAD~1 -- src/middleware.ts | grep -cE '^[-+].*matcher'
+git diff HEAD~1 -- src/proxy.ts | grep -cE '^[-+].*matcher'
 # Expected: 0. Lesson 15.5 §4 forbids editing it and Lesson 20.3 obeyed.
 
 # 14. NEGATIVE — the i18n wrapper survived

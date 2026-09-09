@@ -1056,7 +1056,10 @@ export async function POST(request: Request): Promise<Response> {
   const tags = tagsFor(parsed.data);
 
   for (const tag of tags) {
-    revalidateTag(tag);
+    // The second argument is the cacheLife profile, required since Next 16.
+    // 'max' = serve the stale entry while the fresh one is fetched, which is
+    // what you want for public content behind a publish event.
+    revalidateTag(tag, 'max');
   }
 
   // Echo what was invalidated. This body is the ONLY place either application

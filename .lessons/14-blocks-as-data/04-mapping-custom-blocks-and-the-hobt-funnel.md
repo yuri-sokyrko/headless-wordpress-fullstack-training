@@ -1007,7 +1007,7 @@ export default async function WordPressPage({
 }: {
   readonly params: Promise<{ locale: string; slug: readonly string[] }>;
 }) {
-  // Next 15: params is a Promise, and every access is awaited.
+  // Next 16: params is a Promise, and every access is awaited.
   const { locale, slug } = await params;
 
   // Leading AND trailing slash, which is what WordPress stores in `uri`.
