@@ -18,7 +18,7 @@ dependencies, your scripts and your module system. This lesson creates the first
 `next-app/`, and it spends most of its time on the four things that actually cause trouble
 later: semver ranges, the lockfile, `npm ci` versus `npm install`, and `"type": "module"`.
 
-Semver deserves the attention. `^15.1.0` means "any 15.x at or above 15.1.0", which is a
+Semver deserves the attention. `^16.3.0` means "any 16.x at or above 16.3.0", which is a
 *range*, which means two developers running `npm install` a week apart can get different code
 from an identical `package.json`. `package-lock.json` is what makes the install reproducible by
 recording the exact resolved version of every package in the tree, and `npm ci` is the command

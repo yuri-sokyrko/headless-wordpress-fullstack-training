@@ -342,7 +342,7 @@ Candidates you will genuinely see on this stack, and the honest verdict on each:
 
 | Console line | Verdict |
 |---|---|
-| `Failed to load resource … /favicon.ico` | tolerate. There is no favicon until Lesson 19.4 adds the icon set; middleware already excludes the path |
+| `Failed to load resource … /favicon.ico` | tolerate. There is no favicon until Lesson 19.4 adds the icon set; proxy already excludes the path |
 | React hydration mismatch warnings | **fix**. This is the bug the listener exists to catch |
 | `Warning: Each child in a list should have a unique "key"` | **fix**. Lesson 08.2 covered it, and this is the test that notices a regression |
 | Next's dev-only fast-refresh chatter | tolerate if it is genuinely `error` type, and name it |
@@ -616,7 +616,7 @@ test.describe('the app shell', () => {
     const response = await request.get('/', { maxRedirects: 0 });
 
     // 307 preserves the method and body. Lesson 09.5 chose it because Module 16
-    // POSTs Server Actions through paths this middleware touches, and a 302 turns
+    // POSTs Server Actions through paths this proxy touches, and a 302 turns
     // a POST into a GET and loses the submission with no error anywhere.
     expect(response.status()).toBe(307);
     expect(response.headers()['location'] ?? '').toContain('/en');
@@ -675,7 +675,7 @@ import type { Page } from '@playwright/test';
  */
 const CONSOLE_ALLOWLIST: readonly RegExp[] = [
   // Chromium reports a missing subresource as a console error. There is no
-  // favicon until Lesson 19.4 adds `src/app/icon.svg`, and middleware already excludes
+  // favicon until Lesson 19.4 adds `src/app/icon.svg`, and proxy already excludes
   // the path from the locale redirect. Delete this entry in Module 19.
   /favicon\.ico/,
 ];

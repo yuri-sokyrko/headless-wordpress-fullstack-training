@@ -163,7 +163,7 @@ renders it on demand. Set `export const dynamicParams = false` and anything not 
 404 instead. Default `true` is right here, because an editor publishing an incident should not have
 to wait for a deploy to see it.
 
-> **The honest note about this module.** Next 15 does not cache `fetch` by default, and a route
+> **The honest note about this module.** Next 16 does not cache `fetch` by default, and a route
 > whose data comes from an uncached fetch is rendered on demand rather than prerendered — so the
 > build output marks these routes `ƒ (Dynamic)`, and `generateStaticParams` currently buys you very
 > little beyond a reviewable list of what exists. That is not a mistake in the code you are about

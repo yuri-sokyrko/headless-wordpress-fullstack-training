@@ -1275,7 +1275,7 @@ export default async function RegisterPage({
 }: {
   readonly params: Promise<{ locale: string }>;
 }) {
-  // Next 15: params is a Promise.
+  // Next 16: params is a Promise.
   const { locale } = await params;
 
   return (
@@ -1327,7 +1327,7 @@ export default async function VerifyPage({
   readonly params: Promise<{ locale: string }>;
   readonly searchParams: Promise<{ readonly uid?: string; readonly token?: string }>;
 }) {
-  // Next 15: BOTH are Promises.
+  // Next 16: BOTH are Promises.
   const { locale } = await params;
   const { uid = '', token = '' } = await searchParams;
 

@@ -893,7 +893,7 @@ docker compose run --rm wpcli wp eval '
 
 `src/lib/auth/cookies.ts` is the one module that names a cookie's attributes (Lesson 15.4), so
 `btt_preview_jwt` goes there. Unlike `btt_at` and `btt_rt`, its name may live in this `server-only`
-module, because middleware never reads it.
+module, because proxy never reads it.
 
 ```ts
 // next-app/src/lib/auth/cookies.ts — appended. SECURE, AT_ATTRS etc. already exist.
@@ -1105,7 +1105,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     return new NextResponse(null, { status: 401, headers: NO_STORE });
   }
 
-  // 4. draftMode() is ASYNC in Next 15. So is cookies(). Getting this wrong is
+  // 4. draftMode() is ASYNC in Next 16. So is cookies(). Getting this wrong is
   //    the single most common stale-knowledge error in the ecosystem.
   (await draftMode()).enable();
   await setPreviewCookie(previewJwt);
@@ -1134,7 +1134,9 @@ Three small pieces and two anchored edits. First capture what `npm run build` re
 Key Concept 3 makes a claim about that table and Verification check 12 is how you test it:
 
 ```bash
-# Stop `npm run dev` first — a dev server and a build fight over .next/.
+# On Next 16 `dev` and `build` write to separate directories (.next/dev and
+# .next/), so they no longer fight — but stop `npm run dev` anyway if you want
+# the build to have the machine to itself.
 cd next-app
 npm run build 2>&1 | tee /tmp/btt-build-before-banner.txt | tail -30
 ```
@@ -1260,7 +1262,7 @@ import { fetchGraphQL, fetchGraphQLAuthed } from '@/lib/graphql/client';
   //     would hide a capability problem the editor needs to see.
   //
   // No `revalidate` and no `tags` on the preview path, and none can be passed:
-  // Next 15's fetch is uncached by default, so omitting the options IS the opt-out.
+  // Next 16's fetch is uncached by default, so omitting the options IS the opt-out.
   const data =
     previewJwt === null
       ? await fetchGraphQL(
@@ -1587,7 +1589,7 @@ diff <(sed -n '/Route (app)/,$p' /tmp/btt-build-before-banner.txt | grep -o '[ƒ
 #           measurement arrives with it. A lesson that claimed otherwise here
 #           would be bluffing.
 #
-#           And a second, sharper limit, measured on Next 15.5.25: this diff is
+#           And a second, sharper limit, measured on Next 16.3.4: this diff is
 #           not an assertion even after Lesson 18.1. A layout that reads
 #           cookies() prerenders ZERO pages and still prints an identical symbol
 #           table — `●` means "has generateStaticParams", not "HTML exists". The
@@ -1671,7 +1673,7 @@ returned a `WP_Error`: set the current user first, since an autosave belongs to 
   `draftMode()`, `enable()`, `disable()` and the two cookies; read the caching notes, because they
   are the argument in Key Concept 3
 - [Next.js: `draftMode` API reference](https://nextjs.org/docs/app/api-reference/functions/draft-mode)
-  — short, and the place that confirms it is asynchronous in Next 15 along with `cookies()`
+  — short, and the place that confirms it is asynchronous in Next 16 along with `cookies()`
 - [WPGraphQL: previewing content](https://www.wpgraphql.com/docs/wpgraphql-vs-wp-rest-api) — the
   `asPreview` argument and the revision resolution behind it, which is the whole of Key Concept 4
 - [`preview_post_link` filter reference](https://developer.wordpress.org/reference/hooks/preview_post_link/)

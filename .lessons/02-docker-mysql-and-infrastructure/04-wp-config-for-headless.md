@@ -528,7 +528,7 @@ Description:       Deliberately empty theme for a headless install. Renders noth
                    application code lives in the blame-the-tech-core plugin, never here.
 Version:           1.0.0
 Requires at least: 6.7
-Requires PHP:      8.3
+Requires PHP:      8.4
 License:           GPL-2.0-or-later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain:       btt-headless

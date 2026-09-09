@@ -18,7 +18,7 @@ Module 01.
 | 12 | `wp-content/mu-plugins/blame-seeder/` — determinism fixes to the Module 04 seeder, plus `wp blame fixture export|load|status` (dev/CI only, never in the production image) |
 | 13 | `wp-content/plugins/blame-the-tech-blocks/` — six blocks, `block.json` each, `@wordpress/scripts` build, `theme.json` |
 | 15 | JWT configuration and `incident_reporter` hardening |
-| 23 | `tests/` — Pest + Brain Monkey unit tests run in the `composer` service, `wp-phpunit` integration tests in the `wordpress` container, `phpunit.xml.dist`, and a `wp_test` database created by one idempotent `exec` rather than a Compose edit |
+| 23 | `tests/` — Pest + Brain Monkey unit tests and `wp-phpunit` integration tests, both executed in the `phptest` service (PHP 8.3, while the site runs 8.4 — Lesson 23.4 §1.1), `phpunit.xml.dist`, and a `wp_test` database created by one idempotent `exec` rather than a Compose edit |
 | 24 | `Dockerfile` (multi-stage, non-root, opcache; **WP-CLI stays**, because `release_command` is four `wp` invocations), `.dockerignore`, `fly.toml`, `railway.json`, `phpstan.neon`, `includes/health.php`, `includes/observability.php`, `mu-plugins/000-btt-hardening.php` |
 | 17 | `includes/Preview.php` — preview token issue and the `/wp-json/btt/v1/preview/verify` endpoint |
 | 18 | `includes/Revalidate.php` — the HMAC-signed revalidation webhook |
@@ -60,8 +60,8 @@ wordpress-headless/
     │   │   │   └── admin/
     │   │   └── tests/                          (M23)
     │   │       ├── Pest.php  bootstrap.php  wp-tests-config.php
-    │   │       ├── Unit/         Pest + Brain Monkey — the `composer` service
-    │   │       └── Integration/  wp-phpunit — the `wordpress` container
+    │   │       ├── Unit/         Pest + Brain Monkey — the `phptest` service
+    │   │       └── Integration/  wp-phpunit — the `phptest` service + db
     │   └── blame-the-tech-blocks/         (M13, M14)
     │       ├── blame-the-tech-blocks.php
     │       ├── package.json
@@ -95,7 +95,7 @@ patterns are themselves lessons.
 
 | Not committed | Why |
 |---|---|
-| WordPress core | It lives in the `btt-wp-core` named volume, copied out of the `wordpress:6.8-php8.3-apache` image at first boot and shared with the `wpcli` service. Nothing in this directory is core, and nothing here should be |
+| WordPress core | It lives in the `btt-wp-core` named volume, copied out of the `wordpress:7.1-php8.4-apache` image at first boot and shared with the `wpcli` service. Nothing in this directory is core, and nothing here should be |
 | `wp-content/plugins/*` except our two | Third-party plugins are installed by the bootstrap script with `wp plugin install`, pinned by version |
 | `wp-content/themes/*` except `btt-headless` | The image entrypoint copies the three bundled core themes onto that bind mount at first boot — about 14 MB of WordPress core. Same allowlist pattern as `plugins` |
 | `wp-content/uploads/` | Media lives in a named Docker volume locally and in R2/S3 in production |

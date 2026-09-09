@@ -47,7 +47,7 @@ everything else through wp-admin. Both shapes share an assumption: the deployabl
 on. That assumption is what MAMP, `wp-admin` plugin installs and "just FTP the fix" all rest on.
 
 This repository breaks that assumption on purpose. WordPress core is not in git — it comes from
-the `wordpress:6.8-php8.3-apache` image. Third-party plugins are not in git — they are
+the `wordpress:7.1-php8.4-apache` image. Third-party plugins are not in git — they are
 installed by a pinned bootstrap command. `wp-config.php` is not in git — it is generated from
 environment variables when the container boots. What *is* in git is exactly the code you wrote,
 plus the declarative description of the environment that runs it. The ADR habit is the same
@@ -96,7 +96,7 @@ Two application directories, two deployment targets, two runtimes, one `git log`
 
 | Directory | What deploys from it | Target platform | Runtime | Built by |
 |---|---|---|---|---|
-| `wordpress-headless/` | a Docker image | Fly.io (Railway taught alongside) | PHP 8.3 + Apache in a container | Modules 02–06, 13, 15, 17–18, 20, 23–24 |
+| `wordpress-headless/` | a Docker image | Fly.io (Railway taught alongside) | PHP 8.4 + Apache in a container | Modules 02–06, 13, 15, 17–18, 20, 23–24 |
 | `next-app/` | a Node build output | Vercel | Node 22 on the platform's serverless/edge runtime | Modules 07–24 |
 | `.lessons/` | nothing | — | — | ships complete |
 | `docs/` | nothing | — | — | you, one file per decision |
@@ -148,7 +148,7 @@ to have.
 
 | Question | `wordpress-headless/` | `next-app/` |
 |---|---|---|
-| Does the runtime version matter? | yes — PHP 8.3, specific extensions, MySQL 8 | yes, but `.nvmrc` + `nvm` already pins it |
+| Does the runtime version matter? | yes — PHP 8.4, specific extensions, MySQL 8 | yes, but `.nvmrc` + `nvm` already pins it |
 | How often do you edit its files? | occasionally (plugin PHP) | constantly, with a watcher running |
 | Cost of a bind mount on macOS | acceptable — three directories | severe — `node_modules` and `.next` are tens of thousands of small files |
 | Is the local runtime the production runtime? | yes, literally the same image (Module 24) | no — Vercel's runtime is not something you run locally anyway |
@@ -262,7 +262,7 @@ the following, and each absence has a named replacement:
 
 | Not committed | Where it comes from instead | Introduced |
 |---|---|---|
-| WordPress core | the `wordpress:6.8-php8.3-apache` image | Lesson 02.1 |
+| WordPress core | the `wordpress:7.1-php8.4-apache` image | Lesson 02.1 |
 | Third-party plugins | a pinned bootstrap: `wp plugin install <slug> --version=x.y.z --activate` | Module 03 |
 | `wordpress-headless/wp-config.php` | generated from environment variables at container boot | Lesson 02.4 |
 | `wp-content/uploads/` | the `btt-uploads` named volume locally; R2/S3 in production | Lessons 02.2, Module 24 |
@@ -288,7 +288,7 @@ type(scope): subject
 
   feat(wp): register the incident post type
   fix(graphql): guard createIncident against anonymous callers
-  chore(deps): bump next to 15.1.2
+  chore(deps): bump next to 16.3.4
   feat(graphql)!: rename Incident.scapegoats to Incident.blamedOn
   └──┬─┘ └──┬──┘│ └──────────────────┬───────────────────────┘
      │       │  │                    └── imperative, lower case, no full stop
@@ -406,7 +406,7 @@ git --version
 
 **Verify §1:**
 
-- [ ] `node -v` prints `v22.` — **not** `v20.`, **not** `v23.`. Next.js 15, the block build and
+- [ ] `node -v` prints `v22.` — **not** `v20.`, **not** `v23.`. Next.js 16, the block build and
       every test runner in this course are exercised against 22 LTS.
 - [ ] `docker compose version` prints `v2.` If your machine only has the hyphenated
       `docker-compose` binary, that is Compose v1 and it is end-of-life. This course uses the

@@ -6,7 +6,7 @@ Before starting this module you should have completed:
 
 - **Module 03** — the `incident_reporter` role and the capability matrix in [appendix 03 §6](../appendix/03-content-model-reference.md#6-roles-and-capabilities)
 - **Module 06** — the guarded mutations `createIncident` and `registerDeveloper` ([appendix 03 §7](../appendix/03-content-model-reference.md#7-custom-graphql-fields-and-mutations))
-- **Module 09** — `middleware.ts`, route handlers, the `[locale]` segment
+- **Module 09** — `proxy.ts`, route handlers, the `[locale]` segment
 - **Module 10** — `fetchGraphQL`, `fetchGraphQLAuthed` and the `import 'server-only'` guard
 - **Module 14** — `BlockRenderer`, so editor-composed pages already render
 
@@ -51,7 +51,7 @@ cd next-app && npm test -- --run && npx playwright test
 - A hardened `incident_reporter` role: no wp-admin, no media, no `publish_incidents`
 - `registerDeveloper` wired to a public `/register` page, with `users_can_register` still off
 - `src/lib/auth/{cookies,session,guards}.ts` and `src/actions/auth.ts`
-- `/api/auth/refresh`, plus middleware that refreshes a near-expiry token without a round trip per request
+- `/api/auth/refresh`, plus proxy that refreshes a near-expiry token without a round trip per request
 - Guarded `/account` and `/incidents/submit` routes that redirect anonymous visitors to `/login`
 
 After this module the app has real users. They register, verify, log in, see their own name in
@@ -66,7 +66,7 @@ is Module 16.
 | 02 | [WPGraphQL JWT Authentication](02-wpgraphql-jwt-authentication.md) | WPGraphQL JWT, `Authorization: Bearer` | Working `login` / `refreshJwtAuthToken`, secrets split |
 | 03 | [Public Registration & Roles](03-public-registration-and-roles.md) | `registerDeveloper`, `map_meta_cap` | `/register`, `/verify`, a locked-down reporter role |
 | 04 | [httpOnly Cookie Sessions in Next.js](04-httponly-cookie-sessions-in-next.md) | `cookies()`, `SameSite`, refresh rotation | `src/lib/auth/`, `src/actions/auth.ts`, `/api/auth/refresh` |
-| 05 | [Authorization & Hardening](05-authorization-and-hardening.md) | Route guards, CSRF, rate limits | `guards.ts`, middleware gate, the entry-point matrix |
+| 05 | [Authorization & Hardening](05-authorization-and-hardening.md) | Route guards, CSRF, rate limits | `guards.ts`, proxy gate, the entry-point matrix |
 
 ## Who Decides What
 
@@ -79,7 +79,7 @@ live on either side, and every one of them lives in WordPress.
 | Is this JWT signed and unexpired? | WordPress, on every call | Next holds no signing secret — see [appendix 04 §5](../appendix/04-env-reference.md#5-why-graphql_jwt_auth_secret_key-must-differ-from-auth_key) |
 | May this user create an incident? | WordPress (`create_incidents`) | A capability check in Next is advisory decoration |
 | May this user publish it? | WordPress — and the answer is no, structurally | The capability does not exist for the role |
-| Should the browser be sent to `/login`? | Next (middleware + guards) | Purely a UX redirect, never the security boundary |
+| Should the browser be sent to `/login`? | Next (proxy + guards) | Purely a UX redirect, never the security boundary |
 | Is this token close to expiry? | Next, by reading `exp` | A cheap heuristic, not a verification |
 
 ## The Login Flow

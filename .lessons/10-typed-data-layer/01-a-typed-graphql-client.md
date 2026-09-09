@@ -487,7 +487,7 @@ export type TypedDocumentNode<TResult, TVariables> = DocumentNode & {
 
 /** Everything `fetchGraphQL` accepts. Note what is absent: `cache`, `headers`, `method`. */
 export type FetchGraphQLOptions = {
-  /** Seconds. `false` caches until a tag invalidates it. Omit and Next 15 does not cache. */
+  /** Seconds. `false` caches until a tag invalidates it. Omit and Next 16 does not cache. */
   readonly revalidate?: number | false;
   /** Built by `src/lib/graphql/tags.ts` from Lesson 10.3 — never hand-typed at a call site. */
   readonly tags?: readonly string[];

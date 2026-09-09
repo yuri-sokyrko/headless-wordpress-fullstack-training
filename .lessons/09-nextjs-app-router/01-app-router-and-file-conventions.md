@@ -110,7 +110,7 @@ each one tells you what Module 09 is deliberately leaving out.
 | `page.tsx` | Makes the segment routable. Receives `params` and `searchParams`. | 09.1, 09.2, 09.3, 09.4 |
 | `layout.tsx` | Wraps everything below it. Persists across navigation. Receives `children`. | **09.1** (the root layout) |
 | `route.ts` | An HTTP endpoint. Exports `GET`, `POST`, … Cannot coexist with `page.tsx` in the same folder. | **09.5** (`/api/health`) |
-| `middleware.ts` | Runs *before* the router, on every matched request. One file per project. | **09.5** |
+| `proxy.ts` | Runs *before* the router, on every matched request. One file per project. | **09.5** |
 | `loading.tsx` | The Suspense fallback for the segment below it. | Module 10 (Lesson 10.4) |
 | `error.tsx` | A client-side error boundary for the segment. | Module 10 (Lesson 10.4) |
 | `not-found.tsx` | The UI rendered when `notFound()` is thrown below it. | Module 10 (Lesson 10.4) |
@@ -157,9 +157,9 @@ not get.
 > constraint that occasionally forces a route redesign, and it is better to hit it now, in a
 > paragraph, than in Module 15.
 
-### 4. `params` and `searchParams` are Promises. This is the Next 15 change
+### 4. `params` and `searchParams` are Promises. This is the Next 16 change
 
-In Next 14, `params` was a plain object and you wrote `params.slug`. **In Next 15 both `params`
+In Next 14, `params` was a plain object and you wrote `params.slug`. **In Next 16 both `params`
 and `searchParams` are Promises, and every access is `await`ed.** Every blog post, Stack Overflow
 answer and generated snippet written before late 2024 gets this wrong, and the failure mode is
 ugly: `params.locale` is `undefined` at runtime, or in development you get a warning about
@@ -171,7 +171,7 @@ export default function Page({ params }: { params: { locale: string } }) {
   return <html lang={params.locale} />;
 }
 
-// ✅ Next 15. The component is async and the props type says Promise. — (illustration)
+// ✅ Next 16. The component is async and the props type says Promise. — (illustration)
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   return <html lang={locale} />;
@@ -231,7 +231,7 @@ The argument is retrofit cost. Here is what adding the segment in Module 20 woul
 | `generateStaticParams` functions to extend with `locale` | 3 | ~8 |
 | `redirect()` / `notFound()` call sites to re-check | 6 | ~20 |
 | Playwright specs with hard-coded paths | 0 | the whole `e2e/` suite |
-| Middleware `matcher` to rewrite | — | 1, and it is the fiddly one |
+| Proxy `matcher` to rewrite | — | 1, and it is the fiddly one |
 
 Cost of doing it now: **one folder**, plus `await params` in files that are already `async`, plus
 one `generateStaticParams` returning a single-element array. That asymmetry is the entire content
@@ -258,9 +258,9 @@ GET /                 →  nothing matches  →  no layout at all  →  Next's b
 ```
 
 A request to `/` gets Next's built-in 404 page, not yours, because there is no layout above the
-`[locale]` segment for a custom 404 to render inside. This is why Lesson 09.5's middleware is not
+`[locale]` segment for a custom 404 to render inside. This is why Lesson 09.5's proxy is not
 cosmetic: something has to put the locale prefix on, and `/` and `/incidents` are 404s until it
-does. The Verification block below proves that 404 deliberately, so that the middleware has a
+does. The Verification block below proves that 404 deliberately, so that the proxy has a
 visible problem to solve.
 
 `src/app/global-error.tsx` (Lesson 10.4) is the exception that proves the rule: it renders its own
@@ -293,12 +293,17 @@ which is worth more on a project you will maintain for two years than it is on a
 
 ### 9. Turbopack, and the three env files
 
-`next dev --turbopack` runs the development server on Turbopack, the Rust bundler that is stable
-for `dev` in Next 15. It is meaningfully faster on cold start and on the recompile after a save,
-which matters because this course asks you to keep the dev server running for the next sixteen
-modules. `next build` is left alone and uses webpack: a Turbopack build exists but is newer than
-the rest of this toolchain, and a production build is the last place to want novelty. If Turbopack
-ever misbehaves, drop the flag — `next dev` alone is always valid.
+There is no `--turbopack` flag in the scripts you are about to write, and its absence is the
+point. **Next 16 made Turbopack the default for both `next dev` and `next build`** — the Rust
+bundler is no longer opt-in, and the flag every Next 15 tutorial tells you to add is now a no-op.
+It is meaningfully faster on cold start and on the recompile after a save, which matters because
+this course asks you to keep the dev server running for the next sixteen modules.
+
+Two consequences worth knowing before they surprise you. First, `next build` is a Turbopack build
+now; if you ever add a custom `webpack` block to `next.config.ts`, the build **fails** rather than
+silently ignoring it, and the escape hatch is `next build --webpack`. Second, Turbopack caches
+compiler artifacts to disk between runs, so a cold `next dev` after the first one is much faster —
+and `rm -rf .next` is the first thing to try when the dev server starts behaving impossibly.
 
 Next reads env files in a fixed order, and the first file to define a variable wins:
 
@@ -362,11 +367,11 @@ npm view next license
 npm view @next/eslint-plugin-next license
 # Expected: MIT for both. Anything with "GPL" in it does not get installed here.
 
-npm install next@^15
+npm install next@^16
 npm install --save-dev @next/eslint-plugin-next
 ```
 
-React and `react-dom` are already at 19 from Lesson 08.1, which is what Next 15 wants. Now the
+React and `react-dom` are already at 19 from Lesson 08.1, which is what Next 16 wants. Now the
 scripts. The Vite harness from Module 08 is about to be deleted, so look at what is there before
 you overwrite it:
 
@@ -374,7 +379,7 @@ you overwrite it:
 npm pkg get scripts
 # Expected: your Module 07 scripts plus whatever you named the Vite harness in Lesson 08.1.
 
-npm pkg set scripts.dev="next dev --turbopack"
+npm pkg set scripts.dev="next dev"
 npm pkg set scripts.build="next build"
 npm pkg set scripts.start="next start"
 ```
@@ -384,9 +389,10 @@ If the harness script had a name of its own rather than reusing `dev`, delete it
 
 **Verify §2:**
 
-- [ ] `npm pkg get scripts.dev` prints `"next dev --turbopack"`.
+- [ ] `npm pkg get scripts.dev` prints `"next dev"` — no `--turbopack`, because on Next 16
+      Turbopack is the default and the flag is redundant.
 - [ ] `npm pkg get scripts` contains no command starting with `vite`.
-- [ ] `npm ls next` reports a single `next@15.x` — not two versions, and not `UNMET`.
+- [ ] `npm ls next` reports a single `next@16.x` — not two versions, and not `UNMET`.
 
 ### Step 3: Point TypeScript at Next — four changes, no more
 
@@ -422,7 +428,7 @@ them yourself, so the file stays a document you wrote rather than one a tool rew
 ```
 
 The `include` widening from `src/**/*.ts` to `**/*.ts` is what brings `next.config.ts` and
-`middleware.ts` into the type-check. `noEmit: true` stays: `tsc` still only judges, and Next still
+`proxy.ts` into the type-check. `noEmit: true` stays: `tsc` still only judges, and Next still
 does all the compiling.
 
 **Verify §3:**
@@ -591,7 +597,7 @@ export default async function LocaleLayout({
   params,
 }: {
   readonly children: ReactNode;
-  // Next 15: params is a Promise. See Key Concept 4.
+  // Next 16: params is a Promise. See Key Concept 4.
   readonly params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
@@ -706,7 +712,7 @@ could not run in it.)
 - We own `next.config.ts`, the `tsconfig.json` compiler options and the ESLint blocks, and
   we do not inherit future scaffold defaults for free.
 - Every route is one segment deeper, forever, and every `<Link href>` must carry a locale.
-- `/` and `/incidents` are 404s until Lesson 09.5's middleware exists.
+- `/` and `/incidents` are 404s until Lesson 09.5's proxy exists.
 
 ## What would reverse this
 (Name the conditions honestly — e.g. a single-locale product with a hard commitment never
@@ -747,7 +753,7 @@ npm run type-check && npm run lint
 # Expected: no output from either
 
 # 6. NEGATIVE — there is no root page, so `/` is Next's built-in 404.
-#    This is the problem Lesson 09.5's middleware solves. Do not "fix" it here.
+#    This is the problem Lesson 09.5's proxy solves. Do not "fix" it here.
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/incidents
 # Expected: 404 and 404
@@ -782,7 +788,7 @@ ls docs/adr/
 ```
 
 If check 6 returns anything other than 404, you have an extra `page.tsx` somewhere above
-`[locale]` — find it and delete it, because a root page would shadow the middleware redirect and
+`[locale]` — find it and delete it, because a root page would shadow the proxy redirect and
 make Lesson 09.5 look broken.
 
 ## Control Questions
@@ -812,8 +818,8 @@ make Lesson 09.5 look broken.
 - [`layout.tsx` API reference](https://nextjs.org/docs/app/api-reference/file-conventions/layout) —
   the `children` and `params` contract, and the rules that apply only to the root layout
 - [`page.tsx` API reference](https://nextjs.org/docs/app/api-reference/file-conventions/page) — the
-  `params` and `searchParams` props, in their Next 15 Promise form
-- [Upgrading to Next.js 15](https://nextjs.org/docs/app/guides/upgrading/version-15) — the async
+  `params` and `searchParams` props, in their Next 16 Promise form
+- [Upgrading to Next.js 16](https://nextjs.org/docs/app/guides/upgrading/version-16) — the async
   request APIs section is the change in Key Concept 4, in the maintainers' own words
 - [Dynamic route segments](https://nextjs.org/docs/app/api-reference/file-conventions/dynamic-routes)
   — `[slug]`, `[...slug]` and `[[...slug]]` compared, plus the sibling-segment constraint

@@ -71,7 +71,7 @@ ceremony; it is the removal of a single point of failure who also takes holidays
 Where the analogy breaks is the discipline that makes CI meaningful and has no FTP equivalent
 whatsoever: **CI must test the artifact that ships.** FTP had a sort of accidental honesty about
 this — you uploaded the exact files and those exact files ran. A CI pipeline can very easily test
-something that is not what you deploy: run E2E against `wordpress:6.8` from Docker Hub while
+something that is not what you deploy: run E2E against `wordpress:7.1` from Docker Hub while
 production runs your multi-stage image with opcache on, `DISALLOW_FILE_MODS` set and no dev
 plugins, and you have built an elaborate apparatus for testing a different application. Every
 difference between the tested environment and the deployed one is a bug that CI is structurally
@@ -451,7 +451,9 @@ jobs:
       contents: read
     uses: ./.github/workflows/_php.yml
     with:
-      # Matches the wordpress:6.8-php8.3-apache base image (Lesson 02.2).
+      # Matches the `phptest` runner (Lesson 23.4 §1.1), NOT the
+      # wordpress:7.1-php8.4-apache application image. Pest 1 does not run on
+      # 8.4; PHPCS's `testVersion 8.4-` is what covers the deployed interpreter.
       php-version: '8.3'
 ```
 
@@ -556,7 +558,7 @@ YAML
 docker pull "$BTT_WP_IMAGE"
 docker compose up -d --wait
 
-# `wpcli` is wordpress:cli-php8.3 and ships no WordPress of its own; it sees core
+# `wpcli` is wordpress:cli-php8.4 and ships no WordPress of its own; it sees core
 # through the shared btt-wp-core volume, which Docker initialises from the BUILT
 # image. This one command is what proves that worked, and it is the same
 # invocation e2e/global-setup.ts uses.
@@ -710,6 +712,10 @@ on:
       php-version:
         required: false
         type: string
+        # 8.3, NOT the 8.4 the application runs on. This job's job is to execute
+        # Pest 1, and Pest 1 dies on 8.4 — Lesson 23.4 §1.1. The 8.4 coverage
+        # comes from PHPCS's `testVersion 8.4-` in the PHPCS step below, which
+        # is why that step is load-bearing rather than cosmetic.
         default: '8.3'
 
 permissions:
@@ -731,7 +737,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8.4
         env:
           # No literal password in a tracked file. The wp_test USER and its
           # password are created in a step below, generated per run and masked.
@@ -747,8 +753,10 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          # 8.3, matching wordpress:6.8-php8.3-apache. A CI PHP that differs from
-          # the image's is a test suite for a different interpreter.
+          # 8.3, matching the local `phptest` service rather than the
+          # application image. Deliberate, and the reason is at the input
+          # default above: the runner and the runtime are split, and PHPCS
+          # carries the 8.4 half.
           php-version: ${{ inputs.php-version }}
           tools: composer:v2
           coverage: none
@@ -808,7 +816,7 @@ jobs:
 
 - [ ] `grep -c -- '--standard' .github/workflows/_php.yml` is **`0`**. If you find yourself
       wanting one, `phpcs.xml.dist` is in the wrong directory.
-- [ ] The `php-version` default is `8.3`.
+- [ ] The `php-version` default is `8.3`, and the comment above it says why it is not `8.4`.
 - [ ] `grep -c 'wp_test' .github/workflows/_php.yml` is `5` or more, and `root` appears only in
       the user-creation step. The suite never runs as `root` and never touches the development
       database.
@@ -1244,7 +1252,7 @@ grep -n 'btt-wp' .github/workflows/_docker-wp.yml | grep -c 'github.sha'
 grep -rn ':latest' .github/workflows/ | grep -vc 'ubuntu-latest'
 # Expected: 0. `:latest` is whatever main last pushed, which is not what you
 #           are reviewing, and it makes the whole pipeline decorative.
-grep -rc 'wordpress:6.8-php8.3-apache' .github/workflows/
+grep -rc 'wordpress:7.1-php8.4-apache' .github/workflows/
 # Expected: 0 for every file — the dev image is not what production runs
 
 # 3. NEGATIVE — pull_request_target appears nowhere
@@ -1325,7 +1333,7 @@ grep -rc 'npm test' .github/workflows/
 # Expected: 0 — `npm test` is watch mode and would hang until the job timeout.
 #           `npm run test:coverage` and `npx playwright test` are the forms used.
 
-# 10. PHP is 8.3, matching the image
+# 10. PHP is 8.3, matching the phptest runner — NOT the application image
 grep -A1 'php-version:' .github/workflows/_php.yml | grep -c "'8.3'"
 # Expected: 1 or more
 

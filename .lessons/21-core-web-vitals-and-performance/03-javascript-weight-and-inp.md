@@ -149,9 +149,11 @@ to look for the biggest box. The **skill** is to look for the biggest box **you 
 
 Three practical rules. **Read `client.html`, not `nodejs.html`** — the analyzer emits three
 reports and only one is the browser's. **Compare, do not admire**: one treemap says what is
-there, two say whether you changed anything. And **match it against the build table** — the
-treemap is uncompressed bytes while `next build` reports gzipped First Load JS, so a box that
-looks enormous may be highly compressible text.
+there, two say whether you changed anything. And **match it against the manifest figure** — the
+treemap is uncompressed bytes while the First Load JS number from Lesson 09.2 §9 is gzipped, so a
+box that looks enormous may be highly compressible text. (Next 16 prints no sizes in the build
+output at all, which is why the comparison is against a number you computed rather than one you
+read.)
 
 ### 4. Barrels, tree shaking, and the finding that is a non-finding
 
@@ -418,7 +420,7 @@ Read `client.html` and nothing else — `nodejs.html` is server code that never 
 the six budgeted routes, note the chunk that owns it and answer one question: **what is the
 largest rectangle in here that I did not deliberately choose?**
 
-Record it as a table with four columns — route, First Load JS in gzip from `next build`, the
+Record it as a table with four columns — route, First Load JS in gzip from the 09.2 §9 command, the
 largest box you did not choose, and its uncompressed bytes — one row per budgeted route. Step 9
 copies it into `docs/perf-baseline.md`, and you will compare against it twice before the lesson
 ends.

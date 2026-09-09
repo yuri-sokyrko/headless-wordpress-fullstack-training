@@ -363,12 +363,30 @@ cd next-app
 npm run build 2>&1 | tee /tmp/btt-build-before.txt | sed -n '/Route (app)/,$p' | head -40
 ```
 
-Five columns, three of which matter here: the marker before each route (`○` static, `●` has
-`generateStaticParams`, `ƒ` dynamic), `Size` (the route's own JavaScript) and `First Load JS`
-(the route's JavaScript **plus** the shared chunks — the budgeted number). Next 15.5 also prints
-`Revalidate` and `Expire`, and `Revalidate` is worth knowing: it appears only when something was
-genuinely prerendered with ISR, which makes it the one column that can contradict the marker.
-`●` means the route *has* `generateStaticParams`, not that any HTML came out of it.
+What matters here is the marker before each route (`○` static, `●` has `generateStaticParams`,
+`ƒ` dynamic), plus the `Revalidate` and `Expire` columns. `Revalidate` is worth knowing: it appears
+only when something was genuinely prerendered with ISR, which makes it the one column that can
+contradict the marker. `●` means the route *has* `generateStaticParams`, not that any HTML came
+out of it.
+
+What is **not** in this table any more is size. Next 16 removed the `Size` and `First Load JS`
+columns, so the budgeted number comes from the build manifests instead — the command is in
+[Lesson 09.2 §9](../09-nextjs-app-router/02-server-vs-client-components.md), and Lesson 21.4 turns
+it into a gate. Capture it now, beside the table:
+
+```bash
+# next-app
+node -e '
+const { gzipSync } = require("node:zlib");
+const { readFileSync } = require("node:fs");
+const read = (p) => JSON.parse(readFileSync(".next/" + p, "utf8"));
+const shared = read("build-manifest.json").rootMainFiles;
+const kb = (f) => gzipSync(readFileSync(".next/" + f), { level: 9 }).length / 1024;
+for (const [route, chunks] of Object.entries(read("app-build-manifest.json").pages)) {
+  const files = [...new Set([...shared, ...chunks])].filter((f) => f.endsWith(".js"));
+  console.log(route.padEnd(40), files.reduce((s, f) => s + kb(f), 0).toFixed(1) + " kB");
+}' | tee /tmp/btt-jsbytes-before.txt
+```
 
 The markers should match Lesson 18.1's table: `/[locale]/hobt` static, `/[locale]/incidents`
 dynamic, the three `[slug]` routes prerendered. If they do not, stop. Something after Module 18
@@ -384,7 +402,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/en/hobt
 **Verify §1:**
 
 - [ ] `npm run build` exits 0 and prints a `Route (app)` table.
-- [ ] `/tmp/btt-build-before.txt` exists and contains `First Load JS`. You need it in Step 4.
+- [ ] `/tmp/btt-build-before.txt` exists, and `/tmp/btt-jsbytes-before.txt` has one kB figure
+      per route. You need both in Step 4.
 - [ ] The markers match Lesson 18.1's rendering-strategy table, route for route.
 - [ ] `curl` returns `200`, so `npm start` is serving the build and not a stale `.next`.
 
@@ -512,7 +531,7 @@ export function routePattern(pathname: string): string {
   const OTHER = '/[locale]/(other)';
   const segments = pathname.split('/').filter((segment) => segment !== '');
 
-  // `/` never reaches a page — middleware redirects it, localePrefix is
+  // `/` never reaches a page — proxy redirects it, localePrefix is
   // 'always' (Lesson 20.3) — but a beacon can still be queued mid-redirect.
   if (segments.length === 0) return OTHER;
 
@@ -790,7 +809,7 @@ export async function POST(request: Request): Promise<Response> {
 > does not export, so there is no `GET` handler to forget to remove — and Verification asserts it
 > anyway, because "the framework handles this" is a claim worth testing once.
 
-Middleware does not touch this route: `config.matcher` has excluded `api` since Lesson 09.5 and no
+Proxy does not touch this route: `config.matcher` has excluded `api` since Lesson 09.5 and no
 lesson may edit it, so the `POST` arrives without a locale redirect. That is why the client posts
 to `/api/vitals` and not `/en/api/vitals`.
 

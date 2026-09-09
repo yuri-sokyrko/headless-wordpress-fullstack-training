@@ -95,11 +95,11 @@ The five services and why each exists:
 
 | Service | Image | Published | Why it is here |
 |---|---|---|---|
-| `wordpress` | `wordpress:6.8-php8.3-apache` | `8080 → 80` | The CMS. One container, Apache and `mod_rewrite` behaving exactly like the shared hosting you know. |
-| `db` | `mysql:8.0` | `3306 → 3306` | The database. The port is published so you can run `EXPLAIN` from your host in Lesson 02.3. |
+| `wordpress` | `wordpress:7.1-php8.4-apache` | `8080 → 80` | The CMS. One container, Apache and `mod_rewrite` behaving exactly like the shared hosting you know. |
+| `db` | `mysql:8.4` | `3306 → 3306` | The database. The port is published so you can run `EXPLAIN` from your host in Lesson 02.3. |
 | `adminer` | `adminer:5` | `8081 → 8080` | A 4 MB SQL console. Its "SQL command" tab renders `EXPLAIN` plans as a table, which is what makes Lesson 02.3 possible. |
 | `mailpit` | `axllent/mailpit` | `8025 → 8025`, `1025 → 1025` | Captures every `wp_mail()` so registration and lead notifications are inspectable and **never leave your machine**. |
-| `wpcli` | `wordpress:cli-php8.3` | — | WP-CLI. Run with `docker compose run --rm wpcli …`. |
+| `wpcli` | `wordpress:cli-php8.4` | — | WP-CLI. Run with `docker compose run --rm wpcli …`. |
 
 > **The stock `wordpress` image does not include WP-CLI.** This surprises almost everyone. That
 > is why `wpcli` is a separate service on the same network, sharing the same volumes and the
@@ -186,7 +186,7 @@ wordpress container                        wordpress container
                                                                     │ shared
 wpcli container                            wpcli container          │
   /var/www/html  ← wp-content only ❌         /var/www/html  ←───────┘   ✅
-  `wp` → "not a WordPress installation"     `wp core version` → 6.8.x
+  `wp` → "not a WordPress installation"     `wp core version` → 7.1.x
 ```
 
 Two consequences worth knowing now rather than discovering later. `docker compose down -v`
@@ -456,7 +456,7 @@ name: btt
 
 services:
   wordpress:
-    image: wordpress:6.8-php8.3-apache
+    image: wordpress:7.1-php8.4-apache
     depends_on:
       db:
         condition: service_healthy
@@ -493,13 +493,16 @@ services:
     restart: unless-stopped
 
   db:
-    image: mysql:8.0
+    image: mysql:8.4
     command:
-      # Pinned to 8.0, where this flag still exists. It is NOT for PHP: mysqlnd
-      # 8.3 in the wordpress image connects to caching_sha2_password accounts
-      # perfectly well. It is for third-party GUI clients, and MySQL 8.0.46
-      # already logs both this option and the plugin as deprecated at boot.
-      - --default-authentication-plugin=mysql_native_password
+      # No authentication flag here, deliberately. MySQL 8.0 tutorials all pass
+      # `--default-authentication-plugin=mysql_native_password`; that option was
+      # REMOVED in 8.4 and the server now refuses to start with "unknown variable".
+      # Nothing is lost: mysqlnd in the PHP 8.4 wordpress image speaks
+      # caching_sha2_password perfectly well, and so does Adminer 5. If a legacy
+      # GUI client of yours cannot, the 8.4 spelling is `--mysql-native-password=ON`
+      # plus `--authentication-policy=mysql_native_password` — an opt-in to a
+      # deprecated plugin, not a default. Do not add it just because a blog post did.
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     env_file:
@@ -549,7 +552,7 @@ services:
   wpcli:
     # The stock wordpress image has no WP-CLI. This service provides it.
     # Run with:  docker compose run --rm wpcli wp <command>
-    image: wordpress:cli-php8.3
+    image: wordpress:cli-php8.4
     # Run-on-demand, and the profile is what makes that true. Without it `up`
     # starts this container too, its default command (`wp shell`) exits, and
     # `up -d --wait` then reports "container wpcli-1 exited" and returns 1.
@@ -735,7 +738,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/
 # 3. WP-CLI can see WordPress at all. This is the check that fails if btt-wp-core
 #    is missing from either service, and it fails before anything else does.
 docker compose run --rm wpcli wp core version
-# Expected: 6.8.x
+# Expected: 7.1.x
 #           "This does not seem to be a WordPress installation" means the core
 #           volume is absent from one of the two services. Key Concept 3.
 

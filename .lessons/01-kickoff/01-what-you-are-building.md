@@ -78,7 +78,7 @@ the last column as the real specification — the satire is scaffolding.
 | Blog | `/[locale]/blog` | core `post`, rewrite base `blog` | editors | Custom Gutenberg blocks, core block mapping |
 | Tech reviews | `/[locale]/reviews` | `tech_review` + `Tech Review Fields` | editors only | ACF repeaters, ratings, JSON-LD `Review` |
 | HOBT promo | `/[locale]/hobt` | core `page` + `HOBT Promo` + blocks | editors, block-composed | Lead capture into a non-post table, SSG |
-| Auth | `/[locale]/login`, `/register`, `/account` | `wp_users` + a custom role | — | JWT in httpOnly cookies, middleware guards |
+| Auth | `/[locale]/login`, `/register`, `/account` | `wp_users` + a custom role | — | JWT in httpOnly cookies, proxy guards |
 
 The exact names in the third column are fixed by
 [appendix 03](../appendix/03-content-model-reference.md) and are not yours to change. That is

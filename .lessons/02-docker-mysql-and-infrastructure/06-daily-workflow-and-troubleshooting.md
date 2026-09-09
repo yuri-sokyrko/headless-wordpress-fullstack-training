@@ -126,9 +126,9 @@ belt and braces costs nothing and a `Makefile` that works in a fresh clone witho
 worth more than the two characters it saves.
 
 > **One correction to make to your mental model.** WP-CLI does **not** live in the `wordpress`
-> container. The stock `wordpress:6.8-php8.3-apache` image ships no `wp` binary at all — and no
+> container. The stock `wordpress:7.1-php8.4-apache` image ships no `wp` binary at all — and no
 > `composer` either. That is precisely why `docker-compose.yml` declares a separate `wpcli`
-> service on `wordpress:cli-php8.3`, sharing the same network, environment and volumes. The
+> service on `wordpress:cli-php8.4`, sharing the same network, environment and volumes. The
 > `cli` image runs as `www-data`, and Lesson 02.2 pins it to uid 33 so that user means the same
 > thing in both containers — so `-u www-data` is unnecessary, and `--allow-root` is **accepted
 > but pointless**: it is a WP-CLI global flag that only does something when the process really
@@ -342,7 +342,7 @@ wpx theme list --status=active --field=name
 
 **Verify §1:**
 
-- [ ] `wpx core version` prints a version starting `6.8`.
+- [ ] `wpx core version` prints a version starting `7.1`.
 - [ ] `wpx plugin list` prints a table. An empty table is fine — no plugins yet.
 - [ ] `wpx theme list --status=active --field=name` prints `btt-headless` from Lesson 02.4.
 
@@ -508,11 +508,11 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait
 
 | Service | Image | Published | Purpose |
 |---|---|---|---|
-| `wordpress` | `wordpress:6.8-php8.3-apache` | `8080` → `80` | The CMS, Apache, PHP 8.3 |
-| `db` | `mysql:8.0` | `3306` (dev only) | MySQL. Data in the `btt-db-data` volume. |
+| `wordpress` | `wordpress:7.1-php8.4-apache` | `8080` → `80` | The CMS, Apache, PHP 8.4 |
+| `db` | `mysql:8.4` | `3306` (dev only) | MySQL. Data in the `btt-db-data` volume. |
 | `adminer` | `adminer:5` | `8081` → `8080` | SQL console and query plans |
 | `mailpit` | `axllent/mailpit` | `8025` UI, `1025` SMTP | Captured mail |
-| `wpcli` | `wordpress:cli-php8.3` | — | WP-CLI, run on demand. `profiles: ['cli']` keeps it out of `up` and `ps` by design. |
+| `wpcli` | `wordpress:cli-php8.4` | — | WP-CLI, run on demand. `profiles: ['cli']` keeps it out of `up` and `ps` by design. |
 
 Project name `btt`, network `btt-net`. Database name and user are both `btt` — never `root`
 for the application.
@@ -588,7 +588,7 @@ contains names and `__CHANGE_ME__` placeholders only.
 
 | Not committed | Why |
 |---|---|
-| WordPress core | Comes from the `wordpress:6.8-php8.3-apache` image |
+| WordPress core | Comes from the `wordpress:7.1-php8.4-apache` image |
 | Third-party plugins | Installed with `wp plugin install`, pinned by version |
 | The three bundled core themes | The entrypoint copies them onto the `themes` bind mount at first boot — ~14 MB of WordPress core. `.gitignore` ignores `wp-content/themes/*` and re-includes `btt-headless` only |
 | `wp-config.php` | Written from the environment; gitignored |
@@ -657,7 +657,7 @@ docker compose ps
 make help | head -3
 # Expected: the help header plus the first targets
 make wp ARGS="core version"
-# Expected: 6.8.x
+# Expected: 7.1.x
 
 # 3. The correct WP-CLI invocation reaches the database
 docker compose run --rm wpcli wp option get siteurl

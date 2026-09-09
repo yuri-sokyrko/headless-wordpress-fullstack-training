@@ -18,7 +18,7 @@ production bugs and pin the blame on inanimate objects, tech stacks, or solar fl
 | **Blog** | `/[locale]/blog` | editors | Custom Gutenberg blocks, core block mapping |
 | **Tech reviews** | `/[locale]/reviews` | editors only | ACF repeaters, ratings, JSON-LD `Review` schema |
 | **HOBT promo** | `/[locale]/hobt` | editors, block-composed | Lead capture, "Get Demo" dialog, "Start Now" CTA, SSG |
-| **Auth** | `/[locale]/login`, `/register`, `/account` | — | JWT in httpOnly cookies, middleware guards |
+| **Auth** | `/[locale]/login`, `/register`, `/account` | — | JWT in httpOnly cookies, proxy guards |
 
 **HOBT** — *How To Omit Blaming Tech* — is the fictional product the site upsells: a course
 for PMs and developers. Its landing page is entirely editor-composed from custom blocks, which
@@ -39,8 +39,8 @@ Next.js runs on the **host**. Everything else runs in Docker Compose.
 │           │                                                                     │
 │   ┌───────▼───────────────────────────────────────┐                             │
 │   │ next-app        `npm run dev`  (NOT in Docker)│                             │
-│   │ Next.js 15 App Router · Node 22 · Turbopack   │                             │
-│   │ RSC fetch + Server Actions + middleware       │                             │
+│   │ Next.js 16 App Router · Node 22 · Turbopack   │                             │
+│   │ RSC fetch + Server Actions + proxy.ts         │                             │
 │   │ :3000                                         │                             │
 │   └───────────────┬───────────────────▲───────────┘                             │
 │                   │                   │                                         │
@@ -53,7 +53,7 @@ Next.js runs on the **host**. Everything else runs in Docker Compose.
 │ │                                                                             │ │
 │ │  ┌────────────────────────────┐  ┌─────────────┐  ┌──────────────────────┐  │ │
 │ │  │ wordpress                  │  │ adminer     │  │ mailpit              │  │ │
-│ │  │ wordpress:6.8-php8.3-apache│  │ :8081       │  │ UI  :8025            │  │ │
+│ │  │ wordpress:7.1-php8.4-apache│  │ :8081       │  │ UI  :8025            │  │ │
 │ │  │ :8080 → 80                 │  │             │  │ SMTP :1025           │  │ │
 │ │  │                            │  │ raw SQL,    │  └──────────▲───────────┘  │ │
 │ │  │ /graphql   /wp-admin       │  │ EXPLAIN     │             │ wp_mail()    │ │
@@ -68,7 +68,7 @@ Next.js runs on the **host**. Everything else runs in Docker Compose.
 │ │  └─────────────┬──────────────┘         │                    │              │ │
 │ │                │ mysqli :3306           │                    │              │ │
 │ │  ┌─────────────▼──────────────────────────────────┐──────────┘              │ │
-│ │  │ mysql:8.0                                      │                         │ │
+│ │  │ mysql:8.4                                      │                         │ │
 │ │  │ :3306 published — for EXPLAIN drills (Mod. 02) │                         │ │
 │ │  │ named volume: btt-db-data                      │                         │ │
 │ │  │ healthcheck: mysqladmin ping                   │                         │ │
@@ -89,7 +89,7 @@ Browser              Next.js (:3000)                  WordPress (:8080)      MyS
    │                        │                                  │                │
    │ GET /en/incidents/dns  │                                  │                │
    ├───────────────────────▶│                                  │                │
-   │                        │ middleware: locale + auth gate   │                │
+   │                        │ proxy: locale + auth gate       │                │
    │                        │ ISR cache HIT? ── yes ─────────────────────────┐  │
    │                        │        │ no                                   │  │
    │                        │        ▼                                      │  │
@@ -142,7 +142,7 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
    end users  ─────────▶│  Vercel Edge Network (CDN)               │
    (HTTPS)              │  ├─ static assets, ISR HTML cache        │
                         │  └─ Node 22: RSC, Server Actions,        │
-                        │     middleware, route handlers           │
+                        │     proxy.ts, route handlers             │
                         └────┬──────────────────────────▲──────────┘
                              │ POST /graphql            │ POST /api/revalidate
                              │ TLS 1.2+, server-only    │ HMAC-SHA256 signed
@@ -206,7 +206,7 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
 
 | Module | What lands |
 |---|---|
-| 09 | `next` + `next.config.ts`, `app/[locale]/` route shells, `middleware.ts`, `/api/health` |
+| 09 | `next` + `next.config.ts`, `app/[locale]/` route shells, `proxy.ts`, `/api/health` |
 | 10 | `src/lib/graphql/` client, `codegen.ts`, `src/gql/`, `src/graphql/` documents, error boundaries |
 | 11 | `tailwind.config.ts`, `components.json`, `src/components/ui/`, the app shell |
 | 12 | `vitest.config.ts`, `playwright.config.ts`, first specs |
@@ -228,13 +228,13 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
 |---|---|---|
 | Container runtime | Docker, Docker Compose | 02 |
 | Database | MySQL 8, Adminer, `EXPLAIN` | 02 |
-| CMS | WordPress 6.8, PHP 8.3 | 02 |
+| CMS | WordPress 7.1, PHP 8.4 | 02 |
 | Content model | Custom post types, taxonomies, ACF (Local JSON) | 03–04 |
 | Tooling (PHP) | Composer, PSR-4, WP-CLI, PHPCS, PHPStan | 03, 07, 23 |
 | API | WPGraphQL + Content Blocks / ACF / Yoast / Polylang / JWT | 05–06 |
 | Language | TypeScript (strict) | 07 |
 | UI library | React 19 | 08 |
-| Framework | Next.js 15 App Router, RSC, Server Actions | 09 |
+| Framework | Next.js 16 App Router, RSC, Server Actions | 09 |
 | Data layer | `fetch` + graphql-codegen `TypedDocumentNode` | 10 |
 | Styling | Tailwind 4, shadcn/ui, Radix, `cva` | 11 |
 | Blocks | `@wordpress/scripts`, `block.json`, `@wordpress/data` | 13–14 |

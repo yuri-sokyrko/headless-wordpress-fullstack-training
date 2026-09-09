@@ -33,7 +33,7 @@ Browser ──▶ index.php ──▶ wp-load.php ──▶ parse_request()
 ### Headless
 
 ```
-Browser ──▶ Vercel ──▶ middleware.ts ──▶ app/[locale]/incidents/[slug]/page.tsx
+Browser ──▶ Vercel ──▶ proxy.ts ──▶ app/[locale]/incidents/[slug]/page.tsx
                                               │
                                               ▼
                                       await fetchGraphQL(IncidentBySlug)

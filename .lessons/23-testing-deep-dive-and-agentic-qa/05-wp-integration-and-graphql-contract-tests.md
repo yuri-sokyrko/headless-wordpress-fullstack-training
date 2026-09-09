@@ -61,7 +61,7 @@ The environment choice is where the interesting comparison lives, and it deserve
 
 | Option | What it is | Verdict |
 |---|---|---|
-| **The existing Compose `wordpress` container** | `docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest` | **Chosen.** Same PHP 8.3, same extensions, same image as production. One stack to reason about. (Composer itself runs from a `composer` service — the stock image has neither Composer nor WP-CLI.) |
+| **The `phptest` service from Lesson 23.4** | `docker compose run --rm -w /var/www/html/$PLUGIN phptest vendor/bin/pest` | **Chosen.** Same WordPress image family and the same extensions as production, on PHP 8.3 rather than 8.4 — because Pest 1, which WordPress core's PHPUnit 9 forces on us, will not run on 8.4. Lesson 23.4 §1.1 is the whole argument and the cost. One stack to reason about. (Composer itself runs from a `composer` service — the stock image has neither Composer nor WP-CLI.) |
 | `wp-env` | The Gutenberg team's Docker-based test environment | A second Docker stack, a second PHP version, a second set of ports. Worth knowing, not worth running here. |
 | `wp scaffold plugin-tests` + a host MySQL | The classic `bin/install-wp-tests.sh` path | Works, and reintroduces "works on my machine" for everyone whose local PHP differs. |
 
@@ -212,16 +212,17 @@ one PHPUnit, both suites. Never patch anything under `vendor/`. Lesson 24.4 inst
 | | Suite 3 — unit | Suite 4 — integration |
 |---|---|---|
 | Needs WordPress | no — it is mocked out | **yes**, plus a real MySQL |
-| Local invocation | `docker compose run --rm composer run test:unit` | `docker compose exec -T -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest --testsuite=integration` |
-| Why not the other container | the stock `wordpress` image has **no Composer binary** | the `composer` service has **no database**, so the bootstrap guard returns early and WordPress is never loaded |
+| Local invocation | `docker compose run --rm phptest vendor/bin/pest --testsuite=unit` | `docker compose run --rm phptest vendor/bin/pest --testsuite=integration` |
+| Why not the `composer` service | its image runs a PHP newer than Pest 1 tolerates (Lesson 23.4 §1.1) | same, plus it has **no database** on its network, so the bootstrap guard would return early and WordPress would never load |
 | On a CI runner | `composer test:unit` | `composer test:integration` — both verbatim |
 
-Read the last row. On a runner with PHP, Composer and a MySQL service, both run by name. Locally
-only the first does, because the container that has WordPress has no Composer and the container
-that has Composer has no WordPress. That asymmetry is a teaching point rather than a wart: **a
-Composer script documents a command; it does not guarantee every host can run it** — as true of
-every `package.json` script you have written. Declaring `test:integration` anyway is what makes
-Lesson 24.4's `_php.yml` a three-line job instead of a copied incantation.
+Read the last row. On a runner with PHP 8.3, Composer and a MySQL service, both run **by name**.
+Locally neither does, because the container that installs your dependencies is not the container
+that may execute them. That gap is a teaching point rather than a wart: **a Composer script
+documents a command; it does not guarantee every host can run it** — as true of every
+`package.json` script you have written. Declaring both anyway is what makes Lesson 24.4's
+`_php.yml` a three-line job instead of a copied incantation, and it is why that workflow pins
+`php-version: '8.3'`.
 
 ### 6. ACF field-group keys are a public contract
 
@@ -434,8 +435,8 @@ from truncating your development content.
 # registrations against a WordPress this site does not run, which is the exact
 # divergence the table above rejects the container's copy for.
 docker compose run --rm composer require --dev \
-  wp-phpunit/wp-phpunit:~6.8.0 \
-  roots/wordpress-no-content:~6.8.0 \
+  wp-phpunit/wp-phpunit:~7.1.0 \
+  roots/wordpress-no-content:~7.1.0 \
   yoast/phpunit-polyfills:^3.0
 ```
 
@@ -453,9 +454,9 @@ docker compose run --rm composer require --dev \
 That is an anchored edit to the `scripts` block Lesson 23.4 left with three entries — the rest of
 `composer.json` is unchanged.
 
-> **The quadruple, measured on PHP 8.3.** `pestphp/pest 1.23.1`, `phpunit/phpunit 9.6.36`,
-> `wp-phpunit/wp-phpunit 6.8.8`, `yoast/phpunit-polyfills 3.1.2` — plus `brain/monkey 2.7.0` and
-> `roots/wordpress-no-content 6.8.8`. Two traps in there. `pestphp/pest:^2.0` will not even resolve
+> **The quadruple, measured on PHP 8.4.** `pestphp/pest 1.23.1`, `phpunit/phpunit 9.6.36`,
+> `wp-phpunit/wp-phpunit 7.1.0`, `yoast/phpunit-polyfills 3.1.2` — plus `brain/monkey 2.7.0` and
+> `roots/wordpress-no-content 7.1.0`. Two traps in there. `pestphp/pest:^2.0` will not even resolve
 > beside `yoast/phpunit-polyfills:^3.0`, because the polyfills' PHPUnit range is
 > `^6.4.4 || ^7.0 || ^8.0 || ^9.0 || ^11.0` and **PHPUnit 10 is not in it**; relax the polyfills to
 > `^2.0` and it resolves and then dies at run time instead, per Key Concept 4. And Pest 1 needs PHP
@@ -695,7 +696,7 @@ if ( '' !== (string) getenv( 'WP_TESTS_DB_PASSWORD' ) ) {
 
 **Verify §4:**
 
-- [ ] `docker compose run --rm composer run test:unit` still reports 30 passing, with
+- [ ] `docker compose run --rm phptest vendor/bin/pest --testsuite=unit` still reports 30 passing, with
       `WP_TESTS_DB_PASSWORD` **unset** inside that container. The guard is what makes that true.
 - [ ] `grep -c 'getenv' tests/wp-tests-config.php` is **4 or more**, and
       `grep -cE "PASSWORD.*=.*'[A-Za-z0-9]" tests/wp-tests-config.php` is `0`. No credential is in
@@ -1083,10 +1084,10 @@ Run it:
 
 ```bash
 cd wordpress-headless
-docker compose exec -T \
+docker compose run --rm \
   -e WP_TESTS_DB_PASSWORD="$WP_TESTS_DB_PASSWORD" \
   -w /var/www/html/wp-content/plugins/blame-the-tech-core \
-  wordpress php vendor/bin/pest --testsuite=integration
+  phptest vendor/bin/pest --testsuite=integration
 ```
 
 The `-e` is how the password crosses into the container, from the shell that exported it in Step 1
@@ -1234,16 +1235,16 @@ docker compose run --rm composer exec -- pest --list-suites
 #           Read the count on each one, never the exit code alone.
 
 # 2. Suite 3 is unaffected by everything this lesson added
-docker compose run --rm composer run test:unit
+docker compose run --rm phptest vendor/bin/pest --testsuite=unit
 # Expected: 30 passed, in under a second of test time. WP_TESTS_DB_PASSWORD is not
-#           set inside the `composer` service, so tests/bootstrap.php returns early
-#           and Brain Monkey never meets a real WordPress.
+#           passed on this invocation, so tests/bootstrap.php returns early and
+#           Brain Monkey never meets a real WordPress.
 
-# 3. Suite 4 boots and runs, in the container that HAS WordPress
-docker compose exec -T \
+# 3. Suite 4 boots and runs — same container, with the database behind it
+docker compose run --rm \
   -e WP_TESTS_DB_PASSWORD="$WP_TESTS_DB_PASSWORD" \
   -w /var/www/html/wp-content/plugins/blame-the-tech-core \
-  wordpress php vendor/bin/pest --testsuite=integration
+  phptest vendor/bin/pest --testsuite=integration
 # Expected: several seconds of "Installing…" — WordPress installing itself into
 #           wp_test — then 17 tests. READ THE SKIP COUNT: every skip is a plugin
 #           this environment does not have, and a skipped test is not a passing one.

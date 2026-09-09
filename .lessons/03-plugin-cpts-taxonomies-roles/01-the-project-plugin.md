@@ -184,7 +184,7 @@ class.** Module 23 tests `includes/post-types.php` by firing `init` and assertin
 `get_post_type_object()`, which is a better test than asserting that a method was called.
 
 > **Composer is not in the WordPress image, and neither is WP-CLI.** The stock
-> `wordpress:6.8-php8.3-apache` image ships neither binary. WP-CLI comes from the `wpcli`
+> `wordpress:7.1-php8.4-apache` image ships neither binary. WP-CLI comes from the `wpcli`
 > service you already have; Composer gets a service of its own in Step 5. Because the plugin
 > directory is a bind mount, the `vendor/` tree Composer writes on your disk is immediately
 > visible inside the `wordpress` container, which does have PHP. See
@@ -499,7 +499,7 @@ No dependencies yet. You are here for the autoloader.
     "optimize-autoloader": true,
     "sort-packages": true,
     "platform": {
-      "php": "8.3"
+      "php": "8.4"
     }
   }
 }
@@ -507,7 +507,7 @@ No dependencies yet. You are here for the autoloader.
 
 That file goes at `wordpress-headless/wp-content/plugins/blame-the-tech-core/composer.json`.
 Three keys are doing real work. `"Blame\\Core\\": "includes/"` — the double backslash is JSON
-escaping, not a typo; in PHP the prefix is `Blame\Core\`. `platform.php: "8.3"` pins what
+escaping, not a typo; in PHP the prefix is `Blame\Core\`. `platform.php: "8.4"` pins what
 Composer *resolves against* to the container's PHP, so it cannot pick a package the image
 cannot run. And `require.php: ">=8.1"` matches the `Requires PHP` header — two places
 deliberately, because WordPress reads the header and Composer reads this.
@@ -524,9 +524,9 @@ service to `docker-compose.yml`, alongside `wpcli`:
     # Pinned to a Composer MINOR, not to `composer:2`, so a resolver change
     # cannot land on you mid-course. There is deliberately no PHP in this tag:
     # the official image publishes no `-phpX.Y` variants, and `composer:2.9`
-    # currently runs PHP 8.5 even though this plugin targets 8.3. That is why
+    # currently runs PHP 8.5 even though this plugin targets 8.4. That is why
     # `config.platform.php` in Step 4's composer.json is not optional — it is
-    # what makes RESOLUTION target 8.3. Anything Module 23 EXECUTES here still
+    # what makes RESOLUTION target 8.4. Anything Module 23 EXECUTES here still
     # executes on the image's PHP, which is newer than production's.
     image: composer:2.9
     # Run-on-demand, same as wpcli: without a profile, `up` starts this container,
@@ -676,7 +676,7 @@ docker compose run --rm wpcli wp option get btt_core_version
 # 6. ...and that option does NOT autoload (Lesson 02.3's hot-path rule)
 docker compose run --rm wpcli wp db query \
   "SELECT autoload FROM wp_options WHERE option_name='btt_core_version';"
-# Expected: off   (or "no" on MySQL 8.0 before WP 6.6 changed the value spelling)
+# Expected: off   (or "no" on WordPress before 6.6, which spelled the values differently)
 
 # 7. NEGATIVE: the plugin refuses to run without its autoloader
 mv wp-content/plugins/blame-the-tech-core/vendor/autoload.php /tmp/autoload.php.bak

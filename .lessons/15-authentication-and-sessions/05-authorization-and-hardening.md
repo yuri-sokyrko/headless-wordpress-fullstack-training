@@ -3,7 +3,7 @@ title: 'Authorization & Hardening'
 module: 15
 lesson: 5
 teaches: [route-guards, entry-point-matrix, csrf-defence-in-depth, rate-limiting, wordpress-as-authority]
-produces: ['next-app/src/lib/auth/guards.ts', 'next-app/src/middleware.ts', 'next-app/src/app/[locale]/account/layout.tsx', 'next-app/src/app/[locale]/account/page.tsx', 'next-app/src/app/[locale]/incidents/submit/page.tsx']
+produces: ['next-app/src/lib/auth/guards.ts', 'next-app/src/proxy.ts', 'next-app/src/app/[locale]/account/layout.tsx', 'next-app/src/app/[locale]/account/page.tsx', 'next-app/src/app/[locale]/incidents/submit/page.tsx']
 requires: [15.3, 15.4]
 ---
 
@@ -17,7 +17,7 @@ decision — whether to render a page or redirect the browser to `/login` — an
 experience** decision, not a security boundary. If your guard in `guards.ts` were deleted, the
 worst outcome would be an ugly empty account page; the mutation behind it would still refuse,
 because `create_incidents` is checked in PHP by WordPress's own authorization layer. Say that out
-loud before you write the guard, because the opposite belief — that the middleware is the
+loud before you write the guard, because the opposite belief — that the proxy is the
 protection — is how headless apps ship with an unprotected mutation behind a protected page.
 
 The centrepiece of this lesson is an artifact rather than a feature: an **entry-point
@@ -35,7 +35,7 @@ By the end of this lesson you will have:
 
 - `src/lib/auth/guards.ts` — `requireSession()` and `requireCapability()`, both server-only, both
   documented as UX redirects rather than security boundaries
-- `middleware.ts` extended to gate `/account` and `/incidents/submit`, refresh a near-expiry
+- `proxy.ts` extended to gate `/account` and `/incidents/submit`, refresh a near-expiry
   `btt_at`, and preserve the `[locale]` segment on redirect
 - A guarded `/en/account` (layout + page) showing the viewer's display name and roles, rendered
   `force-dynamic` and never cached
@@ -56,11 +56,11 @@ check lives next to the write. And CSRF has its own layer entirely: `wp_nonce_fi
 
 | Classic WordPress | This stack |
 |---|---|
-| `is_user_logged_in()` + `wp_redirect( wp_login_url() )` | `requireSession()` in a layout, `middleware.ts` for the redirect |
+| `is_user_logged_in()` + `wp_redirect( wp_login_url() )` | `requireSession()` in a layout, `proxy.ts` for the redirect |
 | `current_user_can( 'publish_incidents' )` | unchanged — still `current_user_can()`, still in PHP |
 | `check_admin_referer()` / `wp_verify_nonce()` | Next's Origin/Host check on Server Actions + `SameSite` |
 | `map_meta_cap` narrowing `edit_post` to one post | unchanged — WordPress still owns per-object authorization |
-| `admin_init` capability bouncer | `middleware.ts` matcher |
+| `admin_init` capability bouncer | `proxy.ts` matcher |
 | A REST `permission_callback` | the AuthZ column of the entry-point matrix |
 
 **Where the analogy breaks down:** in Classic WordPress the page and the write happen in the same
@@ -68,7 +68,7 @@ PHP request, so a capability check placed anywhere in that request protects both
 in different runtimes on different machines, potentially in different data centres, and an
 attacker can call the write without ever requesting the page. The page guard and the mutation
 guard are no longer two views of one check — they are two separate checks, and only one of them
-is load-bearing. Treating middleware as security is the single most common headless
+is load-bearing. Treating proxy as security is the single most common headless
 authorization failure, and it is comfortable precisely because it *feels* like `admin_init`.
 
 The second break: WordPress nonces are tied to a user and an action and expire, so they double as
@@ -104,12 +104,12 @@ nothing about data.
 > deleted tomorrow, the worst outcome is an ugly empty account page.** The mutation behind it still
 > refuses, in PHP, because `create_incidents` is checked where the write happens (Lesson 06.2 §2)
 > and the capability does not exist for an unverified reporter (Lesson 15.3 §4). Verification check
-> 11 deletes the middleware and shows exactly that.
+> 11 deletes the proxy and shows exactly that.
 
-### 2. Middleware is not security, and the reason it feels like it is
+### 2. Proxy is not security, and the reason it feels like it is
 
 This is the single most common security mistake in Next.js applications, and the reason it keeps
-happening is that a middleware gate **resembles `admin_init`**. In Classic WordPress, a capability
+happening is that a proxy gate **resembles `admin_init`**. In Classic WordPress, a capability
 check on `admin_init` really does protect wp-admin, because the page and the write happen in the
 same PHP request. Place the check anywhere in that request and both are covered.
 
@@ -135,19 +135,21 @@ mutation behind it has no `current_user_can()` call because "the route is guarde
 
 Lesson 09.5 §7 gave the thirty-second review for this, and it is still the only one anyone needs:
 
-> **If deleting `src/middleware.ts` would make any data reachable that was not reachable before,
+> **If deleting `src/proxy.ts` would make any data reachable that was not reachable before,
 > the application is already broken.** That question has a yes-or-no answer. Ask it of every gate
 > you ever add.
 
-Middleware's actual contribution to security is one thing only: it saves a round trip for the
+Proxy's actual contribution to security is one thing only: it saves a round trip for the
 common case, and it saves a logged-out human from a broken page.
 
-### 3. What the restricted runtime can and cannot do
+### 3. What proxy can and cannot do
 
-Middleware runs in a small V8 isolate, not a Node process. Lesson 09.5 §6 listed the missing APIs;
-what matters here is which *auth* operations survive that constraint.
+Proxy runs in the Node.js runtime on Next 16, so the limits below are **not** the old
+edge-isolate limits — every one of them survives a full Node process. Lesson 09.5 §6 explains
+why reaching for Node APIs here is still the wrong instinct; what matters in this lesson is
+which *auth* operations are possible at all.
 
-| Middleware can | Middleware cannot |
+| Proxy can | Proxy cannot |
 |---|---|
 | read `request.cookies` — presence and value | read `cookies()` from `next/headers` (different API) |
 | do `exp` arithmetic with a base64url decode | verify a signature |
@@ -161,13 +163,13 @@ nothing to upgrade your way out of.
 
 There is also a concrete import boundary that will bite you the first time:
 
-> **`src/middleware.ts` cannot import a module that carries `import 'server-only'`.** The package
-> throws outside the `react-server` condition, and middleware is not a React Server Component
+> **`src/proxy.ts` cannot import a module that carries `import 'server-only'`.** The package
+> throws outside the `react-server` condition, and proxy is not a React Server Component
 > context. That is why Lesson 15.4 split the auth library in two: `src/lib/auth/jwt.ts` is pure
 > and runtime-agnostic — the cookie names and `decodeExpiry` live there — while `cookies.ts`,
-> `session.ts` and `guards.ts` all carry the guard. Middleware imports from `jwt.ts`. Reach for
+> `session.ts` and `guards.ts` all carry the guard. Proxy imports from `jwt.ts`. Reach for
 > `@/lib/auth/session` instead and the build fails with a message about `server-only` that will
-> not obviously be about middleware. Same reasoning as `tags.ts` and `errors.ts` in Module 10.
+> not obviously be about proxy. Same reasoning as `tags.ts` and `errors.ts` in Module 10.
 
 ### 4. The matcher does not change, and that is the finding
 
@@ -175,9 +177,9 @@ The instinct is that a new gate needs a new matcher. It does not, and looking at
 useful than editing the regex.
 
 Lesson 09.5 wrote `matcher: ['/((?!api|_next|favicon\\.ico|.*\\..*).*)']`, which already routes
-`/en/account` and `/en/incidents/submit` through middleware — they are page paths with no dot and
-no `api` or `_next` prefix. **The set of requests reaching middleware is byte-identical before and
-after this lesson. What changed is what middleware does with them.**
+`/en/account` and `/en/incidents/submit` through proxy — they are page paths with no dot and
+no `api` or `_next` prefix. **The set of requests reaching proxy is byte-identical before and
+after this lesson. What changed is what proxy does with them.**
 
 | Request | Before | After |
 |---|---|---|
@@ -189,7 +191,7 @@ after this lesson. What changed is what middleware does with them.**
 
 Two edits are tempting and both are wrong:
 
-**Adding `'/api/auth/:path*'` to the matcher.** Middleware would then run on
+**Adding `'/api/auth/:path*'` to the matcher.** Proxy would then run on
 `/api/auth/refresh` — the very endpoint it redirects to when a token is near expiry — and the
 redirect would loop. The `api` exclusion is what makes the hand-off in Key Concept 5 terminate.
 
@@ -201,16 +203,16 @@ about exactly this. Route handlers guard themselves, in their own code, where th
 > means the matcher in this application never changes again, and a matcher that never changes is a
 > matcher that cannot regress.
 
-### 5. Refreshing from middleware, and the price of a narrow `Path`
+### 5. Refreshing from proxy, and the price of a narrow `Path`
 
 Here is the awkward truth this lesson has to state rather than hide. `btt_rt` is scoped to
-`Path=/api/auth` (Lesson 15.4 §3), so **middleware running on `/en/account` never receives the
+`Path=/api/auth` (Lesson 15.4 §3), so **proxy running on `/en/account` never receives the
 refresh token.** It cannot refresh. Not "should not" — cannot.
 
 ```
    GET /en/account          Cookie: btt_at=…      ← btt_rt is NOT sent: wrong Path
         │
-   middleware: exp is 40s away, and I hold no refresh token
+   proxy: exp is 40s away, and I hold no refresh token
         │
         └──▶ 307 /api/auth/refresh?next=/en/account
                    │                    ← the browser DOES send btt_rt here
@@ -218,7 +220,7 @@ refresh token.** It cannot refresh. Not "should not" — cannot.
                    └─ refused → clear both cookies, 307 /en/login?next=/en/account
 ```
 
-So the implementation is a **hand-off**: middleware does the `exp` arithmetic, and the one endpoint
+So the implementation is a **hand-off**: proxy does the `exp` arithmetic, and the one endpoint
 that can see the refresh token does the work. Three properties make that safe rather than clever.
 The hand-off runs on **every** matched path, not only guarded ones, so a session renews while the
 user is reading public pages. A successful refresh returns a token with 300 seconds on it, which is
@@ -230,18 +232,18 @@ The three alternatives, and why each is worse:
 
 | Alternative | Why not |
 |---|---|
-| Give `btt_rt` `Path=/` so middleware can see it | throws away the blast-radius reduction that is the best thing about the cookie design |
+| Give `btt_rt` `Path=/` so proxy can see it | throws away the blast-radius reduction that is the best thing about the cookie design |
 | Add a non-secret "you have a session" hint cookie at `Path=/` | works, and appendix 04 §4 does not define one; a fourth cookie is a contract change, not a lesson's decision |
 | A client component polling `/api/auth/refresh` | ships JavaScript whose only job is a `POST`, and puts session lifetime in the browser's hands |
 
 **The cost, stated plainly:** an access cookie that has fully expired is indistinguishable, from
-middleware, from never having logged in — so five minutes of *complete* inactivity ends the
+proxy, from never having logged in — so five minutes of *complete* inactivity ends the
 session even though a 30-day refresh token is sitting in the browser. An active user never notices;
 an idle one signs in again. That is the price of the narrowest cookie in the application, it is
 worth paying, and it is written into `docs/quality-gates.md` rather than left as a surprise.
 
 And the anti-pattern the module README warns about is avoided by construction: **there is no
-WordPress round trip per request in middleware.** The `exp` read is arithmetic on a string.
+WordPress round trip per request in proxy.** The `exp` read is arithmetic on a string.
 
 ### 6. Guards on a layout, and what a layout guard does not cover
 
@@ -365,14 +367,14 @@ in this lesson.
 |---|---|---|
 | `fetchGraphQLAuthed` has `cache: 'no-store'` hard-coded and **no options parameter** | `src/lib/graphql/client.ts` (Lesson 10.1, edited 15.2) | an authenticated *response* entering Next's Data Cache — **unrepresentable**, not merely discouraged |
 | `export const dynamic = 'force-dynamic'` | `account/{layout,page}.tsx` | the *route* being prerendered or cached as HTML |
-| `Cache-Control: private, no-store` | set by middleware on guarded paths | a CDN or proxy in front of the app holding the HTML |
+| `Cache-Control: private, no-store` | set by proxy on guarded paths | a CDN or proxy in front of the app holding the HTML |
 
 The first row is the one to notice, because it is a design property rather than a discipline.
 There is no argument you can pass to `fetchGraphQLAuthed` that caches its result. A future
 colleague cannot get this wrong by being in a hurry; they would have to change the function's
 signature, which is a diff a reviewer sees.
 
-The second and third are belt and braces on top. `force-dynamic` is redundant in Next 15 for a
+The second and third are belt and braces on top. `force-dynamic` is redundant in Next 16 for a
 route that reads `cookies()` — it is already dynamic — and it is written anyway, for the same
 reason `/api/health` carries it (Lesson 09.5 §4): a statement of intent that survives a future
 default change and tells the next reader the absence of caching is deliberate.
@@ -479,17 +481,17 @@ export async function requireCapability(
       of `/incidents/submit` and the cause is invisible.
 - [ ] The login target is a template string, not `URLSearchParams`.
 
-### Step 2: Edit `middleware.ts`
+### Step 2: Edit `proxy.ts`
 
-An anchored replacement of the whole `middleware()` body. `config` is shown **unchanged**, and
+An anchored replacement of the whole `proxy()` body. `config` is shown **unchanged**, and
 that is deliberate — Key Concept 4.
 
 ```ts
-// next-app/src/middleware.ts — the full new middleware() body
+// next-app/src/proxy.ts — the full new proxy() body
 import { NextResponse, type NextRequest } from 'next/server';
 
 // From jwt.ts, NOT from session.ts: this file cannot import a module carrying
-// `import 'server-only'`, because middleware is not a react-server context.
+// `import 'server-only'`, because proxy is not a react-server context.
 // Lesson 15.4 §6 and Lesson 15.5 §3.
 import { AT_COOKIE, secondsUntilExpiry } from '@/lib/auth/jwt';
 
@@ -509,7 +511,7 @@ function isGuarded(pathname: string, locale: string): boolean {
   return GUARDED.some((prefix) => rest === prefix || rest.startsWith(`${prefix}/`));
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const firstSegment = pathname.split('/')[1] ?? '';
 
@@ -562,8 +564,8 @@ export function middleware(request: NextRequest): NextResponse {
 }
 
 // UNCHANGED from Lesson 09.5, and that is the finding rather than an oversight.
-// `/en/account` already reaches middleware: it is a page path with no dot and
-// no `api` or `_next` prefix. Adding '/api/auth/:path*' would run middleware on
+// `/en/account` already reaches proxy: it is a page path with no dot and
+// no `api` or `_next` prefix. Adding '/api/auth/:path*' would run proxy on
 // the endpoint step 2 redirects TO, and the redirect would loop. Removing the
 // `api` exclusion would send /api/health to /en/api/health. Lesson 15.5 §4.
 export const config = {
@@ -573,12 +575,12 @@ export const config = {
 
 **Verify §2:**
 
-- [ ] `git diff src/middleware.ts` shows **no change** to `config`. If the matcher moved, re-read
+- [ ] `git diff src/proxy.ts` shows **no change** to `config`. If the matcher moved, re-read
       Key Concept 4 before continuing.
 - [ ] The `exp` import is from `@/lib/auth/jwt`. Change it to `@/lib/auth/session` and
       `npm run build` fails with a `server-only` message — worth doing once, then undoing.
 - [ ] Both `?next=` values are built by assigning `search`, not by `searchParams.set()`.
-- [ ] `grep -c 'fetch(' src/middleware.ts` is `0`. No WordPress round trip, ever.
+- [ ] `grep -c 'fetch(' src/proxy.ts` is `0`. No WordPress round trip, ever.
 
 ### Step 3: Write the guarded `/account`
 
@@ -588,7 +590,7 @@ import type { ReactNode } from 'react';
 
 import { requireSession } from '@/lib/auth/guards';
 
-// Redundant in Next 15 for a route that reads cookies(), and written anyway:
+// Redundant in Next 16 for a route that reads cookies(), and written anyway:
 // a statement of intent that survives a future default change. Lesson 15.5 §10.
 export const dynamic = 'force-dynamic';
 
@@ -605,8 +607,8 @@ export default async function AccountLayout({
   // forgotten file away from an unguarded page (Lesson 15.5 §6).
   //
   // A layout cannot see the child's pathname, so the `next` value is the
-  // section root. The precise path is carried by the middleware redirect; this
-  // is the fallback for the case middleware did not catch — an RSC payload
+  // section root. The precise path is carried by the proxy redirect; this
+  // is the fallback for the case proxy did not catch — an RSC payload
   // request, say.
   await requireSession(locale, `/${locale}/account`);
 
@@ -816,7 +818,7 @@ questions. **Every cell has a real answer, and "n/a" always carries its reason.*
 3. **Validation is hand-written.** `src/actions/auth.ts` has a local `field()` helper. Expires in
    Lesson 16.1, which replaces it with `src/lib/validation/schemas.ts`.
 4. **Session lifetime is strict by construction.** `btt_rt` is scoped to `Path=/api/auth`, so
-   middleware cannot tell an expired session from no session. Five minutes of complete inactivity
+   proxy cannot tell an expired session from no session. Five minutes of complete inactivity
    ends the session. Accepted: it is the price of the narrowest cookie in the app (15.5 §5).
 
 ### The rules behind the columns
@@ -898,7 +900,7 @@ turns every Server Action into an `Invalid Server Actions request`.
 **Verify §8:**
 
 - [ ] All three are green. `npm test` alone is Vitest **watch mode** and never returns.
-- [ ] `git add -A && git commit -m "feat(auth): route guards, the middleware gate, the entry-point matrix"`.
+- [ ] `git add -A && git commit -m "feat(auth): route guards, the proxy gate, the entry-point matrix"`.
 
 ---
 
@@ -961,39 +963,39 @@ curl -s -o /dev/null -w '%{http_code}\n' -b "btt_at=$JWT" http://localhost:3000/
 # 9. NEGATIVE — that response must not be cacheable by anything in front of it
 curl -si -b "btt_at=$JWT" http://localhost:3000/en/account | grep -i '^cache-control'
 # Expected: a Cache-Control containing no-store. Next adds its own directives for a
-#           dynamic route; the middleware header is belt and braces on top.
+#           dynamic route; the proxy header is belt and braces on top.
 
-# 10. NEGATIVE — a garbage cookie is NOT a session. Middleware sees a cookie and
+# 10. NEGATIVE — a garbage cookie is NOT a session. Proxy sees a cookie and
 #     lets the request through; the GUARD asks WordPress, WordPress says no.
 curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' \
   -b 'btt_at=not.a.jwt' http://localhost:3000/en/account
 # Expected: 307 http://localhost:3000/api/auth/refresh?next=/en/account
 #           decodeExpiry() returned null, so secondsUntilExpiry() is 0, so the
 #           hand-off fires. With no btt_rt the refresh route then 307s to
-#           /en/login. Middleware never judged the token — it cannot.
+#           /en/login. Proxy never judged the token — it cannot.
 
-# 11. NEGATIVE — THE THESIS. Delete the middleware and nothing becomes reachable.
+# 11. NEGATIVE — THE THESIS. Delete the proxy and nothing becomes reachable.
 #     A /tmp copy, not `git checkout`: this file is not committed yet.
-cp src/middleware.ts /tmp/btt-middleware.ts
-rm src/middleware.ts
+cp src/proxy.ts /tmp/btt-proxy.ts
+rm src/proxy.ts
 sleep 3   # let the dev server recompile
 curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:3000/en/account
 # Expected: 307 http://localhost:3000/en/login?next=/en/account
-#           SAME ANSWER. The layout guard produced it this time. Middleware saved
+#           SAME ANSWER. The layout guard produced it this time. Proxy saved
 #           a render, not a boundary.
 curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
   -d '{"query":"mutation($i:CreateIncidentInput!){createIncident(input:$i){incident{databaseId}}}",
-       "variables":{"i":{"title":"No middleware probe 155","scapegoatSlug":"dns","severitySlug":"s3-minor",
+       "variables":{"i":{"title":"No proxy probe 155","scapegoatSlug":"dns","severitySlug":"s3-minor",
                          "occurredAt":"2024-06-01 09:00:00","downtimeMinutes":1,"environment":"STAGING"}}}' \
   | jq -r '.errors[0].message'
 # Expected: You must be signed in to submit an incident.
-#           With Next's middleware DELETED, WordPress still refuses. That is the
+#           With Next's proxy DELETED, WordPress still refuses. That is the
 #           whole module in two commands.
-cp /tmp/btt-middleware.ts src/middleware.ts
-rm /tmp/btt-middleware.ts
+cp /tmp/btt-proxy.ts src/proxy.ts
+rm /tmp/btt-proxy.ts
 sleep 3
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/api/health
-# Expected: 200   — middleware is back and the matcher still excludes /api
+# Expected: 200   — proxy is back and the matcher still excludes /api
 
 # 12. NEGATIVE — no capability check in TypeScript, anywhere
 grep -rn 'current_user_can' src/ ; echo "exit=$?"
@@ -1029,12 +1031,12 @@ grep -c 'force-dynamic' 'src/app/[locale]/account/layout.tsx'
 grep -c "import 'server-only'" src/lib/auth/guards.ts
 # Expected: 1
 grep -rn "'btt_at'\|'btt_rt'" src/ | grep -v 'src/lib/auth/jwt.ts'
-# Expected: no output — including middleware.ts, which imports the constant
+# Expected: no output — including proxy.ts, which imports the constant
 
-# 17. NEGATIVE — middleware makes no network call and reads no secret
-grep -c 'fetch(' src/middleware.ts
+# 17. NEGATIVE — proxy makes no network call and reads no secret
+grep -c 'fetch(' src/proxy.ts
 # Expected: 0
-grep -cE 'GRAPHQL_JWT_AUTH_SECRET_KEY|WP_APP_TOKEN|jose|jsonwebtoken' src/middleware.ts
+grep -cE 'GRAPHQL_JWT_AUTH_SECRET_KEY|WP_APP_TOKEN|jose|jsonwebtoken' src/proxy.ts
 # Expected: 0
 
 # 18. The matrix exists, is filled in, and names its gaps
@@ -1060,14 +1062,14 @@ npx playwright test
 # 20. Clean up
 cd ../wordpress-headless
 docker compose run --rm wpcli wp post list --post_type=incident \
-  --title='No middleware probe 155' --format=count
+  --title='No proxy probe 155' --format=count
 # Expected: 0 — check 11's probe was refused, so there is nothing to delete
 git status --short
 # Expected: no .env file listed
 ```
 
 Checks 11 and 12 are the two that define this lesson, and they should be read together. Check 11
-deletes the middleware and gets the same refusal from two different layers. Check 12 shows there is
+deletes the proxy and gets the same refusal from two different layers. Check 12 shows there is
 no capability check in the TypeScript at all. Together they are the proof that Next.js is making
 user-experience decisions and WordPress is making authorization decisions — which is the sentence
 the whole module hangs on, and now you have run it rather than read it.
@@ -1077,28 +1079,28 @@ the whole module hangs on, and now you have run it rather than read it.
 1. A colleague moves the `/account` guard out of `account/layout.tsx` and into `account/page.tsx`,
    "so the guard is next to the thing it guards". Name the failure that becomes possible, say what
    would detect it, and give the one category of entry point a layout guard never covered anyway.
-2. `btt_rt` is scoped to `Path=/api/auth`, and Key Concept 5 says middleware therefore cannot
+2. `btt_rt` is scoped to `Path=/api/auth`, and Key Concept 5 says proxy therefore cannot
    refresh. Walk through what actually happens on `GET /en/account` when `btt_at` has 40 seconds
    left, name the two things that stop that hand-off looping, and state the user-visible cost the
    design accepts.
 3. `config.matcher` is byte-identical to Lesson 09.5's. Explain why `/en/account` already reached
-   middleware, then describe precisely what breaks if you add `'/api/auth/:path*'` and, separately,
+   proxy, then describe precisely what breaks if you add `'/api/auth/:path*'` and, separately,
    what breaks if you remove the `api` exclusion.
 4. `requireCapability()` fails **open** when `roles` is empty, while a rate limiter fails
    **closed** when Redis is unreachable. Both are "the check could not get its data". Justify the
    opposite decisions, and name the WPGraphQL behaviour that makes the empty-`roles` case common
    rather than theoretical.
-5. Verification check 11 deletes `src/middleware.ts` and the guarded route still redirects, while
+5. Verification check 11 deletes `src/proxy.ts` and the guarded route still redirects, while
    `createIncident` still refuses. Say which of those two facts is a security property and which is
-   a convenience, then describe the request shape that would have bypassed a middleware-only gate
+   a convenience, then describe the request shape that would have bypassed a proxy-only gate
    entirely.
 
 ## Learn More
 
-- [Next.js — Middleware](https://nextjs.org/docs/app/api-reference/file-conventions/middleware) —
+- [Next.js — Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy) —
   the `matcher` syntax, the runtime limits, and Next's own warning against using it for authorization
 - [Next.js — Authentication](https://nextjs.org/docs/app/guides/authentication) — Vercel's own
-  guidance, including the "optimistic checks in middleware, secure checks at the data layer" split
+  guidance, including the "optimistic checks in proxy, secure checks at the data layer" split
   this lesson implements
 - [Next.js — `serverActions.allowedOrigins`](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions) —
   the exact value format (host and port, no scheme) that Task Step 5 depends on

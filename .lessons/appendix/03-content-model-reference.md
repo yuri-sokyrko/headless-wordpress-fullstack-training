@@ -234,7 +234,7 @@ on the **root query**, so it can be fetched once in the root layout.
 | `primary_cta_url` | URL | `primaryCtaUrl` | |
 | `footer_blurb` | Textarea | `footerBlurb` | |
 | `social_links` | Repeater → `network` (Select), `url` (URL) | `socialLinks` | |
-| `btt_redirects` | Repeater → `from` (Text), `to` (Text), `permanent` (True/False) | `bttRedirects` | Read at **build** time by `next.config.ts` (Lesson 19.4), never by a page. Keep it to a few dozen rows — past that, middleware is the right home. |
+| `btt_redirects` | Repeater → `from` (Text), `to` (Text), `permanent` (True/False) | `bttRedirects` | Read at **build** time by `next.config.ts` (Lesson 19.4), never by a page. Keep it to a few dozen rows — past that, proxy is the right home. |
 | `incident_submission_open` | True/False | `incidentSubmissionOpen` | **a kill switch the Server Action must honour** |
 
 Navigation is **not** in Site Settings — it comes from core WordPress menus via

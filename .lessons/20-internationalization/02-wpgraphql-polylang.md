@@ -641,8 +641,8 @@ One file, four exports, and it is the only place in the application that knows `
 // next-app/src/lib/i18n/locale.ts
 // The locale vocabulary, and the untranslated-content policy, in one module.
 //
-// NO `import 'server-only'`: `middleware.ts` imports LOCALES from here, and
-// middleware is not a react-server context (Lesson 15.5 §3). The redirect helper
+// NO `import 'server-only'`: `proxy.ts` imports LOCALES from here, and
+// proxy is not a react-server context (Lesson 15.5 §3). The redirect helper
 // below is only ever called from a Server Component, and `redirect()` throws a
 // control-flow exception rather than performing I/O, so nothing here holds a
 // secret or touches the network.
@@ -772,10 +772,10 @@ export function localePathForUri(locale: Locale, node: TranslationLink): string 
 > green without an edit. If this course localised its segments, this line would be a second
 > mapper with a lookup table in it.
 
-Middleware needs the same list, so it stops carrying its own copy:
+Proxy needs the same list, so it stops carrying its own copy:
 
 ```ts
-// next-app/src/middleware.ts — edit: replace the two locale constants
+// next-app/src/proxy.ts — edit: replace the two locale constants
 import { DEFAULT_LOCALE, LOCALES } from '@/lib/i18n/locale';
 
 // DELETE these two lines from Lesson 09.5:
@@ -790,7 +790,7 @@ import { DEFAULT_LOCALE, LOCALES } from '@/lib/i18n/locale';
 
 - [ ] `npm run type-check` still fails — on route files only. If it now complains about
       `locale.ts`, the `Record<Locale, LanguageCodeEnum>` is missing a key.
-- [ ] `grep -c "'en'" src/middleware.ts` returns `0`. There is one list of locales in the
+- [ ] `grep -c "'en'" src/proxy.ts` returns `0`. There is one list of locales in the
       codebase.
 - [ ] `curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:3000/de/incidents`
       returns `200` — or a `500` from the still-unfixed call sites, but **not** a 307 to
@@ -815,9 +815,9 @@ import { isLocale, localeToLanguageCode } from '@/lib/i18n/locale';
 // …inside the component:
 //   const { locale } = await params;
 //
-//   // A route param is a string. Middleware would have redirected an unknown
+//   // A route param is a string. Proxy would have redirected an unknown
 //   // locale, and Lesson 15.5's thesis applies here too: a route does not rely on
-//   // middleware for correctness, because deleting middleware must not change what
+//   // proxy for correctness, because deleting proxy must not change what
 //   // is reachable.
 //   if (!isLocale(locale)) notFound();
 //

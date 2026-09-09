@@ -437,7 +437,7 @@ async function scan(page: Page, id: string): Promise<Partitioned> {
  * Go to a path and wait until the DOM is worth scanning.
  *
  * BE HONEST ABOUT THIS ONE. There is no public, stable "React has hydrated"
- * signal in Next 15, so `waitUntil: 'load'` plus a visible <main> is the best
+ * signal in Next 16, so `waitUntil: 'load'` plus a visible <main> is the best
  * this helper can do, and it does NOT prove that Lesson 20.3's locale switcher
  * has corrected its server-rendered state yet. This is the weakest assertion in
  * the file. Lesson 23.6 owns the switcher's hydration race and its `setup`

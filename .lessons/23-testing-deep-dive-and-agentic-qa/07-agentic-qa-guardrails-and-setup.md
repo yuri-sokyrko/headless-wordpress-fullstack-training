@@ -320,7 +320,7 @@ never in `.mcp.json` — which is committed, and therefore has no `env` block at
 
 Two honest notes on the hand-off. `btt_at` has `Max-Age=300`, so a five-minute-old state file
 would be useless on its own; it works because the state also carries `btt_rt` and Lesson 15.5's
-middleware performs the near-expiry hand-off on the agent's behalf. And a state file holds a live
+proxy performs the near-expiry hand-off on the agent's behalf. And a state file holds a live
 session, which is why `next-app/e2e/.auth/` has been gitignored since Module 01 — Step 1 checks
 that before creating one.
 
@@ -558,7 +558,7 @@ variable the seeder used, injected into the session that needs it and nowhere el
 
 - [ ] `jq -r '.cookies[].name' e2e/.auth/agent.json` lists `btt_at` **and** `btt_rt`. Without
       the refresh cookie the session dies after 300 seconds and every charter fails five minutes
-      in, which is a confusing failure. Lesson 15.5's middleware does the hand-off.
+      in, which is a confusing failure. Lesson 15.5's proxy does the hand-off.
 - [ ] `git status --short | grep -c '\.auth/'` returns `0`. That file is a live session.
 - [ ] Ask the agent: *"Open http://localhost:3000/en/account and tell me the display name."* It
       answers `E2E Agent` without being told a password.

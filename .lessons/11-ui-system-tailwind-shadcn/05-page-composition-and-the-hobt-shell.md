@@ -689,7 +689,7 @@ export default async function HobtPage({
 }: {
   readonly params: Promise<{ locale: string }>;
 }) {
-  // Next 15: params is a Promise.
+  // Next 16: params is a Promise.
   const { locale } = await params;
 
   const data = await fetchGraphQL(

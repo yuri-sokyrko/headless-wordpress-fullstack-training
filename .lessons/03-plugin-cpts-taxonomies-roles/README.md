@@ -33,7 +33,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/wp-admin/
 
 # 3. WP-CLI works inside the container
 docker compose run --rm wpcli wp core version
-# Expected: 6.8.x
+# Expected: 7.1.x
 
 # 4. The theme stub is active and the plugins directory is yours to write to
 docker compose run --rm wpcli wp theme list --status=active --field=name

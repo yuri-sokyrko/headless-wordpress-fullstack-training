@@ -38,7 +38,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:3000/api/reval
   becomes a `seo { ... }` field on every content node
 - **The Next.js Metadata API** — `generateMetadata`, `metadataBase`, `alternates`, and why it
   replaces `wp_head()` rather than imitating it
-- **File-based OG images** — `opengraph-image.tsx` rendering a real image at the edge, and when
+- **File-based OG images** — `opengraph-image.tsx` rendering a real image on request, and when
   the editor's uploaded image should win instead
 - **JSON-LD** — `Article`, `Review`, `BreadcrumbList`, `Organization` and `FAQPage`, emitted from
   data you already fetch, validated against the Rich Results test
