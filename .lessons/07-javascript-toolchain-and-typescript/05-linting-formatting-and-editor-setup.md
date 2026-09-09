@@ -3,7 +3,7 @@ title: 'Linting, Formatting & Editor Setup'
 module: 7
 lesson: 5
 teaches: [eslint-flat-config, prettier, phpcs-wordpress-standards, editor-integration, lint-vs-format]
-produces: ['next-app/eslint.config.mjs', 'next-app/.prettierrc', 'wordpress-headless/phpcs.xml.dist']
+produces: ['next-app/eslint.config.mjs', 'next-app/.prettierrc', 'wordpress-headless/wp-content/plugins/blame-the-tech-core/phpcs.xml.dist']
 requires: [7.3]
 ---
 
@@ -20,8 +20,8 @@ formatting and ESLint explicitly not fighting it, is the configuration this less
 ESLint's flat config format in `eslint.config.mjs`.
 
 Then the other language in the repository gets the same treatment.
-`wordpress-headless/phpcs.xml.dist` runs **PHP_CodeSniffer** with the WordPress Coding Standards
-over `blame-the-tech-core`, catching the things you would otherwise be told in review: missing
+The plugin's own `phpcs.xml.dist` runs **PHP_CodeSniffer** with the WordPress Coding
+Standards over `blame-the-tech-core`, catching the things you would otherwise be told in review: missing
 escaping on output, unprepared SQL, Yoda conditions, naming and documentation conventions. The
 security sniffs are the ones that earn their keep — PHPCS will flag an unescaped `echo` and an
 interpolated `$wpdb` query, both of which are invariants this course refuses to break. Finally
@@ -35,8 +35,8 @@ By the end of this lesson you will have:
   interoperation configured, not guessed
 - `next-app/.prettierrc` and the formatting settings aligned with the repository's
   `.editorconfig`
-- `wordpress-headless/phpcs.xml.dist` running WordPress Coding Standards over the plugin, with a
-  documented and minimal exclusion list
+- `blame-the-tech-core/phpcs.xml.dist` running WordPress Coding Standards over the plugin,
+  with a documented and minimal exclusion list
 - `npm run lint`, `npm run format:check` and `npm run type-check` all passing on a clean tree
 - `composer phpcs` passing over `blame-the-tech-core`, including the escaping and SQL sniffs
 - Format-on-save and inline diagnostics working in your editor for both TypeScript and PHP
@@ -184,8 +184,11 @@ off in the config with a comment explaining why — that decision is reviewable 
 Leaving it as a permanent warning is not a decision, it is a deferral.
 
 The same argument applies to `// eslint-disable-next-line`: acceptable with a reason on the same
-line, unacceptable bare. Module 24 adds `reportUnusedDisableDirectives` so that stale
-suppressions are themselves errors.
+line, unacceptable bare. The config in Step 2 already sets
+`linterOptions.reportUnusedDisableDirectives: 'error'`, so a suppression that stops being
+necessary is itself an error — which means a bare `eslint-disable` cannot quietly outlive the
+problem it was hiding. Lesson 23.7 leans on exactly that when it gives its selector-contract
+rule a one-line escape hatch.
 
 ### 5. PHPCS and the sniffs that actually earn their keep
 
@@ -247,7 +250,7 @@ cd next-app
 
 npm install --save-dev \
   eslint@^9 \
-  @eslint/js \
+  @eslint/js@^9 \
   typescript-eslint \
   eslint-config-prettier \
   prettier
@@ -255,7 +258,9 @@ npm install --save-dev \
 
 **Verify §1:**
 
-- [ ] `npx eslint --version` prints `v9.x`.
+- [ ] `npx eslint --version` prints `v9.x`. Both ESLint packages carry `@^9` for one reason:
+      `@eslint/js` has shipped a v10 that peer-requires `eslint@^10`, so leaving it unpinned next
+      to `eslint@^9` is an `ERESOLVE` failure rather than a warning.
 - [ ] `package.json` has all five under `devDependencies`, not `dependencies` — none of this
       ships to a user.
 
@@ -309,8 +314,16 @@ export default [
       // `any` defeats the entire point of Module 07. Use `unknown` and narrow.
       '@typescript-eslint/no-explicit-any': 'error',
 
-      // Stale suppressions are themselves errors.
-      // (Also set at the top level below, for files this block does not match.)
+      // `== null` is the one coercion worth keeping — it catches null AND
+      // undefined in one test, which is the check you actually want. Lesson
+      // 07.2 §8 promises this rule by name and permits exactly that form.
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+
+      // Stale suppressions are themselves errors. Scoped to this block, which is
+      // the TS/TSX surface — so a stale disable inside the `**/*.graphql` block
+      // Lesson 23.5 adds is NOT reported. Accepted: that block carries one rule.
+      // Lesson 23.7 relies on this setting when it gives its selector-contract
+      // rule a documented one-line escape hatch.
     },
     linterOptions: {
       reportUnusedDisableDirectives: 'error',
@@ -400,6 +413,17 @@ Composer nor WP-CLI — see [appendix 07 §2](../appendix/07-command-reference.m
 ```bash
 cd ../wordpress-headless
 
+# Allowlist the installer FIRST. `dealerdirect/phpcodesniffer-composer-installer`
+# is a Composer *plugin*, and Composer 2.2+ refuses to execute a plugin that is
+# not allowlisted. Skip this line and the `require` below ABORTS — exit 1, with a
+# `PluginManager.php` exception naming the blocked package — after having already
+# added the three packages to `require-dev`. So the honest failure mode is a
+# half-applied change rather than a silent one: your `composer.json` says the
+# standards are there and `vendor/` says they are not. Verify §5 below is what
+# tells the two apart.
+docker compose run --rm composer config --no-plugins \
+  allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+
 docker compose run --rm composer require --dev \
   wp-coding-standards/wpcs:^3.1 \
   phpcompatibility/phpcompatibility-wp:^2.1 \
@@ -408,12 +432,12 @@ docker compose run --rm composer require --dev \
 
 ```xml
 <?xml version="1.0"?>
-<!-- wordpress-headless/phpcs.xml.dist -->
+<!-- wordpress-headless/wp-content/plugins/blame-the-tech-core/phpcs.xml.dist -->
 <ruleset name="Blame The Tech Core">
   <description>WordPress Coding Standards for the blame-the-tech-core plugin.</description>
 
   <!-- What to scan -->
-  <file>wp-content/plugins/blame-the-tech-core</file>
+  <file>.</file>
   <exclude-pattern>*/vendor/*</exclude-pattern>
   <exclude-pattern>*/node_modules/*</exclude-pattern>
   <exclude-pattern>*/build/*</exclude-pattern>
@@ -450,12 +474,15 @@ docker compose run --rm composer require --dev \
     </properties>
   </rule>
 
-  <!-- Every global must be prefixed. `btt` for functions and options,
-       `Blame\Core` for the namespaced code. -->
+  <!-- Every global must be prefixed. `btt_` for functions and options,
+       `Blame\Core` for the namespaced code. The trailing underscore is not
+       cosmetic: WPCS 3.2.0 raised PrefixAllGlobals' minimum prefix length to
+       FOUR characters, so a bare `btt` is rejected as too short and every file
+       with a global-scope declaration fails. The whole course writes `btt_`. -->
   <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
     <properties>
       <property name="prefixes" type="array">
-        <element value="btt"/>
+        <element value="btt_"/>
         <element value="Blame\Core"/>
       </property>
     </properties>
@@ -463,13 +490,23 @@ docker compose run --rm composer require --dev \
 </ruleset>
 ```
 
-Add the scripts to the plugin's `composer.json`:
+> **The ruleset lives inside the plugin, next to `composer.json`, and that is a container
+> decision rather than an aesthetic one.** The `composer` service from Lesson 03.1 mounts
+> **only** `./wp-content/plugins/blame-the-tech-core` at `/app`, and the `wordpress` container
+> sees `wp-content/{plugins,themes,mu-plugins}` and a named volume holding core — so a ruleset
+> at `wordpress-headless/phpcs.xml.dist` would be visible to neither, and `--standard=../../..`
+> would resolve to a path outside the mount. Keeping the config beside the code it describes
+> means PHPCS finds it by auto-discovery from the working directory, in **both** containers and
+> on a CI runner, with no `--standard` flag anywhere. Module 24's PHP workflow depends on that.
+
+Add the scripts to the plugin's `composer.json`. No `--standard` flag: PHPCS discovers
+`phpcs.xml.dist` in the working directory, which is where the script runs.
 
 ```json
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/composer.json (fragment)
   "scripts": {
-    "phpcs": "phpcs --standard=../../../phpcs.xml.dist",
-    "phpcbf": "phpcbf --standard=../../../phpcs.xml.dist"
+    "phpcs": "phpcs",
+    "phpcbf": "phpcbf"
   }
 ```
 
@@ -490,8 +527,10 @@ Add the scripts to the plugin's `composer.json`:
   "eslint.useFlatConfig": true,
   "eslint.workingDirectories": [{ "directory": "next-app", "changeProcessCWD": true }],
   "[php]": { "editor.defaultFormatter": null, "editor.formatOnSave": false },
-  "phpcs.enable": true,
-  "phpcs.standard": "wordpress-headless/phpcs.xml.dist",
+  // `phpsab.*`, not `phpcs.*`: the extension recommended below reads only its own
+  // namespace. The `phpcs.*` keys belong to a different, unmaintained extension.
+  "phpsab.snifferEnable": true,
+  "phpsab.standard": "wordpress-headless/wp-content/plugins/blame-the-tech-core/phpcs.xml.dist",
   "files.eol": "\n",
   "editor.rulers": [100],
   "search.exclude": { "**/src/gql": true, "**/vendor": true, "**/.next": true }
@@ -597,7 +636,7 @@ docker compose run --rm composer run phpcs
 
 # 8. THE NEGATIVE THAT MATTERS: the security sniffs are live
 docker compose run --rm composer exec -- \
-  phpcs --standard=../../../phpcs.xml.dist --sniffs=WordPress.Security.EscapeOutput,WordPress.DB.PreparedSQL \
+  phpcs --sniffs=WordPress.Security.EscapeOutput,WordPress.DB.PreparedSQL \
   --report=summary .
 # Expected: the sniffs run and report 0 errors.
 #           These two are why PHPCS is in this project — Module 16 writes the

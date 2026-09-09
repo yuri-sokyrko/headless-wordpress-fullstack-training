@@ -339,6 +339,13 @@ failure worth knowing about in advance.
 Step 1 installs free ACF, which is enough for this lesson. Step 2 of Lesson 04.2 is where PRO
 becomes load-bearing, and it explains the install path there.
 
+> **If you do not have a PRO licence, try Secure Custom Fields first.** It is WordPress's own fork
+> of ACF, in the plugin directory as `secure-custom-fields`, and it ships `acf_add_options_page()`
+> — measured on 6.9.5 against this course's own `Site Settings` group, which registered and
+> resolved through WPGraphQL exactly as the PRO plugin does. Whether it also ships the Repeater
+> field type is **not** something this course has verified, so the two Repeater groups may still
+> need PRO. Install it in place of ACF, not alongside: they register the same functions.
+
 ---
 ## Task
 
@@ -894,9 +901,6 @@ model is a file, files are in git, and git is what the deploy already ships.
 
 - [ACF — Local JSON](https://www.advancedcustomfields.com/resources/local-json/) — the official
   description of both filters, the sync behaviour, and the "why" in ACF's own words
-- [ACF — `acf/settings/save_json`](https://www.advancedcustomfields.com/resources/acf-settings-save_json/)
-  and [`load_json`](https://www.advancedcustomfields.com/resources/acf-settings-load_json/) — read
-  both; the argument shapes differ and the docs are where that is stated plainly
 - [ACF — `acf_add_local_field_group()`](https://www.advancedcustomfields.com/resources/register-fields-via-php/) —
   the third strategy from Key Concept 1, including the array format Local JSON files use
 - [ACF — pricing and the PRO field list](https://www.advancedcustomfields.com/pro/) — the

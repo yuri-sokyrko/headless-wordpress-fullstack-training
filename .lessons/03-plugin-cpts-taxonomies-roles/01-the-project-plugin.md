@@ -521,7 +521,18 @@ service to `docker-compose.yml`, alongside `wpcli`:
 ```yaml
 # wordpress-headless/docker-compose.yml (fragment — add under `services:`)
   composer:
-    image: composer:2
+    # Pinned to a Composer MINOR, not to `composer:2`, so a resolver change
+    # cannot land on you mid-course. There is deliberately no PHP in this tag:
+    # the official image publishes no `-phpX.Y` variants, and `composer:2.9`
+    # currently runs PHP 8.5 even though this plugin targets 8.3. That is why
+    # `config.platform.php` in Step 4's composer.json is not optional — it is
+    # what makes RESOLUTION target 8.3. Anything Module 23 EXECUTES here still
+    # executes on the image's PHP, which is newer than production's.
+    image: composer:2.9
+    # Run-on-demand, same as wpcli: without a profile, `up` starts this container,
+    # its default command (Composer's own help listing) exits, and `up -d --wait`
+    # returns 1. `docker compose run` activates the profile for you.
+    profiles: ['cli']
     working_dir: /app
     volumes:
       - ./wp-content/plugins/blame-the-tech-core:/app
@@ -535,8 +546,23 @@ service to `docker-compose.yml`, alongside `wpcli`:
     networks: [btt-net]
 ```
 
-On Linux, `UID` and `GID` are shell variables rather than environment variables, so
-`export UID GID` once per session or add them to `.env`. Unset, they default to `1000:1000`.
+Those two variables need a value, and the obvious way to supply one does not work. `UID` and
+`GID` are shell variables rather than environment variables, so Compose cannot see them — but in
+**bash**, the default shell on essentially every Linux distribution, `GID` does not exist at all
+and `UID` is read-only, so `export UID GID` gets you `501:1000` with a silently wrong group and
+`UID=$(id -u)` gets you `bash: UID: readonly variable`. Put them in your gitignored `.env`
+instead, where Compose reads them the same way it reads `COMPOSE_FILE`:
+
+```dotenv
+# wordpress-headless/.env  (append — machine-local, never committed)
+# Ownership for vendor/ written by the `composer` service. Yours will differ:
+# run `id -u` and `id -g` and paste the two numbers.
+UID=501
+GID=20
+```
+
+Unset, they default to `1000:1000`, which is right on a single-user Linux box and cosmetic on
+Docker Desktop.
 
 ### Step 6: Generate the autoloader
 

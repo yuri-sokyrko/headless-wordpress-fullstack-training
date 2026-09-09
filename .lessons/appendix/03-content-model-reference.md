@@ -221,8 +221,11 @@ Location: `page` **and** `page_template == templates/hobt.php`.
 
 ### 4.5 `Site Settings` (options page)
 
-`acf_add_options_page()` + `show_in_graphql`, `graphql_field_name: siteSettings`, exposed on
-the **root query** so it can be fetched once in the root layout.
+`acf_add_options_page()` + `show_in_graphql`, page `graphql_field_name: siteSettings`, field
+group `graphql_field_name: siteChrome` — **they must differ**, or both resolve to the type
+`SiteSettings`, the second registration loses silently, and the fields land on an orphan
+`SiteSettings_Fields` interface nothing implements. Reached as `siteSettings { siteChrome { … } }`
+on the **root query**, so it can be fetched once in the root layout.
 
 | ACF field name | Type | GraphQL field | Notes |
 |---|---|---|---|
@@ -231,6 +234,7 @@ the **root query** so it can be fetched once in the root layout.
 | `primary_cta_url` | URL | `primaryCtaUrl` | |
 | `footer_blurb` | Textarea | `footerBlurb` | |
 | `social_links` | Repeater → `network` (Select), `url` (URL) | `socialLinks` | |
+| `btt_redirects` | Repeater → `from` (Text), `to` (Text), `permanent` (True/False) | `bttRedirects` | Read at **build** time by `next.config.ts` (Lesson 19.4), never by a page. Keep it to a few dozen rows — past that, middleware is the right home. |
 | `incident_submission_open` | True/False | `incidentSubmissionOpen` | **a kill switch the Server Action must honour** |
 
 Navigation is **not** in Site Settings — it comes from core WordPress menus via
@@ -245,18 +249,18 @@ activation. Not a CPT.
 
 ```sql
 CREATE TABLE {$wpdb->prefix}btt_leads (
-  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  created_at   DATETIME        NOT NULL,
-  email        VARCHAR(190)    NOT NULL,   -- 190, not 255: utf8mb4 is 4 bytes/char and the
-  full_name    VARCHAR(190)    NOT NULL,   -- legacy InnoDB index prefix limit is 767 bytes.
-  company      VARCHAR(190)        NULL,   -- This is why WP core uses 191 everywhere.
-  team_size    VARCHAR(32)         NULL,
-  source       VARCHAR(64)     NOT NULL,   -- 'hobt-hero' | 'hobt-cta-block' | ...
-  locale       VARCHAR(10)     NOT NULL,
-  consent      TINYINT(1)      NOT NULL DEFAULT 0,
-  ip_hash      CHAR(64)            NULL,   -- HMAC-SHA256(ip, BTT_LEAD_IP_HMAC_KEY)
-  user_agent   VARCHAR(255)        NULL,   -- never the raw IP: PII minimisation
-  PRIMARY KEY (id),
+  id           bigint(20) unsigned NOT NULL auto_increment,
+  created_at   datetime            NOT NULL,
+  email        varchar(190)        NOT NULL,  -- 190, not 255: utf8mb4 is 4 bytes/char and the
+  full_name    varchar(190)        NOT NULL,  -- legacy InnoDB index prefix limit is 767 bytes.
+  company      varchar(190)            NULL,  -- This is why WP core uses 191 everywhere.
+  team_size    varchar(32)             NULL,
+  source       varchar(64)         NOT NULL,  -- 'hobt-hero' | 'hobt-cta-block' | ...
+  locale       varchar(10)         NOT NULL,
+  consent      tinyint(1)          NOT NULL DEFAULT 0,
+  ip_hash      char(64)                NULL,  -- HMAC-SHA256(ip, BTT_LEAD_IP_HMAC_KEY)
+  user_agent   varchar(255)            NULL,  -- never the raw IP: PII minimisation
+  PRIMARY KEY  (id),
   UNIQUE KEY uniq_email_source (email, source),
   KEY idx_created_at (created_at)
 ) {$charset_collate};
@@ -270,6 +274,12 @@ Why a custom table rather than a `hobt_lead` CPT:
 | No `wp_postmeta` bloat | 8 fields × N leads = 8N postmeta rows, all EAV, none indexed by value. |
 | Real `$wpdb` practice | `dbDelta()`, `$wpdb->prepare()` with format specifiers, `$wpdb->insert()`, index design, `VARCHAR(190)`. This is the one place in the course you write actual SQL. |
 | Correct uniqueness | `UNIQUE KEY (email, source)` is enforced by the database. There is no equivalent for a CPT. |
+
+Lowercase types, `KEY` rather than `INDEX`, and **two spaces** after `PRIMARY KEY` are not
+cosmetic: `dbDelta()` parses this string with regular expressions and compares the result to
+what MySQL reports, and the two-space rule in particular is the one that silently breaks a
+migration. Core's own `wp_get_db_schema()` is written in exactly this style, and Lesson 16.3
+reproduces it.
 
 Writes happen **only** through the custom WPGraphQL mutation `submitHobtLead`, which requires
 the `X-BTT-App-Token` header (see [appendix 04](04-env-reference.md)) and re-validates every
@@ -315,12 +325,18 @@ Registered in Module 06.
 | Name | Kind | On | Auth | Notes |
 |---|---|---|---|---|
 | `blameScore` | field → `Float` | `Incident` | public | Computed from severity weight × `blameConfidence` × `downtimeMinutes`. Teaches `register_graphql_field` and resolver caching. |
+| `severityIn` | connection `where` arg → `[String]` | `RootQueryToIncidentConnectionWhereArgs` | public | The **only** taxonomy `where` argument this project registers. Incoming slugs are intersected with the closed severity set in §2, so an unrecognised slug narrows to zero rows rather than widening to all of them. There is no generic `taxQuery` — Lesson 05.2 §6. Consumers: `HomepageFeeds` (10.5) and `IncidentTicker` (14.4); every other facet traverses from the term. |
 | `createIncident` | mutation | — | **user JWT**, `create_incidents` | Forces `post_status = 'pending'` and `post_author = get_current_user_id()`. Ignores `is_verified`. |
 | `registerDeveloper` | mutation | — | **app token** (server-to-server) | Creates a user with role `incident_reporter`, `btt_verified = 0`, sends a verification mail. |
+| `verifyDeveloper` | mutation | — | **app token** (server-to-server) | Module **15**, not 06. Consumes the single-use code `registerDeveloper` mailed, **sets the account password** — `registerDeveloper` generates one and never discloses it, so this is where the user first gets a usable credential — sets `btt_verified = 1`, and returns the same generic payload for a bad, expired or already-used code. |
 | `submitHobtLead` | mutation | — | **app token** (server-to-server) | Inserts into `wp_btt_leads`. Honeypot + timing + Turnstile checked on the Next side, fields re-validated here. |
 
 The two credentials are different things and must never be confused — see
 [appendix 04 §4](04-env-reference.md#4-the-two-credentials).
+
+Everything above except `verifyDeveloper` is registered in Module 06. `verifyDeveloper` is the
+one addition Module 15 makes, because verification only becomes meaningful once a session
+exists to gate.
 
 ---
 
@@ -336,11 +352,18 @@ The two credentials are different things and must never be confused — see
 | WPGraphQL Polylang | no | `language`, `translations`, locale filtering |
 | Advanced Custom Fields | no | The field groups in §4 |
 | Yoast SEO | no | Editor-controlled metadata |
-| Polylang | no | Multilingual content |
+| Polylang | no | Multilingual content. **Free edition** — it translates post slugs but *not* CPT rewrite slugs, which is what decides Lesson 20.3's routing model |
 | **`blame-the-tech-core`** | **yes** | §1–§7 — everything above |
 | **`blame-the-tech-blocks`** | **yes** | The six Gutenberg blocks (Modules 13–14) |
 
-Deliberately **not** installed: **WPGraphQL CORS.** The browser never talks to `/graphql` —
+Deliberately **not** installed: **`wp-graphql-tax-query`.** It would add
+`where: { taxQuery: { taxArray: [ ... ] } }` to every post-object connection, which is a
+taxonomy-join builder handed to anonymous callers — the surface core WPGraphQL declines to ship
+and Lesson 05.2 §6 declines to re-open. Lesson 06.1 §9 registers one narrow, allowlisted
+`severityIn` instead (§7). A query using `taxQuery` against this schema is a validation error,
+and Lesson 23.5's `@graphql-eslint` gate fails the build on it.
+
+Also deliberately **not** installed: **WPGraphQL CORS.** The browser never talks to `/graphql` —
 only the Next.js server runtime does. That is a load-bearing architectural property, not an
 accident: there is no GraphQL endpoint in the client bundle, therefore no CORS policy to get
 wrong and no public introspection surface reachable from the app's own traffic. Lesson 15.1
@@ -354,10 +377,10 @@ states it explicitly.
 
 | Content | Count | Notes |
 |---|---|---|
-| Incidents | 40 | fixed slugs, fixed `post_date`, spread across all 4 severities and all 10 scapegoats |
-| Tech reviews | 8 | one per verdict × 2 |
-| Blog posts | 10 | two use every custom block, for the block-rendering E2E spec |
-| Pages | 3 | Home, About, HOBT (with `templates/hobt.php`) |
+| Incidents | 40 en + 10 de + 5 uk = **55** | fixed slugs, fixed `post_date`, spread across all 4 severities and all 10 scapegoats. Translations are added by Lesson 20.1's final seeder phase — German slugs are `incident-NN-de`, Ukrainian are Cyrillic (`відмова-NN`). Before Module 20 the count is 40 |
+| Tech reviews | 8 | one per verdict × 2. Slugs `review-01`…`review-08`, **`en` only** — reviews are not translated, so `/de/reviews/review-01` is the one path in the app that exercises Lesson 20.4's untranslated-content 307 |
+| Blog posts | 10 en + 2 de = **12** | slugs `blog-01`…`blog-10` plus `blog-01-de`/`blog-02-de`. Two use every custom block, for the block-rendering E2E spec |
+| Pages | 3 × 3 locales = **9** | Home, About, HOBT (with `templates/hobt.php`). German `startseite`/`ueber-uns`/`hobt-de`, Ukrainian `holovna`/`pro-nas`/`hobt-uk` |
 | Users | 3 | `editor`, `reporter`, `e2e_agent` — **passwords from the environment, never literals in the seeder** |
 | Scapegoat terms | 10 | §2 |
 | Severity terms | 4 | §2 |
@@ -367,6 +390,11 @@ Determinism rules (Lesson 12.4 covers all of them): fixed slugs never IDs, expli
 `post_date` and `post_date_gmt`, no `wp_rand`/`time()`/unseeded Faker, one fixed `WP_HOME` for
 both seed and run, and Polylang translations linked **last** with
 `pll_save_post_translations()`.
+
+Taxonomy terms and media are deliberately **not** translated (Lesson 20.1), so the term counts
+above are totals across all three languages and no attachment carries a language at all. The
+cost, stated plainly: a German page shows English severity badges and scapegoat names, and the
+leaderboard counts a translation as its own incident.
 
 ---
 

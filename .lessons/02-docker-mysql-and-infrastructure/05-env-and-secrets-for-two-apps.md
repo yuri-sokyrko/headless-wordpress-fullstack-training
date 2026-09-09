@@ -275,7 +275,7 @@ Three consequences worth holding:
 | The value ships in a public asset | **There is no such thing as a secret `NEXT_PUBLIC_` variable** |
 | There is no warning | No build error, no lint failure, no log line. The only guardrail is the name. |
 
-[Appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them) lists
+[Appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them) lists
 the only four variables in this application that will ever carry the prefix, each with a written
 justification. Nothing else. Ever. Module 09 adds a `grep` over `.next/static/` proving no
 server-only value reached the bundle, and Module 24 makes it a CI gate.
@@ -355,20 +355,25 @@ git check-ignore -v .env
 # The file Module 09 will create — checked now, four modules early, on purpose
 git check-ignore -v ../next-app/.env.local
 
-# And the one file that must NOT be ignored
-git check-ignore -v .env.example ; echo "exit=$?"
+# And the one file that must NOT be ignored. NO -v here, deliberately: -v reports
+# the last matching pattern INCLUDING the negation, and exits 0 because something
+# matched. Without -v you get the plain answer "is this ignored?" — and silence.
+git check-ignore .env.example ; echo "exit=$?"
 ```
 
 **Verify §1:**
 
-- [ ] The first command names a rule — `.gitignore:72:.env` is line 72 of the root file, the
-      first of the three lines quoted in Key Concept 3.
+- [ ] The first command names a rule — currently `.gitignore:80:.env`, the first of the three
+      lines quoted in Key Concept 3. The line number moves whenever the file grows; the rule
+      text is what matters.
 - [ ] The second names a rule too, even though `next-app/.env.local` does not exist yet. An
       ignore rule for a file that does not exist is the correct state — that is what "before the
       secret exists" means.
 - [ ] The third prints **no output** and `exit=1`. That is the `!.env.example` negation winning.
-      If it instead names a rule, your `.gitignore` has the negation before the broad ignore, and
-      Step 4 would silently produce an untracked file.
+      If it names a rule instead, either you left `-v` on — which prints
+      `.gitignore:82:!.env.example` and exits `0` even when everything is correct — or your
+      `.gitignore` has the negation before the broad ignore, and Step 4 would silently produce
+      an untracked file. Re-run without `-v` before you conclude anything.
 
 ### Step 2: Generate nine independent secrets
 
@@ -414,6 +419,12 @@ two database passwords you already generated in Lesson 02.2 — do not regenerat
 # GITIGNORED. Never commit this file. Every value here is machine-local.
 # The full inventory, with which variables are secret and why, is the contract in
 # .lessons/appendix/04-env-reference.md — this file does not duplicate it.
+
+# ── Compose itself, not WordPress ────────────────────────────────────
+# Kept from Lesson 02.2 §5. Compose reads COMPOSE_* out of this file before it
+# resolves which YAML to load, so a bare `docker compose run --rm wpcli …` sees
+# the same `db` that `up` created instead of recreating it.
+COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml
 
 # ── Database ─────────────────────────────────────────────────────────
 MYSQL_DATABASE=btt
@@ -495,6 +506,9 @@ that goes in git.
 #            GRAPHQL_JWT_AUTH_SECRET_KEY; do
 #     printf '%s=%s\n' "$k" "$(openssl rand -base64 48 | tr -d '\n=+/' | cut -c1-64)"
 #   done
+
+# ── Compose itself, not WordPress. Lesson 02.2 §5 explains why ───────
+COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml
 
 # ── Database ─────────────────────────────────────────────────────────
 MYSQL_DATABASE=btt
@@ -619,7 +633,7 @@ git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example'
 git status --porcelain | grep -E '\.env$|\.env\.local$|wp-config\.php$'
 # Expected: no output
 
-# 6. The example contains ONLY placeholders — eleven of them, and no 40+ char value
+# 6. The example contains ONLY placeholders — thirteen of them, and no 40+ char value
 grep -c '__CHANGE_ME__' .env.example
 # Expected: 14   — 13 placeholder values, plus the one in the header comment
 grep -nE '=[A-Za-z0-9]{40,}' .env.example
@@ -652,7 +666,8 @@ docker compose run --rm wpcli wp eval 'echo (GRAPHQL_JWT_AUTH_SECRET_KEY !== AUT
 docker compose -f docker-compose.yml -f docker-compose.dev.yml config | grep -c 'CMD-SHELL'
 # Expected: 1
 docker compose -f docker-compose.yml -f docker-compose.dev.yml config | grep -A1 'CMD-SHELL'
-# Expected: the literal string $MYSQL_ROOT_PASSWORD, not your password
+# Expected: -p"$$MYSQL_ROOT_PASSWORD" — TWO dollars, because Compose re-escapes
+#           the literal one on the way out. Never your password.
 
 # 12. The site still works with the new salts — you were logged out, which is correct
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/wp-admin/

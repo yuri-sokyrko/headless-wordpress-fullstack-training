@@ -309,8 +309,9 @@ prove with your own hands:
 > official image. It means `docker compose exec wordpress wp …` can never work, and it is why
 > Lesson 02.2 declares a fifth service, `wpcli`, on `wordpress:cli-php8.3`, sharing the same
 > network, volumes and credentials. **Every WP-CLI command in this course is
-> `docker compose run --rm wpcli wp <command>`** — and `--allow-root` is neither needed nor
-> valid, because that image already runs as `www-data`. Composer arrives the same way, as its own
+> `docker compose run --rm wpcli wp <command>`** — and `--allow-root` is never needed, because that
+> image already runs as `www-data`. WP-CLI does **accept** the flag; it is simply a no-op when the
+> process is not root, so reaching for it is a sign the `user:` pin has gone missing. Composer arrives the same way, as its own
 > service, in Module 03. Note that `docker compose exec wordpress <anything else>` — `php`,
 > `bash`, `cat`, `getent` — is correct and you will use it constantly. Only `wp` and `composer`
 > are absent.

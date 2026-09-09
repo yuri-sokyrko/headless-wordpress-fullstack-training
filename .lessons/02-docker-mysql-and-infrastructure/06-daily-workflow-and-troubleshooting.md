@@ -17,9 +17,10 @@ up -d`, `ps`, `logs -f wordpress`, `exec wordpress bash`, `down`, and — the on
 with — `down -v`. That last flag deletes named volumes, which means your database and your
 uploads, and it is the difference between "restart the stack" and "start the module over".
 
-You will also run WP-CLI for the first time. WP-CLI lives inside the `wordpress` container, so
-every invocation is `docker compose run --rm wpcli wp <command>`, and you will alias
-it because you are about to type it several hundred times. Then you write
+You will also run WP-CLI for the first time. WP-CLI does **not** live in the `wordpress`
+container — that image has no `wp` binary at all — so every invocation is
+`docker compose run --rm wpcli wp <command>`, and you will alias it because you are about to
+type it several hundred times. Then you write
 `wordpress-headless/README.md` — replacing the placeholder that shipped with the repo — as a
 real runbook: the start command, the ports, the reset procedure, and the three failure modes
 that account for most of the pain in this module. Writing the runbook is not busywork; the
@@ -48,10 +49,10 @@ log, and a volume reset replaces the `.sql` restore.
 
 WP-CLI is the one piece that carries over unchanged in *behaviour* and changes in *invocation*.
 `wp plugin list`, `wp post create`, `wp search-replace`, `wp db export` all work exactly as you
-remember. The only difference is that the command must run inside the container, as
-`www-data`, so that any files it creates are owned by the user Apache runs as. Getting the `-u
-www-data` right the first time avoids a whole category of "permission denied" confusion later,
-particularly in Module 04 when the seeder sideloads media.
+remember. The only difference is that the command runs inside its own container, as uid 33 — the
+same numeric user Apache's workers run as — so any file it creates is owned by the user the web
+server can also write. Lesson 02.2 pinned that with `user: '33:33'`, which is why you never pass
+`-u www-data` and never need `--allow-root`, and why Module 04's media sideload works.
 
 **Where the analogy breaks down:** when MAMP misbehaved, everything was inspectable with tools
 you already had — the filesystem was right there, the process was in Activity Monitor, the log
@@ -75,7 +76,7 @@ never claimed to.
 | Command | What it does | What it does **not** do | Reach for it when |
 |---|---|---|---|
 | `up -d` | Creates and starts containers, detached | Wait for anything to be *ready*. Recreate containers whose compose definition changed, in every case | Starting your day |
-| `up -d --wait` | Same, then blocks until every healthcheck passes | Tell you *why* a healthcheck failed | Scripts and CI, where the next command must not run early |
+| `up -d --wait` | Same, then blocks until every healthcheck passes | Tell you *why* a healthcheck failed. Tolerate a service that **exits** during the wait — it returns `1` even for exit code `0`, which is why `wpcli` and `composer` carry `profiles: ['cli']` | Scripts and CI, where the next command must not run early |
 | `ps` | Lists containers in this project, with health | Show run-on-demand services like `wpcli` | Anything is behaving oddly |
 | `logs -f wordpress` | Streams a service's stdout/stderr | Show PHP warnings — those go to `debug.log` | Almost every failure in this module |
 | `exec wordpress <cmd>` | Runs a command **inside the already-running** container | Work if the container is not running | `php`, `bash`, `cat`, `getent`, `tail` |
@@ -112,15 +113,26 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 Forget the second `-f` and the stack still comes up — which is exactly the problem. You get no
 `WORDPRESS_DEBUG`, so nothing lands in `debug.log`, and no published `3306`, so a host MySQL
 client cannot connect. Neither failure appears now; both appear later, in the Lesson 02.3
-drills or the first time you need a warning logged. Step 3 wraps this in a `Makefile` so the
-two flags stop being something you can forget.
+drills or the first time you need a warning logged.
+
+There is a nastier version of the same mistake, and it does not need you to forget anything.
+Compose compares the definition it is handed against the container that is running, so a **bare**
+`docker compose run --rm wpcli wp …` — which loads only the base file — decides `db` has changed,
+prints `Container btt-db-1 Recreated`, and takes the published `3306` away with it. Your next
+host-side `EXPLAIN` fails for a reason nothing on screen mentions. `COMPOSE_FILE` in `.env`
+(Lesson 02.2 §5) is what stops it: Compose reads it before it resolves which files to load, so
+every bare invocation gets both. Step 3's `Makefile` still passes the flags explicitly, because
+belt and braces costs nothing and a `Makefile` that works in a fresh clone without `.env` is
+worth more than the two characters it saves.
 
 > **One correction to make to your mental model.** WP-CLI does **not** live in the `wordpress`
 > container. The stock `wordpress:6.8-php8.3-apache` image ships no `wp` binary at all — and no
 > `composer` either. That is precisely why `docker-compose.yml` declares a separate `wpcli`
 > service on `wordpress:cli-php8.3`, sharing the same network, environment and volumes. The
-> `cli` image already runs as `www-data`, so there is nothing to pass: `-u www-data` is
-> unnecessary and `--allow-root` is invalid and will be rejected.
+> `cli` image runs as `www-data`, and Lesson 02.2 pins it to uid 33 so that user means the same
+> thing in both containers — so `-u www-data` is unnecessary, and `--allow-root` is **accepted
+> but pointless**: it is a WP-CLI global flag that only does something when the process really
+> is root, which here it never is. Reaching for it is a sign the `user:` pin went missing.
 
 ```bash
 # ✅ The only correct WP-CLI invocation in this course
@@ -129,7 +141,8 @@ docker compose run --rm wpcli wp <command>
 # ❌ Wrong — the stock wordpress image ships no `wp` binary at all
 docker compose exec wordpress wp <command>
 
-# ❌ Also wrong — `--allow-root` is invalid for the cli image, which runs as www-data
+# ❌ Pointless, not an error — WP-CLI accepts --allow-root everywhere, and this
+#    container is uid 33, never root. It silences nothing and fixes nothing.
 docker compose run --rm wpcli wp <command> --allow-root
 ```
 
@@ -188,14 +201,27 @@ and `--since=5m` to get only what happened while you were reproducing the bug.
 
 ### 5. Port collisions
 
-The symptom is unmistakable and arrives at `up` time:
+The symptom arrives at `up` time, and Docker words it **two different ways** depending on who
+holds the port. Both mean the same thing; only one of them contains the phrase everybody
+searches for:
 
 ```
-Error response from daemon: driver failed programming external connectivity:
-bind: address already in use
+# another CONTAINER holds it — note: no "address already in use" anywhere
+Error response from daemon: failed to set up container networking: driver failed programming
+external connectivity on endpoint btt-wordpress-1 (...): Bind for 0.0.0.0:8080 failed:
+port is already allocated
+
+# a HOST PROCESS holds it
+Error response from daemon: ports are not available: exposing port TCP 0.0.0.0:8080 ->
+127.0.0.1:0: listen tcp 0.0.0.0:8080: bind: address already in use
 ```
 
-One command diagnoses it — substitute the port from the message:
+`up -d` exits `1` in both cases. There is a third, quieter outcome on Docker Desktop: if the
+squatter bound **IPv4 only**, Docker takes the IPv6 socket, `up` succeeds, and requests to
+`localhost:8080` land on whichever server the resolver reaches first. "It works, sometimes" is
+also a port collision.
+
+One command diagnoses all three — substitute the port from the message:
 
 ```bash
 lsof -nP -iTCP:8080 -sTCP:LISTEN
@@ -266,13 +292,16 @@ before changing anything.
 | Symptom | Likeliest cause | Confirm with | Fix |
 |---|---|---|---|
 | "Error establishing a database connection" | `WORDPRESS_DB_HOST` is `localhost`; inside Compose it must be the service name | `docker compose exec wordpress getent hosts db` | Set `db:3306`. Lesson 02.2 §2. |
-| `wordpress` restarts in a loop | `depends_on` without `condition: service_healthy`, so it started before MySQL was ready | `docker compose logs db \| tail -30` | Add the healthcheck condition. Lesson 02.2 §4. |
-| `bind: address already in use` | Another process or container owns the port | `lsof -nP -iTCP:8080 -sTCP:LISTEN` | Key Concept 5. |
+| "Error establishing a database connection" for the first seconds after `up`, then fine | `depends_on` without `condition: service_healthy`, so WordPress started before MySQL was ready. It does **not** restart-loop — the entrypoint never probes the DB, so the container stays up and just serves 500s until MySQL answers | `docker compose exec wordpress tail /var/www/html/wp-content/debug.log` — you want `mysqli_real_connect(): (HY000/2002): Connection refused` | Add `condition: service_healthy`. Lesson 02.2 §4. |
+| `port is already allocated` (container culprit) or `bind: address already in use` (host process) | Another container or process owns the port. Search for **both** strings — the container-culprit message does not contain the second one | `lsof -nP -iTCP:8080 -sTCP:LISTEN`, then `docker ps -a` if that comes back empty | Key Concept 5. |
 | Plugin edits do nothing | Bind mount missing, or the container predates it | `docker compose exec wordpress ls /var/www/html/wp-content/plugins` | Key Concept 6, then `up -d --force-recreate`. |
-| `wp: command not found`, or "This does not seem to be a WordPress installation" | You ran `wp` on the host, or via `exec wordpress`, which has no `wp` | `docker compose exec wordpress sh -c 'command -v wp'` | `docker compose run --rm wpcli wp …`. Key Concept 2. |
+| `wp: command not found` | You ran `wp` on the host, or via `exec wordpress`, which has no `wp` binary | `docker compose exec wordpress sh -c 'command -v wp'` | `docker compose run --rm wpcli wp …`. Key Concept 2. |
+| "This does not seem to be a WordPress installation" **from `wpcli`** | The `btt-wp-core` volume is missing from one of the two services, so WP-CLI has core nowhere to bootstrap from | `docker compose --profile cli config \| grep -c 'source: btt-wp-core'` — must be `2`. Both flags earn their place: grep `source:` rather than the `btt-wp-core:/var/www/html` you typed, because Compose rewrites short volume syntax into long form in `config` output; and pass `--profile cli`, or the `wpcli` service is omitted from that output and you get `1` on a correct stack | Add it to whichever service lacks it, then `up -d --force-recreate`. Lesson 02.2 Key Concept 3. |
 | White screen, empty 500, after editing config | PHP syntax error. `WP_DEBUG_DISPLAY` is `false`, so the browser shows nothing | `docker compose logs --tail=30 wordpress` | Fix the file and line the log names. |
-| All content gone | `docker compose down -v` destroyed `btt-db-data` | `docker volume ls \| grep btt` | Reinstall, then Module 04's seeder. Key Concept 3. |
+| All content gone | `docker compose down -v` destroyed `btt-db-data` (and `btt-wp-core`, which the next `up` re-copies from the image — code in bind mounts is untouched) | `docker volume ls \| grep btt` | Reinstall, then Module 04's seeder. Key Concept 3. |
 | "Permission denied" writing into a bind-mounted directory | The container runs as `www-data`; your host user owns the files | `docker compose exec wordpress ls -la /var/www/html/wp-content/plugins` | `sudo chown -R $(id -u):$(id -g) wp-content/` on Linux. |
+| "Permission denied" from `wpcli` only, while the browser writes fine | `www-data` is uid 33 in the `wordpress` image and uid 82 in `wordpress:cli`, so the two containers disagree about who owns a shared volume | `docker compose run --rm wpcli id -u` — must be `33` | The `user: '33:33'` pin on the `wpcli` service. Lesson 02.2 Key Concept 3. |
+| `Unable to create directory wp-content/uploads/YYYY/MM` — from `wp core install`, `wp media import`, or the wp-admin media library | The `btt-uploads` named volume is fresh. Docker creates one as `root:root` `755` and the image entrypoint does not chown into it, so **nobody** can write there: not WP-CLI at uid 33, and not Apache, whose workers are also uid 33 | `docker compose exec wordpress ls -ldn /var/www/html/wp-content/uploads` — must print `33 33`, not `0 0` | `docker compose exec wordpress chown 33:33 /var/www/html/wp-content/uploads`. Once per fresh volume, so again after every `down -v`. Lesson 02.2 Step 7. |
 
 That last row is platform-dependent and worth knowing before it happens. On **Docker Desktop**
 (macOS, Windows) the file-sharing layer maps ownership for you, so files WP-CLI creates inside a
@@ -294,7 +323,10 @@ You are about to type `docker compose run --rm wpcli wp` several hundred times.
 
 ```bash
 cd wordpress-headless
-alias wpx='docker compose run --rm wpcli wp'
+# Both -f flags, explicitly. With COMPOSE_FILE in .env you would not need them —
+# but an alias that is correct with or without .env is one less thing to reason
+# about, and it is the form appendix 07 uses.
+alias wpx='docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm wpcli wp'
 
 wpx core version
 wpx plugin list
@@ -320,8 +352,10 @@ You have read what a missing database looks like. Now see it, so you recognise i
 weeks. Open a second terminal for the logs.
 
 ```bash
-# Terminal 1 — watch the logs
-docker compose logs -f wordpress
+# Terminal 1 — the log that actually holds PHP warnings. The CONTAINER log will
+# show you only `"GET / HTTP/1.1" 500` and not one word about the database,
+# because WP_DEBUG_DISPLAY is false and WP_DEBUG_LOG is true. Key Concept 4.
+docker compose exec wordpress tail -f /var/www/html/wp-content/debug.log
 
 # Terminal 2 — take the database away
 docker compose stop db
@@ -341,7 +375,11 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/
 
 - [ ] With `db` stopped, the `curl` returned `500` (or `502`), **not** `200`.
 - [ ] `docker compose ps` showed `db` as `exited`, or omitted it entirely.
-- [ ] Terminal 1 showed a database-connection error from WordPress or PHP.
+- [ ] Terminal 1 showed
+      `PHP Warning:  mysqli_real_connect(): … getaddrinfo for db failed: Name or service not known`
+      — the container is out of Docker's DNS while it is stopped, so you get a name failure
+      before you get a refused connection. `docker compose logs -f wordpress` in the other
+      terminal shows only the `500` access line; that is the whole point of Key Concept 4.
 - [ ] After `start db` and a `(healthy)` status, the `curl` returned `302` again — the
       Lesson 02.4 redirect, which means WordPress is fully back.
 - [ ] You did **not** need to restart `wordpress`. It recovers on its own once `db` answers,
@@ -360,11 +398,13 @@ One place for the two-`-f` invocation, so it is impossible to forget.
 #
 # Usage:  make up          make wp ARGS="plugin list"        make help
 
+# Both -f flags even though .env sets COMPOSE_FILE: this file must work in a
+# fresh clone that has no .env yet, and an explicit -f always wins anyway.
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 WP      := $(COMPOSE) run --rm wpcli wp
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-wait down nuke ps logs logs-db sh wp reset-db debug-log mail adminer
+.PHONY: help up up-wait down nuke ps logs logs-db sh wp reset-db debug-log mail adminer uploads-own
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -376,6 +416,9 @@ up: ## Start the stack, detached
 up-wait: ## Start and block until every healthcheck passes (what CI uses)
 	$(COMPOSE) up -d --wait
 
+uploads-own: ## Give the btt-uploads volume to uid 33. Once per fresh volume.
+	$(COMPOSE) exec wordpress chown 33:33 /var/www/html/wp-content/uploads
+
 down: ## Stop and remove containers. Volumes and your code are untouched.
 	$(COMPOSE) down
 
@@ -383,6 +426,7 @@ nuke: ## DESTRUCTIVE: down -v — deletes btt-db-data and btt-uploads
 	@printf 'This deletes the database AND uploads. Type YES to continue: ' \
 		&& read ans && [ "$$ans" = "YES" ] || (echo "Aborted."; exit 1)
 	$(COMPOSE) down -v
+	@echo 'Next up needs `make uploads-own` again — the volume is new.'
 
 ps: ## What is running, and is it healthy?
 	$(COMPOSE) ps
@@ -428,7 +472,8 @@ without WSL there is no `make`, so use the `wpx` alias from Step 1 plus the raw
 - [ ] `make ps` prints the same table as `docker compose ps`.
 - [ ] `make wp ARGS="core version"` prints the WordPress version.
 - [ ] `make nuke` **prompts** before doing anything. Type anything other than `YES` and confirm
-      it aborts — do not type `YES`.
+      it aborts — do not type `YES`. It prints `Aborted.` followed by
+      `make: *** [nuke] Error 1`; that second line is the guard working, not a broken recipe.
 
 ### Step 4: Write your runbook, replacing the placeholder
 
@@ -467,7 +512,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait
 | `db` | `mysql:8.0` | `3306` (dev only) | MySQL. Data in the `btt-db-data` volume. |
 | `adminer` | `adminer:5` | `8081` → `8080` | SQL console and query plans |
 | `mailpit` | `axllent/mailpit` | `8025` UI, `1025` SMTP | Captured mail |
-| `wpcli` | `wordpress:cli-php8.3` | — | WP-CLI, run on demand. Absent from `ps` by design. |
+| `wpcli` | `wordpress:cli-php8.3` | — | WP-CLI, run on demand. `profiles: ['cli']` keeps it out of `up` and `ps` by design. |
 
 Project name `btt`, network `btt-net`. Database name and user are both `btt` — never `root`
 for the application.
@@ -485,9 +530,13 @@ for the application.
 | Stop | `make down` |
 
 WP-CLI is **always** `docker compose run --rm wpcli wp <command>`. The stock `wordpress` image
-ships no `wp` binary and no `composer`; `--allow-root` is invalid for the `cli` image, which
-already runs as `www-data`. Full list:
+ships no `wp` binary and no `composer`. `--allow-root` is accepted by WP-CLI but pointless here:
+the `wpcli` service is pinned to uid 33, never root. Full list:
 [appendix 07](../.lessons/appendix/07-command-reference.md).
+
+`.env` also sets `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml`, so a bare
+`docker compose …` loads both files. Without it, a bare `run` recreates `db` and unpublishes
+3306.
 
 ## Resetting
 
@@ -495,7 +544,8 @@ already runs as `www-data`. Full list:
 |---|---|
 | Restart the stack | `make down && make up` |
 | Reset the database, keep your code | `make reset-db`, then re-run `wp core install` |
-| Start over completely | `make nuke` — ⚠️ **destroys `btt-db-data` and `btt-uploads`** |
+| Start over completely | `make nuke`, then `make up-wait && make uploads-own` — ⚠️ **destroys `btt-db-data` and `btt-uploads`** |
+| Fix "Unable to create directory wp-content/uploads/…" | `make uploads-own` — a fresh `btt-uploads` volume is `root:root` |
 
 ⚠️ `docker compose down -v` (what `make nuke` runs) deletes the database **and** all uploaded
 media. Your plugin and theme code is a bind mount on your own disk and survives everything.
@@ -516,8 +566,8 @@ media. Your plugin and theme code is a bind mount on your own disk and survives 
 | Symptom | Cause | Fix |
 |---|---|---|
 | "Error establishing a database connection" | `WORDPRESS_DB_HOST` is `localhost` | Use `db:3306` — the service name |
-| `bind: address already in use` | Another process owns the port | `lsof -nP -iTCP:8080 -sTCP:LISTEN` |
-| `wordpress` restarts in a loop | Started before MySQL was ready | `depends_on` needs `condition: service_healthy` |
+| `port is already allocated` or `bind: address already in use` | Another container or process owns the port | `lsof -nP -iTCP:8080 -sTCP:LISTEN`, then `docker ps -a` |
+| "Error establishing a database connection" right after `up` | Started before MySQL was ready; it serves 500s, it does not restart-loop | `depends_on` needs `condition: service_healthy` |
 | Plugin edits do nothing | Bind mount wrong, or container predates it | `docker compose up -d --force-recreate` |
 | `wp: command not found` | Ran `wp` on the host or via `exec wordpress` | `docker compose run --rm wpcli wp …` |
 | White screen, empty 500 | PHP syntax error; `WP_DEBUG_DISPLAY` is `false` | `docker compose logs --tail=30 wordpress` |
@@ -540,6 +590,7 @@ contains names and `__CHANGE_ME__` placeholders only.
 |---|---|
 | WordPress core | Comes from the `wordpress:6.8-php8.3-apache` image |
 | Third-party plugins | Installed with `wp plugin install`, pinned by version |
+| The three bundled core themes | The entrypoint copies them onto the `themes` bind mount at first boot — ~14 MB of WordPress core. `.gitignore` ignores `wp-content/themes/*` and re-includes `btt-headless` only |
 | `wp-config.php` | Written from the environment; gitignored |
 | `.env` | Real secrets. Only `.env.example` is tracked. |
 | `wp-content/uploads/` | The `btt-uploads` volume locally, R2/S3 in production |
@@ -597,8 +648,10 @@ cd wordpress-headless
 
 # 1. Four long-running services up, db healthy. wpcli ABSENT is correct.
 docker compose ps
-# Expected: wordpress, db, adminer, mailpit — all "running"; db "(healthy)"
-#           wpcli does not appear — it is run-on-demand (Key Concept 1)
+# Expected: wordpress, db, adminer, mailpit — all "running"; db "(healthy)".
+#           mailpit and wordpress ship healthchecks too, so THREE services read
+#           "(healthy)"; only db's was added by Lesson 02.2.
+#           wpcli does not appear — profiles: ['cli'] (Key Concept 1)
 
 # 2. The wrapper works and hides the two -f flags
 make help | head -3
@@ -614,9 +667,12 @@ docker compose run --rm wpcli wp option get siteurl
 docker compose exec wordpress sh -c 'command -v wp || echo "no wp in this image — use the wpcli service"'
 # Expected: the message. NOT a path like /usr/local/bin/wp.
 
-# 5. NEGATIVE — --allow-root is invalid for the cli image
-docker compose run --rm wpcli wp core version --allow-root 2>&1 | head -2
-# Expected: an error about an unknown/unrecognised flag. --allow-root does not exist here.
+# 5. NEGATIVE — --allow-root is never NEEDED, because this container is not root
+docker compose run --rm wpcli id -u
+# Expected: 33. Note what this check deliberately does NOT assert: WP-CLI
+#           accepts --allow-root as a no-op at uid 33, so any test expecting an
+#           error from it would fail. Reaching for the flag means the `user:`
+#           pin on the wpcli service went missing; check that, not the flag.
 
 # 6. NEGATIVE — `exec` needs a RUNNING container, `run --rm` does not
 docker compose ps --services --filter status=running | grep -c '^wpcli$'
@@ -630,7 +686,8 @@ rm wp-content/plugins/_mount-check.php
 
 # 8. Mailpit is reachable and its inbox is readable
 curl -s http://localhost:8025/api/v1/messages | head -c 60
-# Expected: JSON beginning with {"messages":  (an empty inbox is correct — see KC7)
+# Expected: JSON beginning {"total":0,"unread":0,"count":0,  — an empty inbox is
+#           correct (see KC7). The `messages` array comes later in the object.
 
 # 9. Adminer is up
 curl -s http://localhost:8081/ | grep -o 'Adminer' | head -1
@@ -642,14 +699,19 @@ grep -c 'empty on purpose' README.md
 grep -c 8081 README.md
 # Expected: 1 or more — Adminer is documented
 
-# 11. NEGATIVE — no secret is staged
+# 11. NEGATIVE — no secret, and no WordPress core, is staged
 git status --short
-# Expected: Makefile and README.md appear. .env and wp-config.php DO NOT.
+# Expected: Makefile and README.md appear. .env and wp-config.php DO NOT — and
+#           neither does wp-content/themes/twentytwentyfive/ and friends, which
+#           the entrypoint wrote onto your disk. If you see them, the
+#           wp-content/themes/* rule is missing from the root .gitignore.
 
 # 12. Everything survives a full stop and start
-docker compose down && docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait
+docker compose down && docker compose up -d --wait ; echo "wait-exit=$?"
 docker compose run --rm wpcli wp option get blogname
-# Expected: Blame The Tech
+# Expected: wait-exit=0, then Blame The Tech. A wait-exit=1 with a line reading
+#           "container …-wpcli-1 exited" means profiles: ['cli'] is missing from
+#           the wpcli or composer service. Lesson 02.2 Step 5.
 ```
 
 Check 6 is the one people get wrong. Seeing `wpcli` missing from `docker compose ps` reads like
@@ -667,9 +729,9 @@ WP-CLI works while check 6 proves nothing is running is the point, not a contrad
    command you must **not** run, and say which of the three storage kinds each one destroys.
 3. A plugin file you just edited has no effect in the browser. Give the two-command diagnostic
    from Key Concept 6, and describe what each of the two possible outcomes tells you to do next.
-4. You start the stack with `docker compose up -d` — one `-f` flag, not two. Nothing appears to
-   be wrong. Name two things that are silently missing and the lesson in which each one first
-   causes a visible failure.
+4. You start the stack with `docker compose -f docker-compose.yml up -d` — one explicit `-f`,
+   which beats the `COMPOSE_FILE` in `.env`. Nothing appears to be wrong. Name two things that
+   are silently missing and the lesson in which each one first causes a visible failure.
 5. `wp_mail()` fires but the Mailpit inbox stays empty. Explain why this is expected right now,
    what has to be added for it to work, and which two environment variables that addition will
    read.

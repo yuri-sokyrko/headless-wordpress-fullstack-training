@@ -30,7 +30,7 @@ npx playwright test --project=a11y
 # Expected: 0 critical, 0 serious across the six routes × three locales
 
 # 3. The seeder is deterministic — same data, twice
-docker compose -f ../wordpress-headless/docker-compose.yml run --rm wpcli wp blame seed --fresh
+docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli wp blame seed --fresh --yes
 # Expected: identical slugs and post dates as the previous run
 ```
 
@@ -58,8 +58,9 @@ docker compose -f ../wordpress-headless/docker-compose.yml run --rm wpcli wp bla
 - `tests/mocks/handlers.ts` — MSW v2 GraphQL handlers reused by every component test
 - Component tests for the client islands, and unit tests for Server Actions and route handlers
   that prove the negatives: no JWT in a response body, zero GraphQL calls when unauthenticated
-- `wordpress-headless/.../tests/Unit/` (Pest + Brain Monkey) and `tests/Integration/`
-  (`wp-phpunit`), both runnable in the existing `wordpress` container
+- `wordpress-headless/.../tests/Unit/` (Pest + Brain Monkey) in the **`composer` service**, and
+  `tests/Integration/` (`wp-phpunit`) in the existing **`wordpress` container** — invoked
+  differently, on purpose, and Lesson 23.4 explains why
 - A committed `schema.graphql` with a drift check, plus `@graphql-eslint` in the lint run
 - A full `e2e/` suite: auth setup project, moderation → webhook → public list, draft preview,
   Polylang locale routing
@@ -98,8 +99,9 @@ Lesson 23.7 builds this. Every arrow that does not exist is as important as the 
 │  Playwright MCP server                                   │
 │  --isolated            no persisted profile              │
 │  --allowed-origins     localhost:3000;localhost:8080     │
-│  --blocked-origins *   everything else refused           │
-│  --save-trace          → .agent-artifacts/  (gitignored) │
+│    (an allowlist alone. --blocked-origins * was MEASURED  │
+│     to abort the allowlist too — Lesson 23.7 KC 6)        │
+│  --save-session        → .agent-artifacts/  (gitignored) │
 │  drives the ACCESSIBILITY TREE, not screenshots          │
 └────────────┬─────────────────────────────────────────────┘
              │ HTTP, localhost only
@@ -120,9 +122,11 @@ Lesson 23.7 builds this. Every arrow that does not exist is as important as the 
 
 1. **Work 23.1 through 23.6 in order before touching the agent.** The agent's output is only
    useful if you can convert it into a spec, and Lesson 23.9 assumes you can write one.
-2. **Run the PHP tests inside the existing `wordpress` container.** One stack, one mental model,
-   the same PHP version as production. Lesson 23.5 explains why, and gives `wp-env` the aside it
-   needs so upstream Gutenberg documentation still makes sense.
+2. **Run the *integration* PHP tests inside the existing `wordpress` container.** One stack, one
+   mental model, the same PHP version as production. The *unit* tests mock WordPress out entirely,
+   so they run in the `composer` service — which is also the only container with a Composer
+   binary. Lesson 23.5 explains the choice, and gives `wp-env` the aside it needs so upstream
+   Gutenberg documentation still makes sense.
 3. **Point the agent at localhost and nothing else.** Lesson 23.7 comes before Lesson 23.8 on
    purpose: the guardrails are set up before the agent is ever given a task.
 4. **Commit after every lesson.** `git commit -m "test(e2e): cover moderation through the revalidation webhook"`

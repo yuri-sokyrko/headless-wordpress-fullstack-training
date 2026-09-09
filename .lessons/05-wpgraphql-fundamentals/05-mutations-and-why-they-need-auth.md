@@ -452,8 +452,9 @@ onward has to be built around it.
 
 ## Learn More
 
-- [WPGraphQL — Mutations](https://www.wpgraphql.com/docs/mutations/) — the built-in mutation
-  reference; skim the input types to see how consistent the Relay convention is
+- [WPGraphQL — Mutations](https://www.wpgraphql.com/docs/wpgraphql-mutations) — the mutation
+  reference. For how consistent the Relay convention is, skim the input types in your own generated
+  `schema.graphql` rather than these docs, which no longer describe it
 - [GraphQL spec — Errors](https://spec.graphql.org/October2021/#sec-Errors) — the normative
   answer to "why is this a 200?", including why `data` and `errors` may both be present
 - [Relay input object mutations](https://relay.dev/docs/guides/graphql-server-specification/#mutations) —

@@ -156,7 +156,9 @@ Add the WordPress host to `images.remotePatterns` in `next.config.ts`. Lesson 14
 **A page shows stale content after publishing in WordPress**
 Work down this list:
 
-1. Did the webhook fire? `docker compose logs wordpress | grep revalidate`
+1. Did the webhook fire? `WP_DEBUG_LOG` sends `error_log()` to a **file**, not to Apache's
+   stdout, so `docker compose logs` will not show it:
+   `docker compose exec wordpress tail -n 20 /var/www/html/wp-content/debug.log | grep revalidate`
 2. **Is `BTT_FRONTEND_URL` set to `host.docker.internal:3000`?** Next runs on the host;
    WordPress inside the container cannot reach `localhost:3000`. On Linux you also need
    `extra_hosts: ["host.docker.internal:host-gateway"]`. **This is the single most common
@@ -190,6 +192,10 @@ Missing `asPreview: true`. For an already-published post the draft lives in `wp_
 **Preview says 404 or 401**
 Preview tokens are **single-use with a 120-second TTL**. Reloading the preview URL consumes an
 already-consumed token. Click Preview in wp-admin again.
+
+**Preview says 400**
+The `?next=` parameter is not a same-origin path, so the open-redirect guard rejected it before
+the token was spent. Something rewrote the preview link in transit. Click Preview again. Lesson 17.2.
 
 ---
 
@@ -235,8 +241,12 @@ blocks.
 Re-run codegen after adding the inline fragment. `npm run codegen`.
 
 **`npm run start` in the blocks plugin does not pick up changes**
-`@wordpress/scripts` writes to `build/`, and `block.json` must point at `file:./build/...`
-paths, not `src/`.
+`@wordpress/scripts` compiles `src/<block>/` into `build/<block>/` and copies `block.json`
+across as it goes. The plugin must therefore register from the **built** directory —
+`register_block_type( PLUGIN_DIR . '/build/incident-callout' )`, never `/src/...`. The
+`file:./index.js` paths inside `block.json` are relative to that built copy, so they need no
+`build/` prefix. Registering `src/` is the usual cause: the block appears, and every change
+you make is invisible.
 
 ---
 
@@ -248,8 +258,10 @@ data from the ISR cache**. `globalSetup` must call the test-only revalidate hook
 restoring the database. Lesson 23.6.
 
 **Playwright cannot find an element that is clearly there**
-You used a CSS chain. Use `getByRole` / `getByLabel` / `getByTestId` — CSS chains are banned by
-an ESLint rule in `e2e/` precisely because Tailwind class churn breaks them weekly.
+You used a CSS chain. Use `getByRole` / `getByLabel` / `getByText` — CSS chains are banned by
+an ESLint rule in `e2e/` (Lesson 23.7) precisely because Tailwind class churn breaks them
+weekly. `getByTestId` is not the escape hatch either: Lesson 12.3 rules it out, because a
+`data-testid` passes while the control is invisible or unreachable.
 
 **E2E results differ between runs**
 Non-deterministic seed data. Fixed slugs, explicit `post_date`, no `wp_rand`/`time()`. Lesson
@@ -260,8 +272,13 @@ Nothing can. The rule: if a component is `async` or reads `cookies()`/`headers()
 the `lib/` function it awaits and cover the rendered output in Playwright.
 
 **Visual snapshots fail on my machine but pass in CI**
-Baselines are font- and platform-dependent. Generate them in the Playwright Docker image, not
-on macOS.
+You added snapshot tests of rendered markup, and **this course deliberately has none** — Lesson
+12.1 writes the rule into `docs/testing-strategy.md` as a do-not-test line, and nothing here
+calls `toHaveScreenshot()`. The reason is this failure: a baseline is font-, platform- and
+GPU-dependent, so it fails for reasons unrelated to your change and the fastest fix is always
+`--update-snapshots`, which is a test that asserts whatever it currently does. If you add them
+anyway, generate every baseline inside the Playwright Docker image rather than on macOS, and
+accept that you now own a second artifact per assertion.
 
 ---
 

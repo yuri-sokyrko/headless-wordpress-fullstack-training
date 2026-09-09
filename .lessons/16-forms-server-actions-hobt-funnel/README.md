@@ -31,7 +31,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:3000/api/auth/
 # Expected: 401
 
 # 3. Suites green before you add mutations
-cd next-app && npm test && npx playwright test
+cd next-app && npm test -- --run && npx playwright test
 # Expected: 0 failures
 ```
 
@@ -78,7 +78,7 @@ it; 16.3 and 16.4 repeat it without variation. If an action skips a step, the sk
 | 2 | `schema.safeParse(formData)` | invalid input | Return typed field errors. Never `throw` |
 | 3 | Authenticate, then authorise | no session / wrong role | Redirect to `/login`, or return a permission error |
 | 4 | Call WordPress | WordPress disagrees | Surface its error — WordPress is the authority |
-| 5 | `revalidateTag()`, then redirect or return state | stale page | Tag names come from `src/lib/graphql/tags.ts` |
+| 5 | `revalidateTag()` or `revalidatePath()`, then redirect or return state | stale page | Tag names come from `src/lib/graphql/tags.ts`. A page whose data came from `fetchGraphQLAuthed` has no Data Cache entry to expire — what is stale there is the Router Cache, so it is `revalidatePath()` |
 
 ## The Core Loop
 
@@ -95,7 +95,7 @@ it; 16.3 and 16.4 repeat it without variation. If an action skips a step, the sk
         │                            │                               │  FORCES post_author
         │                            │                               │  IGNORES is_verified
         │                            │◀── { id, status: PENDING } ────┤
-        │◀── "queued for review" ────┤  5 revalidateTag('account')    │
+        │◀── "queued for review" ────┤ 5 revalidatePath('/en/account')│
         │                            │                               │
                                      │                          ┌────▼──────────────┐
    Editor in wp-admin ───────────────┼─────────────────────────▶│ moderation queue  │

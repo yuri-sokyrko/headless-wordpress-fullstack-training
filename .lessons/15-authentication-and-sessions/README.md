@@ -31,7 +31,7 @@ curl -s http://localhost:3000/en/hobt | grep -c 'data-block'
 # Expected: a number greater than 0
 
 # 3. Both suites are green before you add auth
-cd next-app && npm test && npx playwright test
+cd next-app && npm test -- --run && npx playwright test
 # Expected: 0 failures
 ```
 
@@ -90,7 +90,7 @@ Browser                Next.js (:3000)                    WordPress (:8080)
    │ POST /en/login  (form)   │                                   │
    ├─────────────────────────▶│ Server Action 'login'             │
    │                          │  1. rate limit (fail closed)      │
-   │                          │  2. Zod.safeParse                 │
+   │                          │  2. validate (Zod in 16.1)        │
    │                          ├── mutation login ────────────────▶│
    │                          │   server-to-server only           │ authenticate
    │                          │◀── { authToken, refreshToken } ───┤ sign with

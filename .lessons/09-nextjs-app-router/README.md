@@ -64,7 +64,7 @@ in that order.
 
 | #  | Lesson | New Technology | What You Build |
 |----|--------|----------------|----------------|
-| 01 | [The App Router & File Conventions](01-app-router-and-file-conventions.md) | `create-next-app`, Turbopack, `app/[locale]/` | The scaffold, root layout, home page, `.env.example` |
+| 01 | [The App Router & File Conventions](01-app-router-and-file-conventions.md) | `next` 15, Turbopack, `app/[locale]/` | The scaffold by hand, root layout, home page, `.env.example` |
 | 02 | [Server vs Client Components](02-server-vs-client-components.md) | RSC, `'use client'`, the server/client boundary | `/incidents` as a server page with the M08 filter as an island |
 | 03 | [Fetching WordPress Data in a Server Component](03-fetching-wordpress-data-in-a-server-component.md) | `async` components, `fetch`, hand-written response types | Live incidents, and a type that lies |
 | 04 | [Navigation, Linking & Layouts](04-navigation-linking-and-layouts.md) | `next/link`, `generateStaticParams`, `notFound()` | Blog, reviews and scapegoat routes, plus site nav |
@@ -74,7 +74,7 @@ in that order.
 
 | Route | File | Renders |
 |---|---|---|
-| `/en` | `src/app/[locale]/page.tsx` | Latest incidents from `incidents(first: 6)` |
+| `/en` | `src/app/[locale]/page.tsx` | Latest incidents (`IncidentsList`, `first: 6`; becomes `HomepageFeeds` in Module 10) |
 | `/en/incidents` | `src/app/[locale]/incidents/page.tsx` | The full list plus the client filter island |
 | `/en/incidents/[slug]` | `src/app/[locale]/incidents/[slug]/page.tsx` | One incident, body as an HTML blob |
 | `/en/blog` | `src/app/[locale]/blog/page.tsx` | `posts` connection |
@@ -100,7 +100,7 @@ tells you to write something you can see is wrong, you know it is on purpose.
 
 ## How to Work
 
-1. **Read the module README** and confirm Starting State. `create-next-app` runs exactly once, in Lesson 09.1, with the flags that lesson gives you.
+1. **Read the module README** and confirm Starting State. There is no `create-next-app` in this course — Lesson 09.1 explains why and adds Next.js to the Module 07 project by hand.
 2. **Work the lessons in order.** 09.1 through 09.5 are sequential; skipping 09.2 makes 09.3's fetch fail in a way that is genuinely confusing.
 3. **Keep `npm run dev` and the browser open.** Turbopack recompiles on save, and the terminal shows which component rendered on the server.
 4. **Run `## Verification` before moving on**, then commit: `git commit -m "feat(next): app router routes on live wordpress data"`.

@@ -19,16 +19,17 @@ Before starting this module you should have completed:
 
 Module 17 complete: editors click Preview in wp-admin and see the draft rendered by Next.js
 through `BlockRenderer`, `/api/preview` exchanges a single-use token and enables `draftMode()`,
-`PreviewBanner` shows and exits cleanly, the `/faust` spike has been removed and the ADR recording
+`PreviewBanner` shows and exits cleanly, `faust-spike/` has been removed and the ADR recording
 preview-only adoption is committed, and both suites are green.
 
 ```bash
 # 1. The spike is gone and nothing depended on it
-cd next-app && grep -r '@faustwp' package.json src/ || echo "clean"
+test ! -d faust-spike && ! grep -rq '@faustwp' next-app/package.json next-app/src/ \
+  && echo "clean"
 # Expected: clean
 
 # 2. Suites green before you touch caching
-npm test && npx playwright test
+npm test -- --run && npx playwright test
 # Expected: 0 failures
 ```
 
@@ -76,14 +77,16 @@ Built in Lesson 18.1 and defended there. Every row is a decision, not a default.
 | `/[locale]` | ISR, `revalidate: 300` | Mostly editorial, cheap to keep warm |
 | `/[locale]/hobt` | SSG, `revalidate: false` | **Webhook-only.** Conversion is measured here — it must be static and never mid-rebuild |
 | `/[locale]/incidents` | dynamic | Reads `searchParams` for facets; the inner GraphQL fetch is still cached per variable-set |
-| `/[locale]/incidents/[slug]` | ISR + tags, newest 50 pre-rendered | On-demand ISR covers the long tail |
-| `/[locale]/blog/[slug]`, `/reviews/[slug]`, `/scapegoats/[slug]` | ISR + tags, newest 50 | Term counts and posts both change on publish |
+| `/[locale]/incidents/[slug]` | ISR + tags, newest 100 pre-rendered | On-demand ISR covers the long tail |
+| `/[locale]/blog/[slug]`, `/reviews/[slug]`, `/scapegoats/[slug]` | ISR + tags, newest 50 / 20 / 20 | Term counts and posts both change on publish |
 | `/[locale]/account`, `/incidents/submit` | `force-dynamic`, uncached | Authenticated. **Never** in the shared Data Cache |
 | `/[locale]/[...slug]` | ISR + tags | Editor-composed WP pages |
 
-`generateStaticParams` is **scoped** — the newest 50 per type, not all of them. Enumerating 10,000
-incidents turns a 40-second build into a 25-minute one and pre-renders pages nobody will request.
-On-demand ISR is the correct answer for the tail, and Lesson 18.1 measures both.
+`generateStaticParams` is **bounded per content type** — a window sized to how fast that type
+grows, never the whole archive. Lesson 09.4 already set those bounds (100 incidents, 50 posts, 20
+reviews) and Lesson 18.1 defends the asymmetry. Enumerating 10,000 incidents turns a 40-second
+build into a 25-minute one and pre-renders pages nobody will request. On-demand ISR is the correct
+answer for the tail, and Lesson 18.1 measures the per-page cost the projection is built from.
 
 ## The Revalidation Path
 

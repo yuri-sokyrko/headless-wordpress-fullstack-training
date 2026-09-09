@@ -297,7 +297,7 @@ The named anti-pattern is **`NEXT_PUBLIC_WORDPRESS_URL`**. Nearly every headless
 tutorial on the internet defines it, because it lets the browser query GraphQL directly. The
 `NEXT_PUBLIC_` prefix is an *instruction* to Next.js to inline the literal value into JavaScript
 that anyone can read — see
-[appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-four-of-them),
+[appendix 04 §3.2](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them),
 which lists the only four variables in this application that legitimately carry the prefix.
 
 > **This is not obscurity-as-security, and the course does not pretend it is.** Media
@@ -637,7 +637,7 @@ than a minute here.
 
 ## Learn More
 
-- [The Template Hierarchy](https://developer.wordpress.org/themes/basics/template-hierarchy/) —
+- [The Template Hierarchy](https://developer.wordpress.org/themes/classic-themes/basics/template-hierarchy/) —
   read it once more as a *farewell*; it is the thing Module 09's file conventions replace, and
   the differences are the interesting part
 - [Next.js App Router documentation](https://nextjs.org/docs/app) — the routing and rendering

@@ -2,7 +2,7 @@
 title: 'Extending the Schema in PHP'
 module: 6
 lesson: 1
-teaches: [register-graphql-field, register-graphql-enum, computed-fields, resolver-caching, enum-value-mapping]
+teaches: [register-graphql-field, register-graphql-enum, computed-fields, resolver-caching, enum-value-mapping, connection-where-args]
 produces: ['wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/graphql/enums.php', 'wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/graphql/fields.php']
 requires: [5.4]
 ---
@@ -40,6 +40,9 @@ By the end of this lesson you will have:
 - `includes/graphql/fields.php` registering `blameScore` on `Incident` with a documented formula
 - A `description` on every registered field and enum value, visible in the GraphiQL docs pane
 - A resolver that caches its per-request work rather than recomputing per field access
+- `severityIn: [String]` on the `incidents` connection's where-args input — one narrow,
+  allowlisted taxonomy filter, registered because two documents need it and no generic
+  `taxQuery` exists
 - A `blameScore` sanity check: the S1 incidents score highest, the S4 cosmetic ones lowest
 
 ## Classic WP Analogy
@@ -396,6 +399,71 @@ with the field.
 it will guess it is a percentage. With one sentence naming the formula and the `null` case, it is
 a field they can use correctly on the first try.
 
+### 9. `severityIn`: one narrow argument, and why not three
+
+Lesson 05.2 §6 established that core WPGraphQL ships taxonomy `where` arguments for `category`
+and `post_tag` and nothing else, and that the generic `taxQuery` extension is not installed here,
+because a query builder on a public endpoint lets an anonymous caller assemble joins nobody
+reviewed. That leaves a real hole. Two committed documents need to narrow the **root**
+`incidents` connection by severity — `HomepageFeeds` in Lesson 10.5 wants one slug,
+`IncidentTicker` in Lesson 14.4 wants a list — and traversal from the term, which serves
+`/scapegoats/[slug]` perfectly, cannot express "either of these two severities" as one
+connection.
+
+So you register the **filter** and not the **builder**. That distinction is the whole concept.
+
+| | A generic `taxQuery` | `severityIn: [String]` |
+|---|---|---|
+| Taxonomies reachable | every registered one | `severity` |
+| Values reachable | any string the caller sends | four slugs, intersected server-side |
+| Operators reachable | `IN`, `NOT IN`, `AND`, `EXISTS`, nesting, `relation` | `IN` |
+| Query plans a reviewer has seen | none of them | the only one it can produce |
+
+**One argument, not three.** 05.2 §6's table named `severitySlug`, `scapegoatSlug` and
+`techStackSlug` together, and only the first has a caller. `/incidents` narrows by scapegoat and
+tech stack **in the client**, in Lesson 09.2's `IncidentBrowser`, and every single-facet page
+traverses from the term instead. A `scapegoatIn` would therefore be schema surface with no
+consumer — something to document, version, deprecate and answer questions about, for nothing.
+Register the argument a document actually sends, and add the second one on the day a second
+document needs it.
+
+**The name of the type is not yours.** WPGraphQL composes a connection's where-args input as
+`<fromType>To<ToType>Connection` plus `WhereArgs`, so the root `incidents` connection carries
+`RootQueryToIncidentConnectionWhereArgs`. Step 7 introspects it rather than trusting this page,
+for the same reason Step 4 introspected `IncidentDetails`: a generated name belongs to whoever
+generates it.
+
+**The filter intersects; it never trusts.** `severity` is a closed term set — four slugs,
+appendix 03 §2, term UI locked to radio buttons — so the incoming list is intersected with those
+four and everything else is discarded before any query is built. That intersection is the
+"allowlisted" in "narrow, allowlisted argument", and it is exactly what a builder cannot have,
+because accepting values nobody enumerated is what a builder is *for*.
+
+```
+where: { severityIn: ["s2-major", "s9-apocalyptic", "anything at all"] }
+         │
+         ▼   array_intersect() with the four known slugs
+   ["s2-major"]  ──▶  tax_query … 'IN' ('s2-major')  ──▶  the S2 incidents
+
+where: { severityIn: ["s9-apocalyptic"] }
+         │
+         ▼
+   []            ──▶  tax_query … 'IN' ()            ──▶  ZERO rows
+                                                           — never "all rows"
+```
+
+Read the second branch twice, because it is the failure mode that would actually ship. An unknown
+slug has to narrow to **nothing**; the one thing it must never do is widen to everything.
+Dropping the clause when the allowlist empties the list would turn one typo in a block attribute
+into "the ticker shows every incident on the site", and nobody would ever file that bug.
+WordPress gets this right for you: `WP_Tax_Query` compiles an `IN` clause with an empty `terms`
+array to `0 = 1` rather than to no clause at all — `wp-includes/class-wp-tax-query.php`,
+`get_sql_for_clause()`. Pass the empty array straight through and let it.
+
+An **absent** argument is a different thing again and must stay different: no `severityIn` key
+means no clause, which means no filter. "Filter by nothing" and "no filter" are two answers, and
+Verification check 11 is the one that proves they did not collapse into one.
+
 ---
 
 ## Task
@@ -610,12 +678,13 @@ function stored_to_enum_name( string $enum, mixed $raw ): ?string {
 
 Introspection is how you are going to check every registration in this module, and WPGraphQL
 blocks it for **unauthenticated** callers by default — so an anonymous `curl` asking for `__type`
-gets an error rather than a type. Lesson 04.2 turned it on for local development already; the
-command is idempotent, so confirm it rather than assuming it:
+gets an error rather than a type. Lesson 04.2 turned it on for local development already; `patch
+insert` is the idempotent subcommand — `patch update` **errors** with `No data exists for key`
+when the key is absent, measured — so confirm it rather than assuming it:
 
 ```bash
 cd wordpress-headless
-docker compose run --rm wpcli wp option patch update graphql_general_settings public_introspection_enabled on
+docker compose run --rm wpcli wp option patch insert graphql_general_settings public_introspection_enabled on
 docker compose run --rm wpcli wp option pluck graphql_general_settings public_introspection_enabled
 # Expected: on
 ```
@@ -910,7 +979,8 @@ enums must be registered first:
 **Verify §5:**
 
 - [ ] `docker compose logs --tail=40 wordpress` shows no PHP warning or fatal.
-- [ ] Both `add_action` calls are at the **bottom** of the file, after the functions they name.
+- [ ] All **three** hook registrations — two `add_action`, one `add_filter` — are at the
+      **bottom** of the file, after the functions they name.
       Function declarations hoist, so this is style rather than necessity — but the file reads
       top-down and the hook list at the end is the summary.
 - [ ] No resolver in the file calls `new WP_Query`, `get_field()`, or `get_term_meta()`. If one
@@ -954,6 +1024,117 @@ query BlameScoreProbe {
 - [ ] `severityWeight × blameConfidence ÷ 100 × downtimeMinutes` equals `score` for at least one
       node, checked with a calculator. A formula nobody has arithmetic-checked once is a formula
       with a typo in it.
+
+### Step 7: Register the one connection argument the documents need
+
+Key Concept 9 is the argument for this step: one narrow, allowlisted `where` argument, because
+two committed documents filter the root `incidents` connection by severity and nothing in the
+schema lets them. Ask the schema for the input type name before you type it — the name is
+generated, not yours:
+
+```bash
+cd wordpress-headless
+curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ __type(name:\"RootQuery\"){ fields{ name args{ name type{ name } } } } }"}' \
+  | jq -r '.data.__type.fields[] | select(.name=="incidents") | .args[] | select(.name=="where") | .type.name'
+# Expected: RootQueryToIncidentConnectionWhereArgs
+```
+
+Then append to `fields.php`. Nothing else moves: `SEVERITY_WEIGHTS` is already in this file and
+its keys *are* the allowlist, and `Plugin::INCLUDES` already loads the file, so there is no new
+file and no fourth edit to that array.
+
+```php
+// wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/graphql/fields.php — appended
+
+/**
+ * The where-args input type of the ROOT `incidents` connection.
+ *
+ * WPGraphQL composes it as <fromType>To<ucfirst(toType)>Connection . 'WhereArgs'
+ * — WPConnectionType::register_connection_input(). Introspected in Step 7,
+ * because the name is generated and a major version could change it.
+ */
+const INCIDENT_WHERE_ARGS = 'RootQueryToIncidentConnectionWhereArgs';
+
+/**
+ * ONE narrow, allowlisted taxonomy argument — not a generic taxQuery, and not
+ * the three arguments Lesson 05.2 §6 sketched. `severityIn` has two callers,
+ * HomepageFeeds and IncidentTicker; `scapegoatIn` would have none. See §9.
+ */
+function register_incident_where_args(): void {
+	register_graphql_fields(
+		INCIDENT_WHERE_ARGS,
+		array(
+			'severityIn' => array(
+				'type'        => array( 'list_of' => 'String' ),
+				'description' => __( 'Narrow to incidents carrying any of these severity term slugs. The severity taxonomy is a closed set, so a slug outside it is discarded server-side and narrows the result to nothing rather than widening it. There is deliberately no generic taxQuery — Lesson 05.2 §6.', 'blame-the-tech-core' ),
+			),
+		)
+	);
+}
+
+/**
+ * Translate `severityIn` into exactly one tax_query clause.
+ *
+ * The intersection with SEVERITY_WEIGHTS is the security property: no
+ * caller-supplied string reaches WP_Query, only members of the closed term set.
+ * When nothing survives, the clause is still added with an EMPTY term list,
+ * which WP_Tax_Query compiles to `0 = 1` — "no matches", never "no filter".
+ *
+ * @param array<string,mixed> $query_args WP_Query args WPGraphQL has built.
+ * @param mixed               $source     Unused — a root connection has none.
+ * @param array<string,mixed> $args       This field's GraphQL args, incl. `where`.
+ * @param mixed               $context    Unused.
+ * @param mixed               $info       Unused.
+ * @return array<string,mixed>
+ */
+function apply_severity_in( array $query_args, $source, array $args, $context, $info ): array {
+	// Every post-object connection fires this filter. WPGraphQL normalises
+	// post_type to an ARRAY before it gets here
+	// (PostObjectConnectionResolver::__construct), so compare against a list.
+	if ( ! in_array( 'incident', (array) ( $query_args['post_type'] ?? array() ), true ) ) {
+		return $query_args;
+	}
+
+	$requested = $args['where']['severityIn'] ?? null;
+
+	// Absent or null: add no clause at all. "No filter" and "a filter that
+	// matches nothing" have to stay two different answers.
+	if ( ! is_array( $requested ) ) {
+		return $query_args;
+	}
+
+	$allowed = array_intersect(
+		array_map( 'sanitize_title', array_filter( $requested, 'is_string' ) ),
+		array_keys( SEVERITY_WEIGHTS )
+	);
+
+	$clauses   = ( isset( $query_args['tax_query'] ) && is_array( $query_args['tax_query'] ) ) ? $query_args['tax_query'] : array();
+	$clauses[] = array(
+		'taxonomy' => 'severity',
+		'field'    => 'slug',
+		'terms'    => array_values( $allowed ),
+		'operator' => 'IN',
+	);
+
+	$query_args['tax_query'] = $clauses;
+
+	return $query_args;
+}
+
+add_action( 'graphql_register_types', __NAMESPACE__ . '\\register_incident_where_args' );
+add_filter( 'graphql_post_object_connection_query_args', __NAMESPACE__ . '\\apply_severity_in', 10, 5 );
+```
+
+**Verify §7:**
+
+- [ ] `__type(name: "RootQueryToIncidentConnectionWhereArgs")` lists `severityIn` as a `LIST` of
+      `String`. If the type is `null`, the name is wrong — re-run the introspection above.
+- [ ] `where: { severityIn: ["s1-catastrophic"] }` returns fewer nodes than the unfiltered
+      connection **and** every node it returns carries that term. Fewer alone proves nothing.
+- [ ] `where: { severityIn: ["s9-apocalyptic"] }` returns **zero** nodes and no error. If it
+      returns every incident, your empty-list branch dropped the clause — re-read §9.
+- [ ] Nothing was added to `Plugin::INCLUDES` and no new file was created.
 
 ---
 
@@ -1025,13 +1206,41 @@ curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json
   | jq '.data.incident'
 # Expected: blameScore 297, severityWeight 0.6, blameConfidence 99, downtimeMinutes 500
 
-# 9. S1 incidents out-score S4 ones on the seed data (a sanity check, not a proof)
+# 9. The registered argument narrows, and it narrows to the RIGHT rows.
+#    S1 incidents also out-score S4 ones, which is a sanity check on the weights.
 curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
-  -d '{"query":"{ hi:incidents(first:50, where:{severitySlug:\"s1-catastrophic\"}){nodes{blameScore}} lo:incidents(first:50, where:{severitySlug:\"s4-cosmetic\"}){nodes{blameScore}} }"}' \
-  | jq '{s1_max: ([.data.hi.nodes[].blameScore]|max), s4_max: ([.data.lo.nodes[].blameScore]|max)}'
-# Expected: s1_max greater than s4_max. If not, check the weights in SEVERITY_WEIGHTS.
+  -d '{"query":"{ all: incidents(first:100, where:{status:PUBLISH}){ nodes{ slug } } hi: incidents(first:100, where:{status:PUBLISH, severityIn:[\"s1-catastrophic\"]}){ nodes{ blameScore severities{ nodes{ slug } } } } lo: incidents(first:100, where:{status:PUBLISH, severityIn:[\"s4-cosmetic\"]}){ nodes{ blameScore } } }"}' \
+  | jq -c '{all: (.data.all.nodes|length), s1: (.data.hi.nodes|length),
+            every_s1_node_really_is_s1: ([.data.hi.nodes[].severities.nodes[].slug]|unique),
+            s1_max: ([.data.hi.nodes[].blameScore]|max), s4_max: ([.data.lo.nodes[].blameScore]|max)}'
+# Expected: s1 is smaller than all; every_s1_node_really_is_s1 is exactly
+#           ["s1-catastrophic"]; s1_max greater than s4_max.
+#           The middle line is the one doing work — a filter that returned FEWER rows
+#           has not proved it returned the RIGHT rows.
 
-# 10. A first, crude query count for 40 nodes — the number Lesson 06.4 improves
+# 10. NEGATIVE — `taxQuery` is not in this schema and never will be. This is the
+#     check that catches a document written against a plugin you did not install.
+curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ incidents(first:1, where:{ taxQuery:{ relation: AND } }){ nodes{ slug } } }"}' \
+  | jq -c '{data: .data, msg: .errors[0].message}'
+# Expected: {"data":null,"msg":"Field \"taxQuery\" is not defined by type
+#           \"RootQueryToIncidentConnectionWhereArgs\". Did you mean \"dateQuery\"?"}
+#           `data` is null because this failed VALIDATION — no resolver ran, and the
+#           message names the input type your one argument lives on.
+
+# 11. NEGATIVE, and the one worth having — a slug outside the closed set returns
+#     NOTHING, not EVERYTHING.
+curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ bogus: incidents(first:100, where:{severityIn:[\"s9-apocalyptic\"]}){ nodes{ slug } } mixed: incidents(first:100, where:{severityIn:[\"s9-apocalyptic\",\"s4-cosmetic\"]}){ nodes{ severities{ nodes{ slug } } } } }"}' \
+  | jq -c '{bogus: (.data.bogus.nodes|length),
+            mixed_slugs: ([.data.mixed.nodes[].severities.nodes[].slug]|unique),
+            errors: (.errors // "none")}'
+# Expected: {"bogus":0,"mixed_slugs":["s4-cosmetic"],"errors":"none"}
+#           If `bogus` is 40 rather than 0, the allowlist emptied the term list and your
+#           code dropped the clause, so "unknown severity" silently became "every
+#           incident". A passing happy path cannot see that. This check can.
+
+# 12. A first, crude query count for 40 nodes — the number Lesson 06.4 improves
 docker compose run --rm wpcli wp eval '
   $before = $GLOBALS["wpdb"]->num_queries;
   graphql( array( "query" => "{ incidents(first:40){ nodes{ title blameScore } } }" ) );
@@ -1039,14 +1248,16 @@ docker compose run --rm wpcli wp eval '
 # Expected: a two- or three-digit number. Write it down — Lesson 06.4 measures it properly
 #           and cuts it. Do NOT conclude anything from one run.
 
-# 11. Clean up the probe
+# 13. Clean up the probe
 docker compose run --rm wpcli wp post delete "$ID" --force
 docker compose run --rm wpcli wp post list --post_type=incident --format=count
 # Expected: the count you had before this lesson
 ```
 
-Checks 5 and 7 are the pair to trust. Check 5 proves the enum is doing the mapping you did not
-write, and check 7 proves the field is honest about what it cannot compute.
+Checks 5 and 7 are the pair to trust on the enums: 5 proves the enum is doing the mapping you did
+not write, and 7 proves the field is honest about what it cannot compute. Checks 10 and 11 are the
+pair to trust on the new argument, and 11 is the only one of the four that can fail quietly —
+re-read it before you move on.
 
 ## Control Questions
 

@@ -193,27 +193,27 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
 | 03 | `plugins/blame-the-tech-core/` — post types, taxonomies, custom statuses, roles and capabilities |
 | 04 | `includes/acf-json/` field groups, the `wp blame seed` WP-CLI command, the migration runner |
 | 06 | `includes/graphql/` — enums, `blameScore`, `createIncident`, `registerDeveloper`, `submitHobtLead` |
-| 12 | `mu-plugins/blame-seeder/` refinements — determinism, `wp blame reset` |
+| 12 | `mu-plugins/blame-seeder/` — determinism refinements to the seeder, plus the `wp blame fixture` cache |
 | 13 | `plugins/blame-the-tech-blocks/` — six blocks, `block.json`, `@wordpress/scripts` build |
 | 15 | JWT config and the `incident_reporter` role hardening |
 | 17 | `includes/Preview.php` — preview token issue and verify |
 | 18 | `includes/Revalidate.php` — the signed webhook |
 | 20 | Polylang bootstrap, `wp blame ensure-languages` |
-| 23 | `tests/Unit/` (Pest + Brain Monkey), `tests/Integration/` (`wp-phpunit`), `phpcs.xml.dist`, `phpstan.neon` |
-| 24 | `Dockerfile` (multi-stage, non-root, opcache), `.dockerignore`, `fly.toml`, `mu-plugins/000-btt-hardening.php` |
+| 23 | `tests/Unit/` (Pest + Brain Monkey), `tests/Integration/` (`wp-phpunit`), `tests/bootstrap.php`, `phpunit.xml.dist` — all inside the plugin, beside the `phpcs.xml.dist` Module 07 already put there |
+| 24 | `Dockerfile` (multi-stage, non-root, opcache), `.dockerignore`, `fly.toml`, `railway.json`, `phpstan.neon`, `includes/health.php`, `includes/observability.php`, `mu-plugins/000-btt-hardening.php` |
 
 ### `next-app/`
 
 | Module | What lands |
 |---|---|
-| 09 | `create-next-app` scaffold, `app/[locale]/` route shells, `middleware.ts`, `/api/health` |
+| 09 | `next` + `next.config.ts`, `app/[locale]/` route shells, `middleware.ts`, `/api/health` |
 | 10 | `src/lib/graphql/` client, `codegen.ts`, `src/gql/`, `src/graphql/` documents, error boundaries |
 | 11 | `tailwind.config.ts`, `components.json`, `src/components/ui/`, the app shell |
 | 12 | `vitest.config.ts`, `playwright.config.ts`, first specs |
 | 14 | `src/components/blocks/` — `BlockRenderer`, the registry, one component per block, `RichText.tsx` |
 | 15 | `src/lib/auth/`, `src/actions/auth.ts`, `/api/auth/refresh`, route guards |
 | 16 | `src/lib/validation/schemas.ts`, `src/actions/incidents.ts`, `src/actions/leads.ts`, the forms |
-| 17 | `/api/preview`, `/api/preview/exit`, `PreviewBanner`, the `/faust` spike |
+| 17 | `/api/preview`, `/api/preview/exit`, `PreviewBanner` (the `faust-spike/` sibling app is deleted in Lesson 17.4) |
 | 18 | `/api/revalidate`, per-route rendering config (`tags.ts` itself lands in Lesson 10.3) |
 | 19 | `generateMetadata`, `src/lib/seo/`, `app/sitemap.ts`, `app/robots.ts`, `opengraph-image.tsx` |
 | 20 | `src/lib/i18n/`, `src/messages/{en,uk,de}.json`, the locale switcher |

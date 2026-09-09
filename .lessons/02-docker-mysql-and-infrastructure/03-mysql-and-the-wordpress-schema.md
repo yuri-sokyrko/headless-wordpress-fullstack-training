@@ -23,8 +23,10 @@ The specific fact worth carrying out of this lesson: `wp_postmeta` is an
 **entity-attribute-value** table with an index on `meta_key` (prefixed to 191 characters) and
 **no index on `meta_value`**. Every meta condition is therefore a self-join plus a full scan of
 the matched key's rows, and two meta conditions mean two self-joins. Add a `LIKE '%…%'` and the
-prefix index stops helping at all. The second fact: `wp_options` rows with `autoload = 'yes'`
-are loaded in their entirety on *every single request*, which in a headless build means every
+prefix index stops helping at all. The second fact: `wp_options` rows whose `autoload` column
+holds `yes`, `on`, `auto` or `auto-on` — WordPress 6.6 replaced the old `yes`/`no` pair, and a
+query written against `'yes'` alone now matches **nothing** on 6.8 — are loaded in their entirety
+on *every single request*, which in a headless build means every
 GraphQL query pays for them — a 4 MB autoload set is a 4 MB tax on an API call that returns
 three fields. You will measure both, in your own database, rather than take it on trust.
 
@@ -281,8 +283,11 @@ of with your *term list*.
 any of your code runs, `wp_load_alloptions()` executes:
 
 ```sql
--- wp-includes/option.php, inside wp_load_alloptions()
-SELECT option_name, option_value FROM wp_options WHERE autoload = 'yes';
+-- wp-includes/option.php, inside wp_load_alloptions(). The IN list is built by
+-- wp_autoload_values_to_autoload(), which returns exactly these four values on 6.8.
+-- Pre-6.6 this read `autoload = 'yes'`; that predicate now matches zero rows.
+SELECT option_name, option_value FROM wp_options
+ WHERE autoload IN ( 'yes', 'on', 'auto', 'auto-on' );
 ```
 
 Every row is unserialised into PHP memory and held for the life of the request — a deliberate
@@ -296,7 +301,7 @@ queues.
         │
         ▼   WordPress bootstrap — runs BEFORE WPGraphQL sees the query
    ┌────────────────────────────────────────────────────────────────────┐
-   │  1. SELECT … FROM wp_options WHERE autoload='yes'   ◀── the tax    │
+   │  1. SELECT … WHERE autoload IN ('yes','on','auto',…)  ◀── the tax  │
    │  2. unserialize() every value                                     │
    │  3. load active plugins, theme, translations                      │
    │  4. THEN parse the document and resolve fields                    │
@@ -405,6 +410,14 @@ docker compose run --rm wpcli wp db query "SHOW INDEX FROM wp_term_relationships
 
 Read `Key_name`, `Column_name` and `Sub_part`. `Sub_part` is the prefix length — you will see
 `191` beside `post_name` and `meta_key`.
+
+> **Every `wp db …` command prints a warning to stderr, and it is not your problem.**
+> `WARNING: option --ssl-verify-server-cert is disabled, because of an insecure passwordless
+> login.` comes from the MariaDB client shipped inside `wordpress:cli-php8.3` — WP-CLI hands it
+> the credentials through a temporary defaults file, which the client reads as "no password on
+> the command line". It appears on every `wp db query`, `wp db export` and `wp db import` for
+> the rest of the course. Nothing is unencrypted that should not be: this is a localhost socket
+> inside a Compose network. Read past it and look at the rows below.
 
 **Verify §2:**
 
@@ -571,17 +584,23 @@ Then measure the autoload set and confirm the charset ceiling:
 
 ```bash
 docker compose run --rm wpcli wp db query "SELECT COUNT(*) AS autoloaded,
-  SUM(LENGTH(option_value)) AS autoload_bytes FROM wp_options WHERE autoload='yes';"
+  SUM(LENGTH(option_value)) AS autoload_bytes FROM wp_options
+  WHERE autoload IN ('yes','on','auto','auto-on');"
 
-docker compose run --rm wpcli wp db query "SELECT option_name, LENGTH(option_value) AS bytes
-  FROM wp_options WHERE autoload='yes' ORDER BY bytes DESC LIMIT 5;"
+docker compose run --rm wpcli wp db query "SELECT option_name, autoload,
+  LENGTH(option_value) AS bytes FROM wp_options
+  WHERE autoload IN ('yes','on','auto','auto-on') ORDER BY bytes DESC LIMIT 5;"
 docker compose run --rm wpcli wp db query "SHOW CREATE TABLE wp_options;"
 ```
 
 **Verify §7:**
 
-- [ ] `autoload_bytes` on a bare install is small — tens of kilobytes. Write the number down and
-      re-measure after Modules 03, 05 and 13. Keep it under roughly `800000`.
+- [ ] `autoload_bytes` on a bare install is small — measured on a fresh 6.8.3 install it is
+      **26 428 bytes across 118 options**, of which `_transient_wp_core_block_css_files` alone
+      is 20 314. Write your own number down and re-measure after Modules 03, 05 and 13. Keep it
+      under roughly `800000`.
+- [ ] `autoloaded` is a number, not `NULL`. A `NULL` means you narrowed on `autoload='yes'`
+      somewhere — that value no longer exists on 6.8. Key Concept 7.
 - [ ] `SHOW CREATE TABLE wp_options` shows `option_name` as `varchar(191)` and the table charset
       as `utf8mb4`. That `191` is the number from Key Concept 8.
 
@@ -652,7 +671,8 @@ docker compose run --rm wpcli wp db query "SHOW INDEX FROM wp_postmeta WHERE Col
 docker compose run --rm wpcli wp db query "SELECT INDEX_NAME, COLUMN_NAME, SUB_PART
   FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='btt' AND TABLE_NAME='wp_postmeta'
   ORDER BY INDEX_NAME;"
-# Expected: three rows — PRIMARY/meta_id, meta_key/meta_key with SUB_PART 191, post_id/post_id
+# Expected: three rows. ORDER BY INDEX_NAME sorts case-insensitively, so they
+#           arrive meta_key/meta_key (SUB_PART 191), post_id/post_id, PRIMARY/meta_id.
 
 # 4. The fixture exists, so the plans below mean something
 docker compose run --rm wpcli wp db query "SELECT
@@ -666,8 +686,12 @@ docker compose run --rm wpcli wp db query "EXPLAIN SELECT p.ID FROM wp_posts p
   INNER JOIN wp_postmeta mt2 ON p.ID = mt2.post_id
   INNER JOIN wp_postmeta mt3 ON p.ID = mt3.post_id
   WHERE p.post_type='post' AND mt1.meta_key='resolution_status'
-    AND mt2.meta_key='downtime_minutes' AND mt3.meta_key='estimated_cost_usd';" | grep -c 'mt[123]'
+    AND mt2.meta_key='downtime_minutes' AND mt3.meta_key='estimated_cost_usd';" \
+  | cut -f3 | grep -c '^mt[123]$'
 # Expected: 3   — one plan row per meta clause. Three facets, three self-joins.
+#           Count column 3 (`table`), not the whole line: the wp_posts row's
+#           `ref` reads btt.mt1.post_id, so a plain grep -c prints 4 — and would
+#           print 3 for a different join order, i.e. for the wrong reason.
 
 # 6. NEGATIVE: a leading wildcard makes meta_key(191) unusable
 docker compose run --rm wpcli wp db query "EXPLAIN SELECT COUNT(*) FROM wp_postmeta
@@ -681,8 +705,10 @@ docker compose run --rm wpcli wp db query "SELECT SUM(LENGTH(option_value)) AS a
   (SELECT CONCAT(CHARACTER_SET_NAME, ' ', CHARACTER_MAXIMUM_LENGTH)
      FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='btt'
        AND TABLE_NAME='wp_options' AND COLUMN_NAME='option_name') AS name_column
-  FROM wp_options WHERE autoload='yes';"
-# Expected: tens of thousands of bytes on a bare install, and "utf8mb4 191"
+  FROM wp_options WHERE autoload IN ('yes','on','auto','auto-on');"
+# Expected: roughly 26000 bytes across 118 options on a bare 6.8 install, and
+#           "utf8mb4 191". A NULL autoload_bytes means the predicate matched no
+#           rows — i.e. you wrote autoload='yes', which 6.6 removed.
 
 # 8. Your notes exist and are finished
 test -f ../docs/schema-notes.md && grep -c 'FILL THIS IN' ../docs/schema-notes.md

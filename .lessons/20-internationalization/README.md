@@ -23,7 +23,7 @@ redirects.
 
 ```bash
 # 1. Metadata comes from Yoast, not from code
-curl -s http://localhost:3000/en/incidents/dns | grep -o '<title>[^<]*</title>'
+curl -s http://localhost:3000/en/incidents/incident-01 | grep -o '<title>[^<]*</title>'
 # Expected: the title an editor typed in the Yoast sidebar
 
 # 2. The sitemap and robots files exist and are XML/text, not HTML

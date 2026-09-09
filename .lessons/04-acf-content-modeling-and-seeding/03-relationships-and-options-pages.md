@@ -34,7 +34,7 @@ By the end of this lesson you will have:
   `scapegoat.scapegoatProfile` in GraphiQL
 - `group_hobt_promo.json` with a two-condition location rule, and
   `themes/btt-headless/templates/hobt.php` for it to match
-- `group_site_settings.json` exposed on the root query as `siteSettings`, fetched in one query
+- `group_site_settings.json` reachable as `siteSettings { siteChrome { … } }` on the root query
 - All ten scapegoat terms given a tagline and an official excuse in wp-admin
 - A written decision record on taxonomy-with-term-fields versus CPT-with-relationship, with the
   cost named
@@ -211,7 +211,9 @@ query-complexity limits that stop a client asking for 81 queries in the first pl
 `wp_options`, one row per field, named `options_<field_name>`.
 
 `show_in_graphql` plus `graphql_field_name: siteSettings` puts it on the **root query**, which is
-the whole point:
+the whole point. The page is a *type*, though, not a bag of fields: the field group hangs off it
+one level down, as `siteChrome`. So the shape is two levels, and it is two levels in every
+current release — WPGraphQL for ACF 2.x has no flattening mode:
 
 ```
    ROOT-QUERY SETTINGS (what this course does)        PER-COMPONENT SETTINGS (what not to do)
@@ -219,10 +221,12 @@ the whole point:
    app/layout.tsx                                    Header.tsx    → query siteSettings
      one query: SiteChrome {                         Footer.tsx    → query siteSettings
        generalSettings { … }                         CtaBlock.tsx  → query siteSettings
-       siteSettings { … }                            Banner.tsx    → query siteSettings
-       menuItems(where: {location: PRIMARY}) { … }
-     }                                               4 requests, 4 cache entries, 4 chances
-   ─────────────────────────────────────────          for the header and footer to disagree
+       siteSettings {          ← the PAGE            Banner.tsx    → query siteSettings
+         siteChrome { … }      ← the FIELD GROUP
+       }                                             4 requests, 4 cache entries, 4 chances
+       menuItems(where: {location: PRIMARY}) { … }    for the header and footer to disagree
+     }
+   ─────────────────────────────────────────
    1 request, fetched once per render of the
    layout, passed down as props
 ```
@@ -996,7 +1000,7 @@ Six fields, names fixed by
 	"description": "Global settings, fetched once on the GraphQL root query. NO navigation here.",
 	"show_in_rest": 0,
 	"show_in_graphql": 1,
-	"graphql_field_name": "siteSettings",
+	"graphql_field_name": "siteChrome",
 	"map_graphql_types_from_location_rules": 0,
 	"graphql_types": "",
 	"modified": 1730000000
@@ -1006,6 +1010,20 @@ Six fields, names fixed by
 Note the location `param` is `options_page` and the `value` is the `menu_slug` from Step 4. That
 string is the only thing tying the two together, and a mismatch produces an empty settings screen
 with no error.
+
+> **The field group is `siteChrome`, and the options page is `siteSettings`. They must not
+> match.** WPGraphQL for ACF derives a **type name** from `graphql_field_name`, so naming both
+> of them `siteSettings` asks it to register the object type `SiteSettings` twice — once for the
+> page (`id`, `pageTitle`, `menuTitle`, `parentId`) and once for the group's fields. The second
+> registration loses. The six fields end up on an interface called `SiteSettings_Fields` that
+> **no object type implements**, so `siteTagline` exists in the schema and is reachable from
+> nowhere, while `siteSettings { siteSettings { siteSettings { … } } }` recurses for as long as
+> you keep typing. Measured on `wpgraphql-acf` 2.8.0.
+>
+> **And `register_graphql_object_type()` collides silently.** No PHP notice, no GraphQL error,
+> nothing in `docker compose logs wordpress` — the loser simply is not there. That is the whole
+> reason Step 7 introspects the type instead of trusting the admin screen: a wrong name here
+> produces a schema that builds, type-checks and codegens, and returns nothing.
 
 **Verify §5:**
 
@@ -1046,7 +1064,7 @@ foreach ( get_terms( array( "taxonomy" => "scapegoat", "hide_empty" => false, "o
 docker compose run --rm wpcli wp eval '
 update_field( "site_tagline", "Every outage has a scapegoat.", "option" );
 update_field( "primary_cta_label", "Report an incident", "option" );
-update_field( "primary_cta_url", "/incidents/new", "option" );
+update_field( "primary_cta_url", "/incidents/submit", "option" );
 update_field( "footer_blurb", "Blame The Tech is satire. The outages are real.", "option" );
 update_field( "incident_submission_open", 1, "option" );
 update_field( "social_links", array(
@@ -1082,14 +1100,18 @@ echo $missing, " without a tagline", PHP_EOL;'
 ```graphql
 # queries.graphql — scratch. Lesson 05.4 develops each of these properly.
 query ThreeLocations($scapegoat: ID!, $page: ID!) {
+  # TWO levels: `siteSettings` is the options-page type, `siteChrome` is the field
+  # group hanging off it. Key Concept 5.
   siteSettings {
-    siteTagline
-    primaryCtaLabel
-    primaryCtaUrl
-    incidentSubmissionOpen
-    socialLinks {
-      network
-      url
+    siteChrome {
+      siteTagline
+      primaryCtaLabel
+      primaryCtaUrl
+      incidentSubmissionOpen
+      socialLinks {
+        network
+        url
+      }
     }
   }
   scapegoat(id: $scapegoat, idType: SLUG) {
@@ -1131,10 +1153,13 @@ With variables:
 - [ ] `scapegoatProfile` is on a **term**, reached through the `scapegoat` root field.
 - [ ] `hobtPromo` is non-null. If it is `null`, the page's template is not **HOBT Landing** — go
       back to Verify §2, not to the JSON.
-- [ ] Check the docs pane for the type of `siteSettings`. If your version of WPGraphQL for ACF
-      nests the field group inside the options page type rather than flattening it onto it, you
-      will see one extra level; use the shape the schema shows you and carry it into Module 05.
-      The schema is the authority, not this page.
+- [ ] Check the docs pane for the type of `siteSettings`. It is `SiteSettings`, an object with
+      `id`, `pageTitle`, `menuTitle`, `parentId` and **`siteChrome`** — the field group. If you
+      see the six ACF fields directly on it, you are on a WPGraphQL-for-ACF older than 2.0 and
+      the rest of this course will not fit; upgrade rather than adapting.
+- [ ] `siteSettings { siteTagline }` **errors** with `Cannot query field "siteTagline" on type
+      "SiteSettings"`. That is the correct failure, and provoking it once here is cheaper than
+      meeting it in Module 10 with five other queries in the same document.
 
 ### Step 8: Write the decision down
 
@@ -1163,8 +1188,10 @@ docker compose run --rm wpcli wp eval 'foreach ( acf_get_field_groups() as $g ) 
 # Expected: group_hobt_promo => hobtPromo
 #           group_incident_details => incidentDetails
 #           group_scapegoat_profile => scapegoatProfile
-#           group_site_settings => siteSettings
+#           group_site_settings => siteChrome
 #           group_tech_review_fields => techReviewFields
+#           NOTE siteChrome, not siteSettings — that name belongs to the options
+#           PAGE (Step 4), and giving both the same one collides. Step 5's note.
 
 # 3. WordPress can see the page template (the prerequisite for the AND rule)
 docker compose run --rm wpcli wp eval 'echo implode( ",", array_keys( wp_get_theme()->get_page_templates() ) );'
@@ -1178,9 +1205,13 @@ docker compose run --rm wpcli wp post meta get "$HOBT" _wp_page_template
 # 5. One helper for the GraphQL checks
 gql() { curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' -d "$1"; }
 
-# 6. siteSettings is a field on the ROOT query, not on a node
+# 6. siteSettings is a field on the ROOT query, not on a node — and the field group
+#    is one level inside it, as `siteChrome`. Both halves, because a page with no
+#    reachable field group is the failure Step 5's note describes.
 gql '{"query":"{ __type(name:\"RootQuery\"){ fields{ name } } }"}' | jq -r '.data.__type.fields[].name' | grep -x siteSettings
 # Expected: siteSettings
+gql '{"query":"{ __type(name:\"SiteSettings\"){ fields{ name } } }"}' | jq -r '.data.__type.fields[].name' | grep -x siteChrome
+# Expected: siteChrome
 
 # 7. The term field group landed on the Scapegoat type, via its own interface
 gql '{"query":"{ __type(name:\"Scapegoat\"){ interfaces{ name } fields{ name } } }"}' | jq -r '.data.__type | (.interfaces[].name), (.fields[].name)' | grep -iE 'scapegoatprofile'
@@ -1191,17 +1222,23 @@ gql '{"query":"{ __type(name:\"Page\"){ fields{ name } } }"}' | jq -r '.data.__t
 # Expected: hobtPromo
 
 # 9. Both new repeaters generated object row types
-gql '{"query":"{ a: __type(name:\"SiteSettingsSocialLinks\"){ name fields{ name } } b: __type(name:\"HobtPromoModules\"){ name fields{ name } } c: __type(name:\"HobtPromoTestimonials\"){ name } }"}' | jq -c '.data'
+gql '{"query":"{ a: __type(name:\"SiteChromeSocialLinks\"){ name fields{ name } } b: __type(name:\"HobtPromoModules\"){ name fields{ name } } c: __type(name:\"HobtPromoTestimonials\"){ name } }"}' | jq -c '.data'
 # Expected: a has fields network and url; b has title, summary, durationMinutes; c is non-null
+#           The row type is SiteChromeSocialLinks — composed from the FIELD GROUP's
+#           type name, so it moved when the group was renamed in Step 5.
 
 # 10. The data: root settings, a term profile, and the page promo, in ONE request
-gql '{"query":"query($s:ID!,$p:ID!){ siteSettings{ siteTagline incidentSubmissionOpen socialLinks{ network url } } scapegoat(id:$s, idType:SLUG){ name scapegoatProfile{ tagline defensiveness isSentient } } page(id:$p, idType:URI){ title hobtPromo{ headline priceUsd seatsLeft modules{ title durationMinutes } } } }","variables":{"s":"the-intern","p":"/hobt/"}}' | jq '.data'
+gql '{"query":"query($s:ID!,$p:ID!){ siteSettings{ siteChrome{ siteTagline incidentSubmissionOpen socialLinks{ network url } } } scapegoat(id:$s, idType:SLUG){ name scapegoatProfile{ tagline defensiveness isSentient } } page(id:$p, idType:URI){ title hobtPromo{ headline priceUsd seatsLeft modules{ title durationMinutes } } } }","variables":{"s":"the-intern","p":"/hobt/"}}' | jq '.data'
 # Expected: all three populated. incidentSubmissionOpen is true. socialLinks and modules are
 #           arrays of OBJECTS. hobtPromo.headline is the string you typed in Step 6.
 
 # 11. ...and it was one request with no errors
-gql '{"query":"{ siteSettings{ siteTagline } }"}' | jq 'has("errors")'
+gql '{"query":"{ siteSettings{ siteChrome{ siteTagline } } }"}' | jq 'has("errors")'
 # Expected: false
+gql '{"query":"{ siteSettings{ siteTagline } }"}' | jq -r '.errors[0].message'
+# Expected: Cannot query field "siteTagline" on type "SiteSettings"
+#           The FLAT shape is a validation error. Provoke it once, here, rather
+#           than in Module 10 where it takes five other documents down with it.
 
 # 12. NEGATIVE: the AND location rule really is an AND
 PLAIN=$(docker compose run --rm wpcli wp post create --post_type=page \
@@ -1213,9 +1250,9 @@ gql '{"query":"{ page(id:\"/template-negative-test/\", idType:URI){ title hobtPr
 #           because this page has no HOBT template. That is the AND rule at work.
 docker compose run --rm wpcli wp post delete "$PLAIN" --force
 
-# 13. NEGATIVE: there is no navigation anywhere in siteSettings
-gql '{"query":"{ __type(name:\"SiteSettings\"){ fields{ name } } }"}' | jq -r '.data.__type.fields[].name' | grep -iE 'nav|menuitem|primarymenu' || echo 'no navigation in siteSettings — correct'
-# Expected: no navigation in siteSettings — correct
+# 13. NEGATIVE: there is no navigation anywhere in the settings field group
+gql '{"query":"{ __type(name:\"SiteChrome\"){ fields{ name } } }"}' | jq -r '.data.__type.fields[].name' | grep -iE 'nav|menuitem|primarymenu' || echo 'no navigation in siteChrome — correct'
+# Expected: no navigation in siteChrome — correct
 #           `socialLinks` is there and is not navigation. `navLinks`, `menu` and
 #           `primaryNav` are not, and must never be. Navigation is menuItems — Key Concept 7.
 
@@ -1272,7 +1309,7 @@ broken when it is working exactly as designed.
   every argument used in Step 4, including the ones this course does not use
 - [ACF — Options page](https://www.advancedcustomfields.com/resources/options-page/) — how values
   are stored as `options_<name>` rows, which is what check 14 inspects
-- [ACF — `acf/settings/autoload`](https://www.advancedcustomfields.com/resources/acf-settings-autoload/) —
+- [ACF — `acf/settings/autoload`](https://www.advancedcustomfields.com/resources/acf-settings/) —
   the one-line filter behind Key Concept 5's table
 - [ACF — Location rules](https://www.advancedcustomfields.com/resources/custom-location-rules/) —
   the array-of-arrays AND/OR structure, and how to add your own rule type
@@ -1280,7 +1317,7 @@ broken when it is working exactly as designed.
   the `term_45` / `user_7` / `option` identifiers from Key Concept 1
 - [ACF — Relationship field](https://www.advancedcustomfields.com/resources/relationship/) — read
   the "Bi-directional relationships" note, which is the honest version of Key Concept 3's table
-- [Page Templates in the Theme Handbook](https://developer.wordpress.org/themes/templates/page-templates/) —
+- [Page Templates in the Theme Handbook](https://developer.wordpress.org/themes/classic-themes/templates/page-template-files/) —
   the `Template Name` and `Template Post Type` headers, and the directory-scanning rules
 - [WPGraphQL — menus and `menuItems`](https://www.wpgraphql.com/docs/menus/) — what Key Concept 7
   says you get for free, including `parentId` and menu locations

@@ -308,6 +308,14 @@ git check-ignore -v ../wordpress-headless/wp-config.php
 - [ ] **No output means the file is not ignored. Stop and fix the root `.gitignore` first** —
       writing the file and "fixing it afterwards" is how a password enters git history.
 
+> **This rule has an expiry date, and it is Lesson 24.6.** Ignoring the file protects you *now*,
+> while you are about to type a config that might contain a literal. By the end of Step 2 it
+> contains nothing but `getenv()` calls, and check 6 below proves it — at which point the file
+> stops being a secrets risk and becomes a **build input**, because the production `Dockerfile`
+> has to copy it into the image. A gitignored build input means the image builds on your laptop
+> and fails in CI, which is the exact failure Module 24 exists to remove. So Lesson 24.6 deletes
+> the rule, and the thing that licenses the deletion is re-running check 6.
+
 ### Step 2: Write `wp-config.php`
 
 Every value comes from the environment; the inline comments are the lesson.
@@ -371,7 +379,7 @@ define( 'SECURE_AUTH_SALT', btt_env_opt( 'SECURE_AUTH_SALT' ) );
 define( 'LOGGED_IN_SALT',   btt_env_opt( 'LOGGED_IN_SALT' ) );
 define( 'NONCE_SALT',       btt_env_opt( 'NONCE_SALT' ) );
 
-// Read by WPGraphQL JWT Authentication, installed in Module 05 and configured in
+// Read by WPGraphQL JWT Authentication, installed and configured in Lesson 15.2 and
 // Module 15. Defined here so the environment is the only place it ever lives.
 define( 'GRAPHQL_JWT_AUTH_SECRET_KEY', btt_env_opt( 'GRAPHQL_JWT_AUTH_SECRET_KEY' ) );
 
@@ -468,8 +476,12 @@ environment switch and comments. Keeping both would leave two sources of truth f
 
 - [ ] `docker compose -f docker-compose.yml -f docker-compose.dev.yml config` prints the merged
       configuration with no error, and no longer contains `WORDPRESS_CONFIG_EXTRA` anywhere.
-- [ ] It contains `./wp-config.php:/var/www/html/wp-config.php:ro` twice — once for
-      `wordpress`, once for `wpcli`.
+- [ ] `docker compose --profile cli config | grep -c 'target: /var/www/html/wp-config.php'`
+      prints **2** — once for `wordpress`, once for `wpcli`. Both parts matter: Compose rewrites
+      short volume syntax into long form in `config` output, so grepping for the string you
+      typed (`./wp-config.php:/var/www/html/wp-config.php:ro`) finds nothing even when both
+      mounts are present; and without `--profile cli` the `wpcli` service is omitted from that
+      output altogether and you get `1`. Lesson 02.2 Key Concept 1.
 
 ### Step 4: Recreate the container and read the logs
 
@@ -619,9 +631,22 @@ add_action(
 	static function (): void {
 		add_theme_support( 'title-tag' );
 		add_theme_support( 'editor-styles' );
+
+		// The second — and last — thing this theme does. Menu LOCATIONS are theme-scoped
+		// in WordPress core: switch themes and they disappear, which is why this cannot
+		// live in the plugin even though everything else does. WPGraphQL builds
+		// `MenuLocationEnum` from exactly this call, so without it
+		// `menuItems(where: { location: PRIMARY })` fails GraphQL VALIDATION rather than
+		// returning empty — Lessons 05.4 and 11.3 both depend on it.
+		register_nav_menus( array( 'primary' => 'Primary Navigation' ) );
 	}
 );
 ```
+
+> **Only `primary`, and only because something queries it.** A Classic theme would register
+> three or four locations on the assumption that a designer will want them. Here every location
+> is a value in a public GraphQL enum, so an unused one is API surface you have to keep
+> answering for. Register the second location in the lesson that renders it, not now.
 
 **Verify §5:**
 
@@ -629,6 +654,9 @@ add_action(
       three files. Nothing listed means the `themes` bind mount is missing — Lesson 02.2 Step 5.
 - [ ] `docker compose exec wordpress php -l /var/www/html/wp-content/themes/btt-headless/functions.php`
       prints `No syntax errors detected`.
+- [ ] `docker compose run --rm wpcli wp menu location list --format=csv` lists `primary`. An
+      empty list means `register_nav_menus()` did not run — usually because the theme is not
+      the active one. Lesson 05.4 queries this location and Lesson 11.3 renders it.
 
 ### Step 6: Activate the theme
 
@@ -645,9 +673,12 @@ docker compose run --rm wpcli wp theme list
 - [ ] `curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8080/`
       returns `302` to `http://host.docker.internal:3000/`. Nothing is listening there yet —
       you are testing WordPress's response, not Next's.
-- [ ] The same command against `/graphql` returns **`404`, not `302`**. WPGraphQL arrives in
-      Module 05, so 404 is correct today, and a 302 would mean Module 05's first query gets
-      HTML from Next instead of JSON. Checks 7–10 below prove the rest of the table.
+- [ ] The same command against `/graphql` redirects **inside `localhost:8080`**, never to
+      `:3000`. Module 02 still has plain permalinks, so what you actually get is a `301` to
+      `/graphql/` from WordPress's canonical redirect, and `/graphql/` answers `200`; once
+      Module 03.2 sets a permalink structure it becomes the `404` you would expect. Either way
+      a `302` to `:3000` would mean Module 05's first query gets HTML from Next instead of
+      JSON. Checks 7–10 below prove the rest of the table.
 
 ---
 
@@ -668,7 +699,9 @@ docker compose run --rm wpcli wp option get siteurl     # Expected: http://local
 
 # 3. NOT ONE literal credential in the file — everything comes from the environment
 grep -cE "^define\( *'DB_PASSWORD', *'" wp-config.php   # Expected: 0
-grep -c getenv wp-config.php                            # Expected: 15 or more
+# Count the HELPER calls, not getenv: every value goes through btt_env*(), so the
+# file calls getenv() exactly three times (once per helper) plus one comment.
+grep -cE 'btt_env(_opt|_bool)?\( *.[A-Z]' wp-config.php # Expected: 21
 
 # 4. The file is ignored, and is not staged
 git check-ignore -v wp-config.php
@@ -695,17 +728,21 @@ curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8080/
 curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8080/wp-json/
 # Expected: 200 and nothing after it
 curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8080/graphql
-# Expected: 404 and nothing after it. 404 is correct until Module 05 installs WPGraphQL;
-#           a 302 here would break the whole architecture.
+# Expected: 301 to http://localhost:8080/graphql/ — WordPress's own canonical
+#           redirect adding a trailing slash, because Module 02 still has PLAIN
+#           permalinks. Follow it and you get 200 (index.php's diagnostic page).
+#           Module 03.2 sets a permalink structure and this becomes 404.
+#           What must be true TODAY: the host is localhost:8080, never :3000.
 
 # 9. NEGATIVE — the old config mechanism is gone, so there is one source of truth
 docker compose -f docker-compose.yml -f docker-compose.dev.yml config | grep -c WORDPRESS_CONFIG_EXTRA
 # Expected: 0
 
 # 10. The whole thing survives a restart
-docker compose down && docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait
+docker compose down && docker compose up -d --wait
 docker compose run --rm wpcli wp option get blogname
-# Expected: Blame The Tech
+# Expected: `up --wait` exits 0 — the cli profile from Lesson 02.2 keeps
+#           run-on-demand containers out of the wait set — then: Blame The Tech
 ```
 
 Check 7 is the one people get wrong. They see `302` for `/wp-admin/`, assume the redirect is
@@ -742,7 +779,7 @@ distinguishes a working guard from a broken one.
 - [`getenv()` in the PHP manual](https://www.php.net/manual/en/function.getenv.php) — worth two
   minutes for the return-value note alone: `false` on failure, which is why the helpers in Step 2
   check for it explicitly
-- [Theme basics](https://developer.wordpress.org/themes/basics/) — the `style.css` header and
+- [Theme basics](https://developer.wordpress.org/themes/classic-themes/basics/) — the `style.css` header and
   template hierarchy pages, which together explain why a theme with two files and no CSS is
   still valid
 - [`wp_redirect()` and `wp_safe_redirect()`](https://developer.wordpress.org/reference/functions/wp_safe_redirect/) —

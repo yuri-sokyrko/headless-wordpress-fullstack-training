@@ -79,7 +79,9 @@
 - [ ] E2E for any new user-visible flow
 - [ ] The negative case is tested, not just the happy path
 - [ ] Seeder updated if this adds a content type or field
-- [ ] Locators use `getByRole`/`getByLabel`/`getByTestId` — no CSS chains
+- [ ] Locators use `getByRole` + accessible name, or `getByLabel` for a password field — no
+      CSS chains, and no `data-testid` unless no accessible name can exist (the
+      `no-restricted-syntax` rule over `e2e/` rejects the rest)
 
 Preview URL / screenshots:
 

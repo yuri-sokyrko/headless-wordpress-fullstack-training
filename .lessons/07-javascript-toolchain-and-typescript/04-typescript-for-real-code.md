@@ -3,7 +3,7 @@ title: 'TypeScript for Real Code'
 module: 7
 lesson: 4
 teaches: [generics, discriminated-unions, utility-types, unknown-vs-any, type-narrowing]
-produces: ['next-app/src/types/content.ts']
+produces: ['next-app/src/types/content.ts', 'next-app/scripts/blame.ts']
 requires: [7.3]
 ---
 
@@ -465,7 +465,7 @@ export type Block =
   | BlockOf<'BttScapegoatPicker', { readonly termId: number | null }>
   | BlockOf<'BttIncidentTicker', { readonly count: number | null }>
   | BlockOf<'BttHobtCta', { readonly label: string | null }>
-  | BlockOf<'BttTechVerdictCard', { readonly reviewId: number | null }>;
+  | BlockOf<'BttTechVerdictCard', { readonly reviewSlug: string | null }>;
 ```
 
 Now the two **edits**. Inside `export type Incident`, replace the three placeholder arrays — and
@@ -633,7 +633,7 @@ function blockSummary(block: Block): string {
     case 'BttHobtCta':
       return `CTA — ${block.attributes?.label ?? 'Get demo'}`;
     case 'BttTechVerdictCard':
-      return `verdict — review #${block.attributes?.reviewId ?? 0}`;
+      return `verdict — review ${block.attributes?.reviewSlug ?? '(none)'}`;
     default:
       return assertNever(block);
   }

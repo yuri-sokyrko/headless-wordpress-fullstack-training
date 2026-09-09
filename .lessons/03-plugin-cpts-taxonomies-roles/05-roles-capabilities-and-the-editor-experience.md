@@ -330,7 +330,7 @@ function ensure_reporter_role(): void {
 
 	add_role(
 		REPORTER_ROLE,
-		__( 'Incident Reporter', 'blame-the-tech' ),
+		__( 'Incident Reporter', 'blame-the-tech-core' ),
 		REPORTER_CAPS
 	);
 
@@ -491,7 +491,11 @@ Three edits to `includes/Plugin.php`, matching the pattern from Lesson 03.2 §St
 		// `incident_reporter` is deliberately LEFT IN PLACE — users hold it.
 		// It is removed in uninstall.php, after reassigning those users.
 
-		flush_rewrite_rules();
+		// Soft flush, for the reason Lesson 03.1 Key Concept 6 gives: during its
+		// own deactivation request this plugin is still loaded, so `init` has
+		// already registered the post types and flush_rewrite_rules() would
+		// rebuild the rule set INCLUDING the rules being retired.
+		delete_option( 'rewrite_rules' );
 	}
 ```
 

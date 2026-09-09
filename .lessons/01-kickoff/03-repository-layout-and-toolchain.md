@@ -465,36 +465,51 @@ against a file on disk, so you can confirm the rule before there is anything to 
 ```bash
 # 1. A real WordPress env file — MUST be ignored
 git check-ignore -v wordpress-headless/.env
-# Expected: .gitignore:72:.env	wordpress-headless/.env
+# Expected: .gitignore:80:.env	wordpress-headless/.env
+#           The LINE NUMBER will drift as .gitignore grows — what matters is that a
+#           rule is named at all. Never confirm an ignore by eye: `git status`
+#           looking clean can mean "ignored" or "the file does not exist yet".
 
 # 2. A real Next env file — MUST be ignored (different pattern, same rule)
 git check-ignore -v next-app/.env.local
-# Expected: .gitignore:73:.env.*	next-app/.env.local
+# Expected: .gitignore:81:.env.*	next-app/.env.local
 
 # 3. The tracked example — MUST NOT be ignored, because of the `!` re-include
+#    READ THIS ONE CAREFULLY. `-v` reports the last matching pattern INCLUDING a
+#    negation, and a matched pattern means exit 0. So the flag that makes checks 1
+#    and 2 readable makes this one look like a failure when it is a success.
 git check-ignore -v wordpress-headless/.env.example
 echo "exit=$?"
-# Expected: NO pattern output, and exit=1
-#           exit=1 from check-ignore means "this path is not ignored" — which is
-#           correct here and is what makes .env.example committable.
+# Expected: .gitignore:82:!.env.example	wordpress-headless/.env.example — and exit=0.
+#           The leading `!` is the whole answer: the path matched a NEGATION.
+git check-ignore wordpress-headless/.env.example
+echo "exit=$?"
+# Expected: no output, exit=1. Without `-v`, check-ignore answers the question you
+#           actually asked — "is this ignored?" — and 1 means no. This is the form
+#           to use in a script, and Lesson 02.5 uses it for exactly this reason.
 
 # 4. Your own plugin directory — MUST NOT be ignored, despite plugins/* above it
 git check-ignore -v wordpress-headless/wp-content/plugins/blame-the-tech-core/
 echo "exit=$?"
-# Expected: no output, exit=1 — the `!` on line 47 wins over `plugins/*` on line 46
+# Expected: no output, exit=1 — the `!` on line 49 wins over `plugins/*` on line 48.
+#           Note the asymmetry with check 3, which is git's and not a mistake here:
+#           a negated FILE reports its rule under `-v`, a negated DIRECTORY does not.
 
 # 5. Somebody else's plugin — MUST be ignored
 git check-ignore -v wordpress-headless/wp-content/plugins/wp-graphql/
-# Expected: .gitignore:46:wordpress-headless/wp-content/plugins/*	...wp-graphql/
+# Expected: .gitignore:48:wordpress-headless/wp-content/plugins/*	...wp-graphql/
 ```
 
 **Verify §3:**
 
-- [ ] Checks 1, 2 and 5 each printed a `.gitignore:<line>:<pattern>` match.
-- [ ] Checks 3 and 4 printed **nothing** and exited `1`. The asymmetry is the lesson: the same
-      file governs both, and `!` reverses the verdict for exactly the paths you named.
-- [ ] You can state, without looking, why line 46 ends in `/*` rather than `/`. If you cannot,
-      re-read Key Concept 4 — this is the one that silently loses your work.
+- [ ] Checks 1, 2 and 5 each printed a `.gitignore:<line>:<pattern>` match. The line numbers in
+      the comments are indicative; the pattern names are the contract.
+- [ ] Check 3 printed a rule beginning `!` and exited `0` under `-v`, then printed nothing and
+      exited `1` without it. Check 4 printed nothing and exited `1` both ways. That asymmetry is
+      the lesson twice over: `!` reverses the verdict for exactly the paths you named, and a flag
+      chosen to make output readable can invert what the exit status appears to mean.
+- [ ] You can state, without looking, why the plugins rule ends in `/*` rather than `/`. If you
+      cannot, re-read Key Concept 4 — this is the one that silently loses your work.
 
 ### Step 4: Write ADR 0001
 
@@ -620,10 +635,11 @@ ls wordpress-headless/ next-app/
 
 # 4. Real env files ARE ignored, before either exists
 git check-ignore -v wordpress-headless/.env
-# Expected: .gitignore:72:.env	wordpress-headless/.env
+# Expected: .gitignore:80:.env	wordpress-headless/.env   (the line number drifts;
+#           the pattern name is the contract)
 
 git check-ignore -v next-app/.env.local
-# Expected: .gitignore:73:.env.*	next-app/.env.local
+# Expected: .gitignore:81:.env.*	next-app/.env.local
 
 # 5. THE NEGATIVE — .env.example must NOT be ignored, or it can never be committed
 git check-ignore wordpress-headless/.env.example; echo "exit=$?"
@@ -635,10 +651,10 @@ git check-ignore wordpress-headless/.env.example; echo "exit=$?"
 
 # 6. The allowlist pattern works in both directions
 git check-ignore wordpress-headless/wp-content/plugins/blame-the-tech-core/; echo "ours exit=$?"
-# Expected: no output, ours exit=1   (re-included by the `!` on line 47)
+# Expected: no output, ours exit=1   (re-included by the `!` below `plugins/*`)
 
 git check-ignore -v wordpress-headless/wp-content/plugins/wp-graphql/ >/dev/null; echo "theirs exit=$?"
-# Expected: theirs exit=0            (ignored by plugins/* on line 46)
+# Expected: theirs exit=0            (ignored by the broad `plugins/*` rule)
 
 # 7. ADR 0001 exists and is actually finished
 test -f docs/adr/0001-headless-split.md && echo "adr: present"
@@ -667,9 +683,9 @@ to set.
 
 ## Control Questions
 
-1. `.gitignore` line 46 is `wordpress-headless/wp-content/plugins/*`, with a `*`. Explain what
-   would break if it were `wordpress-headless/wp-content/plugins/` instead, and why the two `!`
-   lines below it would stop having any effect at all.
+1. `.gitignore` ignores `wordpress-headless/wp-content/plugins/*`, with a `*`. Explain what would
+   break if it were `wordpress-headless/wp-content/plugins/` instead, and why the two `!` lines
+   below it would stop having any effect at all.
 2. `wp-config.php` and `.env` are both gitignored, but for different reasons and with different
    replacements. Name each reason and each replacement, and say which of the two would still be
    gitignored if the project moved to a single-server FTP deploy.

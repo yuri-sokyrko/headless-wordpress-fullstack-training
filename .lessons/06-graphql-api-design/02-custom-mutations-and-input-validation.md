@@ -1497,8 +1497,9 @@ token is answered with exactly as much information as no token.
 - [`register_graphql_mutation()`](https://www.wpgraphql.com/functions/register_graphql_mutation/) —
   the config keys used in all three files, including the `isPrivate` and `auth` keys this lesson
   deliberately does not rely on
-- [WPGraphQL — Mutations](https://www.wpgraphql.com/docs/mutations/) — the Relay input/payload
-  convention, and how `clientMutationId` is added for you
+- [WPGraphQL — Mutations](https://www.wpgraphql.com/docs/wpgraphql-mutations) — `register_graphql_mutation`
+  and how to extend an existing mutation. The Relay input/payload convention this lesson leans on is
+  no longer spelled out in these docs; read the generated schema for it instead
 - [OWASP — Broken Access Control](https://owasp.org/Top10/A01_2021-Broken_Access_Control/) — the
   category a missing `current_user_can()` in a resolver falls into; read the "Missing function
   level access control" examples
@@ -1512,5 +1513,5 @@ token is answered with exactly as much information as no token.
   read the `$terms` parameter description and notice exactly when it creates a term
 - [`wpdb::insert()`](https://developer.wordpress.org/reference/classes/wpdb/insert/) — the format
   array, and why it makes the call a prepared statement
-- [OWASP — Account enumeration](https://owasp.org/www-community/attacks/Account_Enumeration_via_Login_Error_Messages) —
+- [OWASP — Account enumeration](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/03-Identity_Management_Testing/04-Testing_for_Account_Enumeration_and_Guessable_User_Account) —
   why `registerDeveloper` answers identically for a known and an unknown email

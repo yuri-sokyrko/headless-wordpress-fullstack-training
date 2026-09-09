@@ -70,7 +70,9 @@ Loaded by Docker Compose via `env_file:`, read in `wp-config.php` with `getenv()
 | `LOGGED_IN_SALT` | **yes** | 64+ random chars | |
 | `NONCE_SALT` | **yes** | 64+ random chars | |
 | `GRAPHQL_JWT_AUTH_SECRET_KEY` | **yes** | 64+ random chars | **Must differ from `AUTH_KEY`** — see §5 |
+| `GRAPHQL_JWT_AUTH_CORS_ENABLE` | no | `false` | Set explicitly, and explicitly **off**. When on, WPGraphQL JWT Authentication emits CORS headers and returns the refresh token in an `X-JWT-Refresh` response header — both of which only help a *browser* client, and the browser never reaches `/graphql` in this app. Lesson 15.2. |
 | `BTT_APP_TOKEN` | **yes** | 48+ random chars | Shared with Next. Server-to-server only. §4 |
+| `BTT_PREVIEW_SHARED_SECRET` | **yes** | 32+ random chars | Mirrors `PREVIEW_SHARED_SECRET`. WordPress mints a preview token as `<random>.<HMAC>` so Next can reject a forged one **before** spending a WordPress round trip. It is a pre-check, not the authority — the single-use transient is. Lesson 17.2. |
 | `BTT_REVALIDATE_SECRET` | **yes** | 48+ random chars | HMAC key for the revalidation webhook |
 | `BTT_LEAD_IP_HMAC_KEY` | **yes** | 32+ random chars | Pseudonymises lead IPs — the raw IP is never stored |
 | `BTT_FRONTEND_URL` | no | `http://host.docker.internal:3000` | Where WordPress posts revalidations and redirects previews |
@@ -128,25 +130,32 @@ you guard the module with `import 'server-only'` — Lesson 10.1 does exactly th
 | `WP_REST_BASE` | no | `http://localhost:8080/wp-json` | For `/btt/v1/preview/verify` |
 | `WP_APP_TOKEN` | **yes** | `__CHANGE_ME__` | Mirrors `BTT_APP_TOKEN` |
 | `REVALIDATE_SECRET` | **yes** | `__CHANGE_ME__` | Mirrors `BTT_REVALIDATE_SECRET` |
-| `PREVIEW_SHARED_SECRET` | **yes** | `__CHANGE_ME__` | |
+| `PREVIEW_SHARED_SECRET` | **yes** | `__CHANGE_ME__` | Mirrors `BTT_PREVIEW_SHARED_SECRET`. Verifies the HMAC on a preview token locally, so an unauthenticated caller cannot force one WordPress round trip per request. Lesson 17.2 |
 | `TURNSTILE_SECRET_KEY` | **yes** | `__CHANGE_ME__` | Cloudflare Turnstile server key |
 | `UPSTASH_REDIS_REST_URL` | **yes** | `__CHANGE_ME__` | Rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | **yes** | `__CHANGE_ME__` | |
 | `RESEND_API_KEY` | **yes** | `__CHANGE_ME__` | Optional lead notification |
-| `E2E_MODE` | no | unset | `1` only in the test stack — gates the test-only revalidate hook |
-| `E2E_SECRET` | **yes** | `__CHANGE_ME__` | Required header for that hook |
+| `E2E_MODE` | no | unset | `1` only in the test stack — gates the test-only revalidate hook. **Playwright does not read `.env.local`**: `playwright.config.ts` and `e2e/global-setup.ts` see this only from the invoking shell (`E2E_MODE=1 npx playwright test`). Deliberate — Lesson 12.4. |
+| `E2E_SECRET` | **yes** | `__CHANGE_ME__` | Required header for that hook. Read from this file inside the Next runtime (Module 18); read from the shell by the test harness (Lesson 12.4). |
 | `SENTRY_DSN` | **yes** | — | Module 24 |
 
-### 3.2 Public (`NEXT_PUBLIC_*`) — all four of them
+### 3.2 Public (`NEXT_PUBLIC_*`) — all five of them
 
-| Variable | Value | Why publishing it is safe |
-|---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | It is already in the address bar |
-| `NEXT_PUBLIC_DEFAULT_LOCALE` | `en` | Not a secret in any sense |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare site key | **Designed** to be public. The *secret* key is the one in §3.1 |
-| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | `blamethe.tech` | Optional analytics |
+| Variable | Value | Why publishing it is safe | Added by |
+|---|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | It is already in the address bar | 09.1 |
+| `NEXT_PUBLIC_DEFAULT_LOCALE` | `en` | Not a secret in any sense | 09.1 |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare site key | **Designed** to be public. The *secret* key is the one in §3.1 | 16.3 |
+| `NEXT_PUBLIC_SENTRY_DSN` | the client DSN | A DSN is a **write-only ingest key**: it can submit an event to one project and read nothing back. Lesson 24.3 argues it deliberately, as the counterpoint to Lesson 24.8's review point 5 | 24.3 |
+| `NEXT_PUBLIC_RELEASE` | the commit SHA | The SHA ships inside the bundle either way; naming it is what makes a stack trace map back to source | 24.3 |
 
-Nothing else. Ever.
+**Nothing else** — and what keeps this list short is not the number, it is the burden of proof.
+Two entries took twenty-four modules to earn a place here, and they earned it by filling in the
+third column with a **property of the value** rather than a convenience. Analytics is the
+canonical thing a reader will want to add next, and it is exactly the addition that has to clear
+the same bar. `NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT`, `NEXT_PUBLIC_WP_APP_TOKEN` and
+`NEXT_PUBLIC_REVALIDATE_SECRET` all appear in this course, every one of them as the wrong answer
+to a Control Question.
 
 ```bash
 # The verification step from Lesson 09.5 — also a CI gate in Module 24
@@ -185,7 +194,7 @@ WordPress compares the app token with `hash_equals()`, not `==`, to avoid a timi
 | Cookie | Contents | httpOnly | Secure | SameSite | Path | Max-Age |
 |---|---|---|---|---|---|---|
 | `btt_at` | WP auth JWT | ✓ | ✓ (prod) | `Lax` | `/` | 300 s |
-| `btt_rt` | WP refresh token | ✓ | ✓ | **`Strict`** | **`/api/auth`** | 30 d |
+| `btt_rt` | WP refresh token | ✓ | ✓ (prod) | **`Strict`** | **`/api/auth`** | 30 d |
 | `btt_preview_jwt` | short-lived preview JWT | ✓ | ✓ | `Lax` | `/` | 300 s |
 | `__prerender_bypass`, `__next_preview_data` | Next `draftMode` | ✓ | ✓ | Next-managed | `/` | session |
 | `NEXT_LOCALE` | `en` \| `uk` \| `de` | ✗ | ✓ | `Lax` | `/` | 1 y |
@@ -270,6 +279,11 @@ Never `echo` a secret in a workflow. Use `::add-mask::` for anything derived, an
 Sectioned, every variable present, secrets as `__CHANGE_ME__`, with a header that states the
 rule.
 
+**This is the file's *final* shape, not its first.** Lesson 09.1 creates it holding only the
+variables Module 09 introduces; Modules 10, 12, 15, 16, 17, 18 and 24 each append their own as
+they arrive. §9 says which module adds what. A learner at the end of Module 09 whose
+`.env.example` is six lines long has not made a mistake.
+
 ```dotenv
 # next-app/.env.example
 #
@@ -299,11 +313,15 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en
 |---|---|
 | 02 | All of §2 except the S3, app-token and `BTT_*_PASSWORD` rows — plus the whole of §1 |
 | 04 | `ACF_PRO_LICENSE`, and the three `BTT_*_PASSWORD` session variables the seeder reads |
-| 09 | `WP_GRAPHQL_ENDPOINT`, `NEXT_PUBLIC_SITE_URL`, the `NEXT_PUBLIC_` boundary lesson |
+| 09 | `WP_GRAPHQL_ENDPOINT`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_DEFAULT_LOCALE`, the `NEXT_PUBLIC_` boundary lesson |
 | 10 | `WP_REST_BASE` |
 | 12 | `E2E_MODE`, `E2E_SECRET` |
-| 15 | `GRAPHQL_JWT_AUTH_SECRET_KEY`, `WP_APP_TOKEN`, `BTT_APP_TOKEN`, the cookie table in §4 |
+| 15 | `GRAPHQL_JWT_AUTH_CORS_ENABLE`, `WP_APP_TOKEN`, and the cookie table in §4. `GRAPHQL_JWT_AUTH_SECRET_KEY` and `BTT_APP_TOKEN` already exist — Lesson 02.5 wrote them into `wordpress-headless/.env`, and Lesson 15.2 *verifies* them rather than creating them. |
 | 16 | `TURNSTILE_*`, `UPSTASH_*`, `BTT_LEAD_IP_HMAC_KEY`, `RESEND_API_KEY` |
-| 17 | `PREVIEW_SHARED_SECRET` |
-| 18 | `REVALIDATE_SECRET`, `BTT_REVALIDATE_SECRET`, `BTT_FRONTEND_URL` |
-| 24 | `BTT_S3_*`, `SENTRY_DSN`, `DISALLOW_FILE_*`, and all of §7 |
+| 17 | `PREVIEW_SHARED_SECRET`, `BTT_PREVIEW_SHARED_SECRET` |
+| 18 | `REVALIDATE_SECRET`. `BTT_REVALIDATE_SECRET` and `BTT_FRONTEND_URL` already exist — Lesson 02.5 wrote both into `wordpress-headless/.env` and `.env.example`, and Lesson 18.3 *verifies* them rather than creating them. |
+| 19–20 | none. Recorded explicitly, because a missing row reads as "not yet audited" |
+| 21 | `ANALYZE` only, and it is **not** an env-file variable: `ANALYZE=true npm run build`, one command, from the invoking shell — the same discipline as `E2E_MODE` in §3.1. `/api/vitals` needs nothing new because it reuses `src/lib/rate-limit.ts` from Lesson 16.2 |
+| 22 | none |
+| 23 | none new. `E2E_MODE` and `E2E_SECRET` are Module 12's; the `e2e_agent` password is a session variable like the three `BTT_*_PASSWORD` rows in §2, injected at run time and never written to a file |
+| 24 | `BTT_S3_*`, `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `BTT_RELEASE` / `NEXT_PUBLIC_RELEASE`, `BTT_PERSISTED_QUERIES_ENFORCED`, and all of §7. `DISALLOW_FILE_EDIT` and `DISALLOW_FILE_MODS` already exist — Lesson 02.4 defines both from the environment and 02.5 wrote them into `.env.example`, so Lesson 24.1 sets **values** and must not add a second `define()`. The Sentry client DSN carries `NEXT_PUBLIC_` **on purpose**: a DSN is a write-only ingest key, not a secret, and Lesson 24.3 argues it as the counterpoint to Lesson 24.8's review point 5. `SENTRY_AUTH_TOKEN` is build-time only and must never reach the bundle. |

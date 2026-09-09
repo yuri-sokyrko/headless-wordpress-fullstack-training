@@ -45,7 +45,8 @@ lsof -i :8080
 
 Always through the `wpcli` service. **The stock `wordpress` image has no WP-CLI** — that is why
 `docker-compose.yml` declares a separate `wpcli` service (Lesson 02.2). It runs as `www-data`, so
-`--allow-root` is neither needed nor valid.
+`--allow-root` is never needed. WP-CLI **accepts** the flag — it is a global option — and it does
+nothing when the process is not root. Needing it means the `user: '33:33'` pin is missing.
 
 ```bash
 # General shape
@@ -82,9 +83,15 @@ wpx cache flush
 wpx transient delete --all
 
 # The course's own commands (Module 04 onward)
-wpx blame seed --fresh
+wpx blame seed --fresh --yes         # --yes is required with no TTY (CI)
 wpx blame reset
 wpx blame ensure-languages
+wpx blame fixture status             # (Module 12, dev/CI only) the seeder digest
+
+# The fixture cache crosses the container boundary on stdin/stdout, so the file
+# lives on the HOST and the container never touches it. -T is mandatory.
+docker compose run --rm -T wpcli wp blame fixture export > ../fixtures/seeded.sql
+docker compose run --rm -T wpcli wp blame fixture load  < ../fixtures/seeded.sql
 
 # GraphQL schema snapshot (Module 06 / 23)
 wpx graphql generate-static-schema
@@ -113,9 +120,12 @@ wpx db query "EXPLAIN SELECT p.ID FROM wp_posts p
   INNER JOIN wp_postmeta m ON p.ID = m.post_id
   WHERE p.post_type='incident' AND m.meta_key='downtime_minutes' AND m.meta_value > 60;"
 
+# WordPress 6.6 replaced the yes/no column with a value SET. `autoload='yes'`
+# returns NULL on 6.8 — measured. Core's own predicate is wp_autoload_values_to_autoload().
 wpx db query "SELECT SUM(LENGTH(option_value)) AS autoload_bytes
-  FROM wp_options WHERE autoload='yes';"
-# Expected: ideally under ~800000. This loads on EVERY GraphQL request.
+  FROM wp_options WHERE autoload IN ('yes','on','auto','auto-on');"
+# Expected: ideally under ~800000; a bare 6.8.3 install is ~26 KB across 118
+#           options. This loads on EVERY GraphQL request.
 
 # Moving a database between environments
 wpx search-replace 'https://old.example' 'http://localhost:8080' --all-tables --dry-run
@@ -156,9 +166,10 @@ npm run build && grep -r "$REVALIDATE_SECRET" .next/static/
 ```bash
 # Unit — Vitest (Module 12, 23)
 npm test                       # watch mode
+npm run test:watch             # the explicit spelling of `npm test`
 npm run test:run               # single pass
 npm run test:coverage
-npx vitest run src/lib/incidents.test.ts   # one file
+npx vitest run src/lib/graphql/tags.test.ts   # one file
 npx vitest run -t "rejects anonymous"      # one test by name
 
 # E2E — Playwright (Module 12, 23)
@@ -166,13 +177,14 @@ npx playwright install --with-deps         # once
 npx playwright test
 npx playwright test --headed
 npx playwright test --ui                   # the best debugging tool in the course
-npx playwright test e2e/auth.spec.ts
+npx playwright test --project=setup        # the auth setup project (e2e/auth.setup.ts)
 npx playwright test --project=mutations
 npx playwright show-report
 npx playwright show-trace test-results/**/trace.zip
-npx playwright codegen http://localhost:3000
+npx playwright codegen http://127.0.0.1:3000   # 127.0.0.1, not localhost — Lesson 12.3
 
-# Update visual baselines — review the diff before committing
+# Update visual baselines — only if you add them. This course does NOT: Lesson 12.1
+# rules out snapshotting rendered markup, and nothing here calls toHaveScreenshot().
 npx playwright test --update-snapshots
 
 # Reset the DB and warm caches before an E2E run
@@ -187,15 +199,26 @@ PLUGIN=wp-content/plugins/blame-the-tech-core
 
 docker compose run --rm composer install                 # writes $PLUGIN/vendor/
 
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest --filter=ScapegoatStats
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/phpcs
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/phpcbf     # auto-fix
-docker compose exec -w /var/www/html/$PLUGIN wordpress php vendor/bin/phpstan analyse
+# Unit (Pest + Brain Monkey) — no WordPress needed, so the `composer` service.
+docker compose run --rm composer run test:unit
+docker compose run --rm composer exec -- pest --filter=BlameScore    # one class
+
+# Integration (wp-phpunit) — needs a real WordPress and a real MySQL, so the
+# `wordpress` container, which has PHP and no Composer. `-T` is mandatory on a
+# runner with no TTY.
+docker compose exec -T -w /var/www/html/$PLUGIN wordpress \
+  php vendor/bin/pest --testsuite=integration
+
+# Style and static analysis — no WordPress needed either, and phpcs.xml.dist and
+# phpstan.neon both sit beside composer.json, so neither needs a --standard flag.
+docker compose run --rm composer run phpcs
+docker compose run --rm composer run phpcbf     # auto-fix
+docker compose run --rm composer run phpstan
 
 # Blocks (Module 13) — from the blocks plugin dir
 npm run start                  # watch build
 npm run build
+npm run lint:js                # wp-scripts lint-js
 npm test                       # wp-scripts test-unit-js
 ```
 
@@ -207,7 +230,11 @@ npx lhci autorun
 npx lhci autorun --collect.url=http://localhost:3000/en/incidents
 
 # Accessibility
-npx playwright test e2e/a11y.spec.ts
+npx playwright test --project=a11y        # the gate: 0 critical, 0 serious
+npx playwright test e2e/a11y.spec.ts      # the same specs, outside the project
+
+# Bundle budget (Module 21) — absolute ceiling and delta vs `main`
+node scripts/check-bundle-budget.mjs
 
 # Secrets
 npx gitleaks detect --no-git --redact
@@ -288,8 +315,13 @@ gh pr checks
 ```bash
 git add -A
 git commit -m "feat(wp): register the incident post type"
-# Conventional commits. Types: feat fix docs style refactor test chore ci perf
-# Scopes: wp block graphql web auth i18n e2e ci docker seed deps
+# Conventional commits, enforced by commitlint from Lesson 24.8.
+# Types, measured from every example in this course: feat fix docs refactor perf
+#   test chore ci spike — plus revert. `spike` is Module 17's (a timeboxed
+#   evaluation you intend to delete), and it is why the list is not the default nine.
+# Scopes are NOT enumerated: 18 appear across the course and a closed list would
+#   reject the next honest one. Common ones: next web wp auth cache graphql
+#   blocks docker seo seed ci. Header limit is 100 (the longest here is 97).
 
 git commit -m "feat(graphql)!: rename Incident.scapegoats to Incident.blamedOn"   # breaking
 

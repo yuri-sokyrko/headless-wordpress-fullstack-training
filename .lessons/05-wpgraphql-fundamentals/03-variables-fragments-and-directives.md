@@ -474,9 +474,9 @@ detail page therefore cannot drift from the card.
 
 > **`SeoFields` waits for Module 19.** The fragment in
 > [appendix 05 §9](../appendix/05-graphql-cheatsheet.md#9-query-patterns-this-app-actually-uses)
-> is declared `on NodeWithSeo`, an interface that only exists once WPGraphQL Yoast SEO is
+> is declared `on ContentNode`, whose `seo` field only exists once WPGraphQL Yoast SEO is
 > installed in Lesson 19.1. Write it into your scratch file now if you like, but keep it
-> commented out — a fragment on a type that does not exist fails validation for the whole
+> commented out — selecting a field the schema does not have fails validation for the whole
 > document, including the operations that were fine.
 
 ### Step 5: Build the remaining read operations on top of the fragments
@@ -686,8 +686,9 @@ grep -nE '\(id: "' queries.graphql
   canonical reference for everything in this lesson, in about fifteen minutes
 - [GraphQL — Validation](https://graphql.org/learn/validation/) — the checks that run before a
   single resolver does, which is why a typo costs you nothing but a 200 response
-- [WPGraphQL — Fragments](https://www.wpgraphql.com/docs/fragments) — fragment usage in a
-  WordPress schema, including interfaces and `contentNodes`
+- [WPGraphQL — GraphQL queries](https://www.wpgraphql.com/docs/graphql-queries) — fragment usage,
+  aliases and query structure in a WordPress schema. The `contentNodes` and interface specifics are
+  no longer on this page; Key Concept 4 above is where this course covers them
 - [GraphQL Code Generator — client preset](https://the-guild.dev/graphql/codegen/plugins/presets/preset-client) —
   read this now to see exactly how operation and fragment names become TypeScript types in
   Lesson 10.2
