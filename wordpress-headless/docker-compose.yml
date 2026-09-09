@@ -1,0 +1,128 @@
+name: btt
+
+services:
+  wordpress:
+    image: wordpress:7.1-php8.4-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?required}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:?required}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?required}
+      WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX:-wp_}
+    volumes:
+      - btt-wp-core:/var/www/html
+      - ./wp-content/plugins:/var/www/html/wp-content/plugins
+      - ./wp-content/themes:/var/www/html/wp-content/themes
+      - ./wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins
+      - btt-uploads:/var/www/html/wp-content/uploads
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+      - ./php.ini:/usr/local/etc/php/conf.d/zz-btt.ini:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks: [btt-net]
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.4
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?required}
+      MYSQL_USER: ${MYSQL_USER:?required}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD:?required}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?required}
+    volumes:
+      - btt-db-data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mysqladmin ping  -h 127.0.0.1 -u root -p$$"MYSQL_ROOT_PASSWORD" --silent',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks: [btt-net]
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:5
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    networks: [btt-net]
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025" # web UI
+      - "1025:1025" # SMTP
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks: [btt-net]
+    restart: unless-stopped
+
+  wpcli:
+    # Run with:  docker compose run --rm wpcli wp <command>
+    image: wordpress:cli-php8.4
+    # Run-on-demand, and the profile is what makes that true. Without it `up`
+    # starts this container too, its default command (`wp shell`) exits, and
+    # `up -d --wait` then reports "container wpcli-1 exited" and returns 1.
+    # `docker compose run` activates a service's own profile, so every
+    # `run --rm wpcli` in this course keeps working unchanged.
+    profiles: ["cli"]
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?required}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:?required}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?required}
+      WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX:-wp_}
+      WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
+    user: "33:33"
+    volumes:
+      # The SAME core volume as the web container. This is what gives `wp`
+      # something to bootstrap.
+      - btt-wp-core:/var/www/html
+      # Must see exactly what the web container sees
+      - ./wp-content/plugins:/var/www/html/wp-content/plugins
+      - ./wp-content/themes:/var/www/html/wp-content/themes
+      - ./wp-content/mu-plugins:/var/www/html/wp-content/mu-plugins
+      - btt-uploads:/var/www/html/wp-content/uploads
+      # BOTH PHP config files, same as the web container.
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+      - ./php.ini:/usr/local/etc/php/conf.d/zz-btt.ini:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks: [btt-net]
+
+volumes:
+  btt-db-data:
+  btt-uploads:
+  btt-wp-core:
+
+networks:
+  btt-net:
+    driver: bridge
