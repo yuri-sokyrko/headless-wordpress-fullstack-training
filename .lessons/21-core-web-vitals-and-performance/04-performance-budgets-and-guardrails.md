@@ -36,8 +36,9 @@ By the end of this lesson you will have:
 
 - `next-app/lighthouserc.json` — six URLs, mobile preset, three runs with median aggregation, and
   assertions set from your own baseline
-- `next-app/scripts/check-bundle-budget.mjs` — a parser over the build output enforcing both the
-  absolute ceiling and the delta-vs-`main` limit, with a readable failure message
+- `next-app/scripts/check-bundle-budget.mjs` — a per-route First Load JS figure computed from the
+  build manifests, enforcing both the absolute ceiling and the delta-vs-`main` limit, with a
+  readable failure message
 - `docs/perf-baseline.md` finalised: current numbers, the thresholds derived from them, and the
   date each threshold was last raised
 - A deliberately-broken branch proving both checks fail — an unnecessary `'use client'` and a
@@ -209,33 +210,41 @@ This lesson uses `assertions` only. `budgets` would be the tool for "no more tha
 third-party script", which is a real budget this application does not need yet — one Turnstile
 script, per Lesson 21.3 §7. Named, not built.
 
-### 6. Parsing `next build` output is brittle by nature, so it fails loudly
+### 6. Next 16 stopped printing the number, so the guardrail computes it — and fails loudly
 
 The route table is terminal output. It is not a public API, Next has never promised its shape,
-and it has changed: the column headers, the box-drawing characters and the route markers have all
-moved between major versions.
+and it has changed: the column headers, the box-drawing characters and the route markers moved
+between major versions — and then **Next 16 removed the `Size` and `First Load JS` columns
+altogether.** The framework's own reasoning is worth reading: in a server-driven app the numbers
+were measuring something the webpack and Turbopack implementations did not even agree on, so
+rather than print a figure people budgeted against, Next now prints none.
 
-There is an alternative and it is worth knowing why this lesson declines it. `.next/app-build-manifest.json`
-lists the chunk files per route, so you could sum and gzip them yourself:
+That leaves a course-shaped hole, because "no number" is not an answer to "did this pull request
+add 40 kB". Three ways to fill it:
 
-| | Parse the printed table | Sum the manifest yourself |
-|---|---|---|
-| Breaks when | the table format changes | the manifest format changes |
-| Matches the number a human reads in the terminal | **yes** | no — you re-implement Next's summation and will disagree with it |
-| Needs to know how Next computes "First Load JS" | no | **yes**, including which chunks are shared |
-| Failure mode | a parse error you can see | a number that is quietly wrong |
+| | Parse the printed table | Sum `.next/app-build-manifest.json` yourself | Lighthouse `total-byte-weight` |
+|---|---|---|---|
+| Works on Next 16 | ❌ the columns are gone | ✅ | ✅ |
+| Breaks when | the table format changes | the manifest format changes | never — it is a Lighthouse audit |
+| Attributes bytes to a route | yes | yes | yes, but includes images, CSS and fonts |
+| Fails a PR on +12 kB of JavaScript | yes | yes | no — the signal is buried in everything else |
 
-The second column loses on the row that matters: **a budget nobody can reconcile with the build
-log is a budget nobody trusts.** When the check says 184 kB, the first thing a developer does is
-scroll up to the table. If your number and that table disagree, the check is finished.
+The middle column is the one left standing, and this lesson takes it. The cost is real and worth
+stating: **you are now computing the number, so you own its definition.** "First Load JS" here
+means *the gzipped size of the union of the JavaScript chunks the manifest lists for that route,
+plus the shared root chunks every route loads*. That is what Next used to print, computed the way
+Next used to compute it, but nothing enforces the agreement any more — so Step 3 reconciles it
+once against `@next/bundle-analyzer` and writes the reconciliation into
+`docs/perf-baseline.md`. A budget nobody can reconcile with something is a budget nobody trusts.
 
-So: parse the table, and **fail loudly when you cannot.** That is the whole difference between a
-guardrail and a decoration:
+The other half of the lesson is unchanged, and it is the half that matters more: **fail loudly
+when you cannot measure.** That is the whole difference between a guardrail and a decoration:
 
 | Situation | A decoration does | A guardrail does |
 |---|---|---|
-| The header is missing | `routes.size === 0`, no failures found, exit 0 | exit 1 with "no First Load JS column — read the log and fix the regex" |
-| A route's size does not parse | skips the row | exit 1, naming the line |
+| The manifest is missing | `routes.size === 0`, no failures found, exit 0 | exit 1 with "no `.next/app-build-manifest.json` — did the build run?" |
+| The manifest has a shape it did not have | reads `undefined`, sums to 0 kB, passes | exit 1, naming the key it expected |
+| A chunk the manifest lists is not on disk | skips it, under-reports | exit 1, naming the file |
 | A route in the baseline vanished | ignores it | exit 1 — if you deleted the route, regenerate the baseline in the same pull request |
 
 A check that passes when it is broken is worse than no check, because it launders "we did not
@@ -383,7 +392,7 @@ the five decisions in it are recorded here instead:
 | `upload.target: "filesystem"` | no server, no token, no third party. The reports land in `.lighthouseci/`, which Step 5 gitignores |
 
 > **`startServerReadyPattern` is coupled to what your Next version prints.** `"Ready in"` matches
-> Next 15's startup line. If `lhci` hangs and then times out, run `npm start` by hand, read the
+> Next 16's startup line. If `lhci` hangs and then times out, run `npm start` by hand, read the
 > first three lines, and match one of them. This is reasoned from the observed output rather than
 > from a documented contract, so verify it rather than trusting it.
 
@@ -429,16 +438,22 @@ print a per-route table on success.
 ```js
 #!/usr/bin/env node
 // next-app/scripts/check-bundle-budget.mjs
-// Enforces two First Load JS budgets from `next build` output:
+// Enforces two First Load JS budgets, computed from the build manifests:
 //   1. an absolute ceiling per route
 //   2. a delta against the committed baseline, which represents `main`
 //
+// Next 16 removed the `Size` and `First Load JS` columns from `next build`
+// output, so there is no table left to parse. The numbers still exist — they
+// are the chunk lists in `.next/app-build-manifest.json` plus the shared root
+// chunks in `.next/build-manifest.json` — and this script gzips them itself.
+// Key Concept 6 is the argument for doing it this way and the honest cost.
+//
 // Usage:
-//   node scripts/check-bundle-budget.mjs                  # runs `next build` itself
-//   node scripts/check-bundle-budget.mjs --log build.log  # parses a saved log (CI)
+//   node scripts/check-bundle-budget.mjs                  # reads ./.next
+//   node scripts/check-bundle-budget.mjs --dist .next     # explicit dist dir
 //   node scripts/check-bundle-budget.mjs --write-baseline # regenerate, on `main` ONLY
-import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -457,104 +472,113 @@ function die(message) {
   process.exit(1);
 }
 
-function toKb(value, unit) {
-  const n = Number(value);
+function distDir() {
+  const at = process.argv.indexOf('--dist');
 
-  if (!Number.isFinite(n)) return null;
-  if (unit === 'B') return n / 1024;
-  if (unit === 'kB') return n;
-  if (unit === 'MB') return n * 1024;
+  if (at === -1) return join(HERE, '..', '.next');
+  if (process.argv[at + 1] === undefined) die('--dist needs a directory path');
 
-  return null;
+  return process.argv[at + 1];
 }
 
-/**
- * Parse the `Route (app)` table out of `next build` stdout.
- *
- * This format is TERMINAL OUTPUT, not a public API, and it has changed between
- * major versions. Every failure path below exits 1 on purpose: a budget check
- * that cannot find the numbers must never report success. Key Concept 6.
- */
-function parseRoutes(output) {
-  if (!output.includes('First Load JS')) {
+function readManifest(dist, name) {
+  const path = join(dist, name);
+
+  if (!existsSync(path)) {
     die(
-      'no "First Load JS" column in the build output.\n' +
-        '  Either the build failed, or Next changed the table format.\n' +
-        '  Read the build log, then update the regexes in parseRoutes().\n' +
+      `no ${name} at ${path}.\n` +
+        '  Run `npm run build` first. In CI, build in the step before this one.\n' +
         '  Failing loudly rather than reporting a green check on no data.'
     );
   }
 
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return die(`${name} is not readable JSON. Delete .next and rebuild.`);
+  }
+}
+
+/** Gzip a chunk once, cached, because routes share most of their chunks. */
+const gzipCache = new Map();
+
+function gzippedBytes(dist, file) {
+  if (gzipCache.has(file)) return gzipCache.get(file);
+
+  const path = join(dist, file);
+
+  if (!existsSync(path)) {
+    die(
+      `the manifest lists ${file} but it is not on disk at ${path}.\n` +
+        '  A partial build, or a manifest format this script does not understand.'
+    );
+  }
+
+  // gzip, not raw bytes: gzip is what crosses the network, and the 180 kB
+  // budget is a gzip number. Level 9 rather than the default, so the figure
+  // does not drift when Node changes its default.
+  const bytes = gzipSync(readFileSync(path), { level: 9 }).length;
+
+  gzipCache.set(file, bytes);
+
+  return bytes;
+}
+
+/**
+ * Build the per-route table.
+ *
+ * `app-build-manifest.json` keys are file-convention paths — `/[locale]/page`,
+ * `/[locale]/incidents/[slug]/page`, `/api/vitals/route`. The `/page` suffix is
+ * stripped to get the URL shape a human recognises; `/route` entries are route
+ * handlers, which ship no page bundle and do not belong in a table about page
+ * weight.
+ */
+function computeRoutes(dist) {
+  const app = readManifest(dist, 'app-build-manifest.json');
+  const build = readManifest(dist, 'build-manifest.json');
+
+  if (typeof app.pages !== 'object' || app.pages === null) {
+    die('app-build-manifest.json has no `pages` object. The manifest format changed.');
+  }
+
+  // Every route pays for these before it pays for anything of its own.
+  const shared = Array.isArray(build.rootMainFiles) ? build.rootMainFiles : [];
+
+  if (shared.length === 0) {
+    die('build-manifest.json has no `rootMainFiles`. The manifest format changed.');
+  }
+
   const routes = new Map();
 
-  for (const line of output.split('\n')) {
-    // A route row: a box-drawing character, an optional marker (o static,
-    // filled circle prerendered, f dynamic), then a path starting with `/`.
-    const row = line.match(/^[┌├└│]\s*[○●ƒλ]?\s*(\/\S*)/u);
+  for (const [key, chunks] of Object.entries(app.pages)) {
+    if (key.endsWith('/route')) continue;
+    if (!Array.isArray(chunks)) die(`app-build-manifest.json: ${key} is not an array of chunks`);
 
-    if (row === null) continue;
+    const route = key.replace(/\/page$/u, '') || '/';
 
-    const route = row[1];
+    // A Set, because a chunk shared between the route and the root must be
+    // paid for once. Double-counting here is exactly the "quietly wrong
+    // number" Key Concept 6 warns about.
+    const files = new Set([...shared, ...chunks].filter((f) => f.endsWith('.js')));
 
-    // Route handlers ship no page bundle; Next reports them at the shared
-    // baseline, which would put /api/* into a table about page weight.
-    if (route.startsWith('/api/')) continue;
+    let bytes = 0;
 
-    // Two size columns — `Size`, then `First Load JS`. The LAST one is the
-    // budgeted number. Fewer than two means a continuation line, not a route.
-    const sizes = [...line.matchAll(/([\d.]+)\s*(B|kB|MB)\b/g)];
+    for (const file of files) bytes += gzippedBytes(dist, file);
 
-    if (sizes.length < 2) continue;
-
-    const last = sizes[sizes.length - 1];
-    const kb = toKb(last[1], last[2]);
-
-    if (kb === null) die(`could not read a size from this row:\n  ${line.trim()}`);
-
-    routes.set(route, kb);
+    routes.set(route, bytes / 1024);
   }
 
   if (routes.size === 0) {
     die(
-      'found the "First Load JS" header but parsed ZERO routes.\n' +
-        '  The header survived a format change and the row regex did not.'
+      'the manifests parsed but produced ZERO routes.\n' +
+        '  Either the build produced no app routes, or the key shape changed.'
     );
   }
 
   return routes;
 }
 
-function buildOutput() {
-  const at = process.argv.indexOf('--log');
-
-  if (at !== -1) {
-    const path = process.argv[at + 1];
-
-    if (path === undefined) die('--log needs a file path');
-
-    return readFileSync(path, 'utf8');
-  }
-
-  // No log supplied, so run the build. In CI, tee the build you already ran and
-  // pass --log, so the job builds once instead of twice. NO_COLOR belt and
-  // braces: on Next 15.5 the escapes wrap the number-and-unit pair rather than
-  // splitting it, so a coloured log happens to parse — but that is an accident
-  // of where Next puts them, not a promise, and this file is a gate.
-  try {
-    return execFileSync('npx', ['next', 'build'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'inherit'],
-      env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
-    });
-  } catch {
-    // Without this, a failing build dumps a raw Node Error object — `output`,
-    // `stdout` and `pid` arrays — and Key Concept 6's promise of failing
-    // loudly AND READABLY is only half kept. The build's own output is above.
-    die('`next build` failed. Its output is above. Fix the build, then the budget.');
-  }
-}
-
-const routes = parseRoutes(buildOutput());
+const routes = computeRoutes(distDir());
 
 if (process.argv.includes('--write-baseline')) {
   const payload = {
@@ -595,7 +619,10 @@ for (const [route, kb] of [...routes].sort(([a], [b]) => a.localeCompare(b))) {
     route,
     `${kb.toFixed(1)} kB`,
     typeof before === 'number' ? `${before.toFixed(1)} kB` : 'NEW',
-    delta === null ? '—' : `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} kB`,
+    // Round FIRST, then sign. The baseline stores one decimal, so an unchanged
+    // route can compute a delta of -0.004 and print `-0.0 kB` — five minutes of
+    // wondering what shrank, over four bytes of rounding.
+    delta === null ? '—' : `${Math.abs(delta) < 0.05 ? '+' : delta > 0 ? '+' : '-'}${Math.abs(delta).toFixed(1)} kB`,
   ]);
 
   if (kb > CEILING_KB) {
@@ -639,12 +666,28 @@ if (failures.length > 0) {
 console.log('\nall routes within budget');
 ```
 
-> **This parser has been run against a real build — on Next 15.5.25, where it read six routes
-> correctly, skipped the child slug rows and the `/api/*` rows, and was untroubled by the
-> `Revalidate` and `Expire` columns Next added.** All three loud-failure paths were exercised too:
-> no baseline, a header with zero rows, and no header at all. What is *not* guaranteed is your
-> Next version: the route table is not a public API. If it parses zero routes, that is Key Concept
-> 6's failure path working correctly rather than a bug in your setup.
+> **The manifests are not a public API either, and that is the deal you accepted in Key Concept
+> 6.** `app-build-manifest.json` and `build-manifest.json` are internal build artifacts; Next may
+> reshape them in a minor. Every path in this script that cannot find what it expects exits `1`
+> naming the key or the file, so a format change presents as a red check with a readable message
+> rather than a green check on a 0 kB route table. That is the property being bought, and it is
+> worth more than the exact figure.
+
+**Reconcile the number, once.** You are computing First Load JS now rather than reading it, so
+prove your definition against something independent before you budget against it:
+
+```bash
+# next-app
+npm install --save-dev @next/bundle-analyzer
+ANALYZE=true npm run build
+# Opens a treemap per bundle. Compare the analyzer's gzip total for one route
+# with this script's figure for the same route.
+```
+
+They will not match to the byte — the analyzer counts a different set of files, and the treemap
+is per-bundle rather than per-route. Agreement within a few kB is the bar. Write both numbers and
+the date into `docs/perf-baseline.md` under a "how First Load JS is computed here" heading, so the
+next person to distrust the budget has somewhere to look.
 
 **Verify §3:**
 
@@ -653,6 +696,9 @@ console.log('\nall routes within budget');
       `eslint.config.mjs` covers, and `--max-warnings=0` means a warning is a failure.
 - [ ] Running it with no baseline present exits **1** with a message naming `--write-baseline`,
       not a stack trace.
+- [ ] Running it against an empty directory (`--dist /tmp/nope`) exits **1** naming
+      `app-build-manifest.json`, not a stack trace.
+- [ ] `docs/perf-baseline.md` records the analyzer reconciliation and its date.
 
 ### Step 4: Record `main`'s numbers
 
@@ -742,7 +788,7 @@ client graph of every content route.
 ```bash
 # next-app
 npm run build > /tmp/btt-break.log 2>&1
-node scripts/check-bundle-budget.mjs --log /tmp/btt-break.log
+node scripts/check-bundle-budget.mjs
 # Expected: exit 1, and a named failure on every content route — the three
 #           [slug] routes and [...slug] — each over the +10 kB delta limit.
 echo "exit=$?"
@@ -994,40 +1040,41 @@ test -f scripts/bundle-baseline.json && echo ok
 node -e "const b=require('./scripts/bundle-baseline.json');console.log(b.recordedAt, Object.keys(b.routes).length)"
 # Expected: a date, and one entry per app route
 
-# 9. The happy path: a table on stdout and exit 0. This is the exact command
-#    Module 22's Starting State runs. Keep the log — checks 10-12 need one.
-npm run build 2>&1 | tee /tmp/btt-build.log | tail -1
-node scripts/check-bundle-budget.mjs --log /tmp/btt-build.log
+# 9. The happy path: a table on stdout and exit 0. This is the exact pair of
+#    commands Module 22's Starting State runs.
+npm run build >/dev/null 2>&1
+node scripts/check-bundle-budget.mjs
 echo "exit=$?"
 # Expected: a per-route table, "all routes within budget", exit=0
 
-# 10. NEGATIVE — an unparseable input FAILS. This is the difference between a
+# 10. NEGATIVE — no build output FAILS. This is the difference between a
 #     guardrail and a decoration: a check that passes when it is broken
 #     launders "we did not measure" into "we measured and it was fine".
-printf 'this is not a next build log\n' > /tmp/btt-nonsense.log
-node scripts/check-bundle-budget.mjs --log /tmp/btt-nonsense.log
+node scripts/check-bundle-budget.mjs --dist /tmp/btt-no-such-dist
 echo "exit=$?"
-# Expected: exit=1, and a message naming the missing "First Load JS" column
-#           rather than a stack trace
+# Expected: exit=1, naming app-build-manifest.json, not a stack trace
 
-# 11. NEGATIVE — a log with the HEADER but no parseable rows also fails. This is
-#     the sneakier format change: the column survives, the row regex does not.
-printf 'Route (app)   Size   First Load JS\nnothing here\n' > /tmp/btt-header-only.log
-node scripts/check-bundle-budget.mjs --log /tmp/btt-header-only.log
+# 11. NEGATIVE — a manifest with the right NAME and the wrong SHAPE also fails.
+#     This is the sneakier format change: the file survives, the key does not.
+mkdir -p /tmp/btt-bad-dist
+printf '{"notPages":{}}\n' > /tmp/btt-bad-dist/app-build-manifest.json
+printf '{"rootMainFiles":["static/chunks/x.js"]}\n' > /tmp/btt-bad-dist/build-manifest.json
+node scripts/check-bundle-budget.mjs --dist /tmp/btt-bad-dist
 echo "exit=$?"
-# Expected: exit=1, naming "parsed ZERO routes"
+# Expected: exit=1, naming the missing `pages` object. A script that summed
+#           `undefined` to 0 kB and passed would be the worst outcome here.
 
-# 12. NEGATIVE — a route over the ceiling fails, with the route named. A
-#     synthetic log rather than a doctored real one, so the input is obvious.
-printf 'Route (app)                Size  First Load JS\n' > /tmp/btt-over.log
-printf '\u250c \u25cb /[locale]              5.4 kB         999.9 kB\n' >> /tmp/btt-over.log
-printf '\u2514 \u0192 /api/vitals            149 B          0 B\n' >> /tmp/btt-over.log
-node scripts/check-bundle-budget.mjs --log /tmp/btt-over.log
+# 12. NEGATIVE — a chunk the manifest promises and the disk does not have fails
+#     rather than under-reporting.
+printf '{"pages":{"/[locale]/page":["static/chunks/ghost.js"]}}\n' \
+  > /tmp/btt-bad-dist/app-build-manifest.json
+node scripts/check-bundle-budget.mjs --dist /tmp/btt-bad-dist
 echo "exit=$?"
-# Expected: exit=1, naming `/[locale]` and "exceeds the 180 kB ceiling". Note
-#           /api/vitals is skipped: a route handler ships no page bundle, and
-#           Next reports it at the shared baseline.
-rm -f /tmp/btt-nonsense.log /tmp/btt-header-only.log /tmp/btt-over.log /tmp/btt-build.log
+# Expected: exit=1, naming the first file it could not read — the shared chunk
+#           from build-manifest.json, since that is checked before the route's
+#           own. Note there is no synthetic "over the ceiling" case any more: the
+#           ceiling is computed from real bytes, so faking it means faking a build.
+rm -rf /tmp/btt-bad-dist
 
 # 13. NEGATIVE — nothing this lesson wrote can be bypassed silently
 grep -rc 'continue-on-error' lighthouserc.json scripts/check-bundle-budget.mjs
@@ -1113,10 +1160,11 @@ Key Concept 3 applies and the answer is in `docs/perf-baseline.md`, not in a low
 1. A route sits at 140 kB against a 180 kB ceiling and four pull requests take it to 178 kB, all
    green. Explain what the delta check would have done differently at each of the four, then
    describe the one circumstance in which the ceiling catches something the delta cannot.
-2. The bundle script parses terminal output that Next has never promised to keep stable, and this
-   lesson chose that over summing `.next/app-build-manifest.json` yourself. Reconstruct the
-   argument, then name the single change to your team's habits that would make the manifest
-   approach the better one.
+2. The bundle script reads build manifests that Next has never promised to keep stable, and it
+   would once have parsed the `First Load JS` column instead. Reconstruct why the column was the
+   better answer while it existed, why its removal in Next 16 settles the question, and name the
+   one property the script must keep now that nobody can reconcile its number against a printed
+   table.
 3. `continue-on-error: true` and "raise the threshold in the same pull request" both let a change
    ship past a red budget. Both are one line. Explain precisely what the second one buys that the
    first does not, in terms of what a reader can discover six months later.

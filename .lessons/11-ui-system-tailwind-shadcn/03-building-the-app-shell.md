@@ -753,7 +753,7 @@ export default async function LocaleLayout({
   readonly children: ReactNode;
   readonly params: Promise<{ locale: string }>;
 }) {
-  // Next 15: params is a Promise and must be awaited.
+  // Next 16: params is a Promise and must be awaited.
   const { locale } = await params;
 
   const chrome = await fetchGraphQL(SiteChromeDocument, undefined, {
@@ -897,9 +897,20 @@ grep -rl "'use client'" src/components/layout/ | sort
 #           src/components/layout/NavLink.tsx
 
 # 12. NEGATIVE — the shell did not blow up the bundle. Compare First Load JS for
-#     /[locale] against the number you recorded in Lesson 09.2.
-npm run build | grep -E 'Route \(app\)|First Load JS|\[locale\]'
-# Expected: First Load JS within a few kB of the Lesson 09.2 figure. A jump of
+#     /[locale] against the number you recorded in Lesson 09.2. Next 16 prints no
+#     size columns, so this is the Lesson 09.2 §9 command again.
+npm run build >/dev/null 2>&1
+node -e '
+const { gzipSync } = require("node:zlib");
+const { readFileSync } = require("node:fs");
+const read = (p) => JSON.parse(readFileSync(".next/" + p, "utf8"));
+const shared = read("build-manifest.json").rootMainFiles;
+const kb = (f) => gzipSync(readFileSync(".next/" + f), { level: 9 }).length / 1024;
+for (const [route, chunks] of Object.entries(read("app-build-manifest.json").pages)) {
+  const files = [...new Set([...shared, ...chunks])].filter((f) => f.endsWith(".js"));
+  console.log(route.padEnd(40), files.reduce((s, f) => s + kb(f), 0).toFixed(1) + " kB");
+}'
+# Expected: /[locale]/page within a few kB of the Lesson 09.2 figure. A jump of
 #           tens of kilobytes means 'use client' ended up on Header or on the
 #           layout, and every child came with it.
 

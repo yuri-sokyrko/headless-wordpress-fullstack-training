@@ -688,7 +688,7 @@ The token never crosses that line and neither does the endpoint.
 import { RegisterForm } from '@/components/auth/RegisterForm';
 
 export default async function RegisterPage({ params }: { params: Promise<{ locale: string }> }) {
-  // params is a Promise in Next 15. Every access awaited, every route async.
+  // params is a Promise in Next 16. Every access awaited, every route async.
   const { locale } = await params;
 
   return (

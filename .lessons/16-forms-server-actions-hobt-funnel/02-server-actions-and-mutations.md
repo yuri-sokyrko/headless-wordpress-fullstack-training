@@ -187,7 +187,7 @@ corporate proxy that mangles bundles, or during the two seconds before hydration
 form built as a Server Action converts them. That is a revenue argument.
 
 The counter-case is real and this app has three of them: `/api/health` (a liveness probe must not
-depend on the abstraction it is probing), `/api/auth/refresh` (called by middleware, not a form),
+depend on the abstraction it is probing), `/api/auth/refresh` (called by proxy, not a form),
 and `/api/revalidate` in Module 18 (called by WordPress, cookieless, HMAC-signed). Notice what they
 have in common: **no human is on the other end.**
 

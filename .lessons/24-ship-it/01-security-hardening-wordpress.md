@@ -561,7 +561,7 @@ add_filter( 'wp_sitemaps_add_provider', static fn( $provider, string $name ) => 
 /*
  * ─── 4. Version disclosure ─────────────────────────────────────────────────────────
  * Not security. Worth doing anyway: it removes this install from the results of a scan
- * that greps for "WordPress 6.8.1" and moves on. Say so rather than counting it as a
+ * that greps for "WordPress 7.1" and moves on. Say so rather than counting it as a
  * control (Key Concept 2).
  */
 add_filter( 'the_generator', static fn(): string => '' );

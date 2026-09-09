@@ -92,7 +92,7 @@ not exist in the deploy — which you discover on the deploy.
 ```
     ┌────────────────────────┐          ┌──────────────────────────────┐
     │ wordpress              │          │ wpcli                        │
-    │ wordpress:6.8-php8.3   │          │ wordpress:cli-php8.3         │
+    │ wordpress:7.1-php8.4   │          │ wordpress:cli-php8.4         │
     │ apache + php-fpm       │          │ php + the `wp` binary        │
     │ ❌ NO `wp` binary       │          │ ✅ `wp`                       │
     │ runs: always           │          │ runs: only when you ask      │

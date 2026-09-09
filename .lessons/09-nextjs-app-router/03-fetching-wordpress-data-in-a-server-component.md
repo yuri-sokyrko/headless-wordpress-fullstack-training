@@ -328,7 +328,7 @@ Four omissions, all listed as debts in the module README, each with an owner:
 | A cache policy | see below | Lesson 10.3 |
 | `loading.tsx` / `error.tsx` | a slow WordPress means a blank page, and a thrown error means Next's default error screen | Lesson 10.4 |
 
-The cache row deserves a sentence, because Next 15 changed the default. **`fetch` is no longer
+The cache row deserves a sentence, because Next 16 changed the default. **`fetch` is no longer
 cached by default** — a plain `fetch` behaves as `cache: 'no-store'`, so every request to
 `/en/incidents` really does hit WordPress. That is the right default for a course: nothing is
 mysteriously stale, and reloading shows the edit you just made in wp-admin. It is also why the
@@ -955,5 +955,5 @@ type-check and a 500 on the same code, on the same afternoon.
   chain that produced the blob, and therefore the list of plugins that can change it under you
 - [GraphQL Code Generator](https://the-guild.dev/graphql/codegen/docs/getting-started) — read the
   first page now, with Key Concept 5 fresh, then again in Lesson 10.2
-- [Next.js caching](https://nextjs.org/docs/app/guides/caching) — the reference for the Next 15
+- [Next.js caching](https://nextjs.org/docs/app/guides/caching) — the reference for the Next 16
   default in Key Concept 9; Lesson 10.3 works through it properly

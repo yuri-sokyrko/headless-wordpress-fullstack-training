@@ -419,12 +419,15 @@ every user with `edit_posts`. Restrict `key` to an explicit list, and return `nu
 
 Two honest caveats, and they are why this block is optional:
 
-- **Core will not substitute a bound value on a custom block — not on 6.8, and not yet on any
-  shipped version.** `WP_Block::process_block_bindings()` opens with a hard-coded literal
-  (paragraph, heading, image, button on 6.8; seven core blocks on 6.9 and 7.0) and returns
-  immediately for any block name outside it. `"role": "content"` is an **editor** hint, for
-  content-only locking, and core's binding code never reads it. 6.9 adds a
-  `block_bindings_supported_attributes` filter — that, not the role, is the supported opt-in.
+- **Core will not substitute a bound value on a custom block — not on 7.1, and not on any shipped
+  version so far.** `WP_Block::process_block_bindings()` opens with a hard-coded allowlist of core
+  block names and returns immediately for anything outside it. That list has grown release by
+  release — four blocks on 6.8, seven by 7.0 — and the only way to know what it holds on the
+  version in front of you is to read it:
+  `docker compose exec wordpress grep -n -A20 'function process_block_bindings' /var/www/html/wp-includes/class-wp-block.php`.
+  `"role": "content"` is an **editor** hint, for content-only locking, and core's binding code
+  never reads it. Since 6.9 the supported opt-in is the `block_bindings_supported_attributes`
+  filter — that, not the role.
 - **In this architecture the payoff is small.** Bindings resolve on the WordPress render path,
   and Module 14 reads `reviewSlug` and queries the review over GraphQL regardless. The binding
   improves wp-admin and Module 17's preview and changes nothing a visitor sees. Learn the
@@ -684,7 +687,7 @@ goes. `--no-purge` keeps the `.po` files after conversion, which is what you wan
 
 ```json
 {
-  "$schema": "https://schemas.wp.org/wp/6.8/theme.json",
+  "$schema": "https://schemas.wp.org/wp/7.1/theme.json",
   "version": 3,
   "settings": {
     "appearanceTools": false,
@@ -1038,7 +1041,7 @@ from the start precisely so that this step is a build and not an edit.
       which proves the selector-less `source: 'html'` round-trips against the frozen fixture.
 - [ ] The rendered card shows the **saved** text, not the bound value — core's allowlist has no
       entry for `btt/tech-verdict-card`, so `get_value_callback` never runs. That is the expected
-      result on 6.8, and Key Concept 8's first caveat says why. Record in
+      result on 7.1, and Key Concept 8's first caveat says why. Record in
       `docs/content-model.md` that the binding serves the editor, not the output.
 - [ ] Nothing on the Next side changed, with or without this step.
 

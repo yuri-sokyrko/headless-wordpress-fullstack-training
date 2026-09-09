@@ -278,8 +278,8 @@ account page to another produces no signal at all — the response is a valid 20
 and the only person who could notice is a stranger looking at somebody else's name.
 
 Which is why the defence is structural rather than procedural, and why it is repeated at four
-layers: `fetchGraphQLAuthed` has no cache options, the route is `force-dynamic`, middleware sets
-`private, no-store`, and `next.config.ts` sets it again for the paths middleware's matcher excludes.
+layers: `fetchGraphQLAuthed` has no cache options, the route is `force-dynamic`, proxy sets
+`private, no-store`, and `next.config.ts` sets it again for the paths proxy's matcher excludes.
 Any one of them would probably be enough. "Probably enough" is not a standard you want for a bug
 whose detection time is measured in weeks.
 
@@ -295,7 +295,7 @@ cannot be shared. Concretely, in this application:
 - `draftMode().isEnabled` makes the route dynamic for that request, so there is no Full Route Cache
   entry to poison.
 - Every preview fetch is `fetchGraphQL(document, variables)` with **no** `revalidate` and **no**
-  `tags`. Next 15's `fetch` is uncached by default, so omitting the options *is* the opt-out —
+  `tags`. Next 16's `fetch` is uncached by default, so omitting the options *is* the opt-out —
   there is no `cache` parameter on this client to reach for, and inventing one would be a worse
   answer than omitting two.
 - `__prerender_bypass` and `__next_preview_data` appear in no `Vary` and no `s-maxage`-carrying
@@ -449,10 +449,10 @@ not retype the file.**
         ],
       },
       {
-        // THE PERSONALISED ROUTES. `middleware.ts` already sets this on a
+        // THE PERSONALISED ROUTES. `proxy.ts` already sets this on a
         // guarded response (Lesson 15.5), and its matcher deliberately
         // excludes `/api` — so these four entries cover exactly what
-        // middleware cannot reach, plus a second statement of intent for what
+        // proxy cannot reach, plus a second statement of intent for what
         // it can. Both words on purpose: `private` says not in a SHARED cache,
         // `no-store` says not in ANY cache (Key Concept 3).
         source: '/api/auth/:path*',
@@ -527,7 +527,7 @@ control **plus** a webhook that purges both systems.
 | Routes | everything under `/[locale]` except the two below | `/[locale]/account/*`, `/[locale]/incidents/submit`, `/api/auth/*`, `/api/preview/*` |
 | Reads a cookie | no | yes |
 | Segment config | `revalidate` | `dynamic = 'force-dynamic'` |
-| `Cache-Control` | Next's, derived from `revalidate` | `private, no-store` — from middleware **and** `next.config.ts` |
+| `Cache-Control` | Next's, derived from `revalidate` | `private, no-store` — from proxy **and** `next.config.ts` |
 | Data layer | `fetchGraphQL` with `revalidate` + tags | `fetchGraphQLAuthed`, which accepts no cache options |
 
 **A response that varies by cookie cannot be shared.** The fix is splitting the routes, not a

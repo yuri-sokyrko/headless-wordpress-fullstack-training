@@ -18,7 +18,7 @@ Everything is inlined in the lessons. Go to
 |---|---|
 | 07 | `package.json`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc`, `src/types/`, `scripts/blame.mjs` |
 | 08 | `src/components/incidents/` — `IncidentCard`, `IncidentList`, the filter island (on fixtures) |
-| 09 | `next` itself, `next.config.ts`, `src/app/[locale]/` route shells, `middleware.ts`, `src/app/api/health/route.ts` |
+| 09 | `next` itself, `next.config.ts`, `src/app/[locale]/` route shells, `proxy.ts`, `src/app/api/health/route.ts` |
 | 10 | `src/lib/graphql/{client,errors,tags}.ts`, `codegen.ts`, `src/graphql/` documents, `src/gql/` generated output, `error.tsx` / `loading.tsx` |
 | 11 | `tailwind.config.ts`, `components.json`, `src/components/ui/` (shadcn), `src/components/layout/`, the `/hobt` shell |
 | 12 | `vitest.config.ts`, `playwright.config.ts`, colocated `src/**/*.test.ts`, `e2e/smoke.spec.ts`, `e2e/global-setup.ts` |
@@ -32,7 +32,7 @@ Everything is inlined in the lessons. Go to
 | 21 | `lighthouserc.json`, `src/app/api/vitals/route.ts`, `src/components/layout/WebVitals.tsx`, `scripts/check-bundle-budget.mjs`, `next/font`, bundle-analyzer wiring nested inside `withNextIntl` |
 | 22 | Accessibility fixes across `src/components/`, the severity-badge ink tokens and `--ring` in `src/app/[locale]/globals.css`, `FormErrorSummary`, `RouteFocus.tsx`, `e2e/a11y.spec.ts` and the `a11y` project |
 | 23 | `tests/mocks/handlers.ts`, component tests, the full `e2e/` suite, `.mcp.json` |
-| 24 | `next.config.ts` security headers and the CSP in `middleware.ts`, `src/lib/logger.ts`, `instrumentation.ts`, `vercel.json`, `scripts/check-patch-coverage.mjs` |
+| 24 | `next.config.ts` security headers and the CSP in `proxy.ts`, `src/lib/logger.ts`, `instrumentation.ts`, `vercel.json`, `scripts/check-patch-coverage.mjs` |
 
 ## Expected final tree
 
@@ -49,7 +49,7 @@ next-app/
 ├── .mcp.json                                          (M23) read when the workspace root is next-app/
 ├── .env.example                                       (M09) ← the ONLY env file in git
 ├── src/
-│   ├── middleware.ts                                  locale + auth gate + token refresh
+│   ├── proxy.ts                                       locale + auth gate + token refresh
 │   ├── app/
 │   │   ├── [locale]/
 │   │   │   ├── layout.tsx  page.tsx
@@ -63,7 +63,7 @@ next-app/
 │   │   │   ├── (auth)/{login,register,verify}/page.tsx
 │   │   │   ├── account/{layout.tsx,page.tsx}
 │   │   │   ├── opengraph-image.tsx                    (M19) inside the segment: no
-│   │   │   │                                          extension, so middleware would
+│   │   │   │                                          extension, so proxy would
 │   │   │   │                                          307 a root-level one
 │   │   │   └── [...slug]/page.tsx                     WP pages catch-all
 │   │   ├── api/

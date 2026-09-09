@@ -236,7 +236,7 @@ too small to register.
 A Google font is published as several **subsets** — `latin`, `latin-ext`, `cyrillic`,
 `cyrillic-ext`, `greek`, and so on — each one a separate file with its own `unicode-range`.
 `next/font/google` requires you to name the ones you want — and what naming them actually
-controls is **preloading**, not downloading. Measured on Next 15.5.25: Inter emits seven `.woff2`
+controls is **preloading**, not downloading. Measured on Next 16.3.4: Inter emits seven `.woff2`
 files whichever subsets you name; what changes is how many of them are written as `*.p.woff2` and
 given a `<link rel="preload">`.
 

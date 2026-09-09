@@ -121,10 +121,10 @@ wpx db query "EXPLAIN SELECT p.ID FROM wp_posts p
   WHERE p.post_type='incident' AND m.meta_key='downtime_minutes' AND m.meta_value > 60;"
 
 # WordPress 6.6 replaced the yes/no column with a value SET. `autoload='yes'`
-# returns NULL on 6.8 — measured. Core's own predicate is wp_autoload_values_to_autoload().
+# returns NULL on 7.1 — measured. Core's own predicate is wp_autoload_values_to_autoload().
 wpx db query "SELECT SUM(LENGTH(option_value)) AS autoload_bytes
   FROM wp_options WHERE autoload IN ('yes','on','auto','auto-on');"
-# Expected: ideally under ~800000; a bare 6.8.3 install is ~26 KB across 118
+# Expected: ideally under ~800000; a bare 7.1 install is ~26 KB across 118
 #           options. This loads on EVERY GraphQL request.
 
 # Moving a database between environments
@@ -199,15 +199,14 @@ PLUGIN=wp-content/plugins/blame-the-tech-core
 
 docker compose run --rm composer install                 # writes $PLUGIN/vendor/
 
-# Unit (Pest + Brain Monkey) — no WordPress needed, so the `composer` service.
-docker compose run --rm composer run test:unit
-docker compose run --rm composer exec -- pest --filter=BlameScore    # one class
+# BOTH Pest suites run in `phptest` — PHP 8.3, while the application runs 8.4.
+# Pest 1 (forced by WordPress core's PHPUnit 9) dies on 8.4. Lesson 23.4 §1.1.
+docker compose run --rm phptest vendor/bin/pest --testsuite=unit
+docker compose run --rm phptest vendor/bin/pest --filter=BlameScore   # one class
 
-# Integration (wp-phpunit) — needs a real WordPress and a real MySQL, so the
-# `wordpress` container, which has PHP and no Composer. `-T` is mandatory on a
-# runner with no TTY.
-docker compose exec -T -w /var/www/html/$PLUGIN wordpress \
-  php vendor/bin/pest --testsuite=integration
+# Integration (wp-phpunit) — same container, plus a real MySQL over btt-net.
+docker compose run --rm -w /var/www/html/$PLUGIN \
+  phptest vendor/bin/pest --testsuite=integration
 
 # Style and static analysis — no WordPress needed either, and phpcs.xml.dist and
 # phpstan.neon both sit beside composer.json, so neither needs a --standard flag.

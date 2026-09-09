@@ -31,7 +31,7 @@ By the end of this lesson you will have:
 - `next-app/src/app/[locale]/incidents/page.tsx` — a Server Component page still using fixtures
 - `'use client'` on `IncidentFilters`, `IncidentSearch` and `IncidentFilterProvider`, and nowhere else
 - The provider mounted around the filter island only, not around the layout
-- A before-and-after of the route's First Load JS from the `npm run build` output
+- A before-and-after of the route's First Load JS, computed from the build manifests
 - A deliberate `console.log` in a Server Component, observed in the terminal and *not* in the browser console
 
 ## Classic WP Analogy
@@ -283,36 +283,55 @@ owns has grown 40 KB that `/en/blog` has no use for.
 The rule, therefore: **push a provider as far down the tree as the components that read it
 allow.** Step 6 of the Task measures both placements so the number is yours rather than mine.
 
-### 9. Reading `npm run build`: Size versus First Load JS
+### 9. Measuring it: route JavaScript versus shared JavaScript, and where the number went
 
-The build prints a table, and the two numeric columns mean different things.
+Until Next 15 the build printed a table with `Size` and `First Load JS` columns, and every
+tutorial you will find still shows it. **Next 16 removed both columns.** The framework's reasoning
+is that in a server-driven application the figures were measuring something its two bundlers did
+not even agree on, so rather than print a number people budget against, it prints none:
 
 ```
-Route (app)                               Size     First Load JS
-┌ ○ /[locale]                            1.1 kB          106 kB
-├ ○ /[locale]/incidents                  5.9 kB          118 kB
-└ ○ /_not-found                            977 B         103 kB
-+ First Load JS shared by all             102 kB
-  ├ chunks/framework-<hash>.js             57 kB
-  ├ chunks/main-app-<hash>.js             221 B
-  └ other shared chunks (total)            45 kB
+Route (app)                                    Revalidate      Expire
+┌ ○ /[locale]
+├ ○ /[locale]/incidents
+└ ○ /_not-found
 
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 ```
 
-| Column | Means |
-|---|---|
-| `Size` | JavaScript unique to that route — its own client components and their imports |
-| `First Load JS` | What a visitor landing on that URL downloads: `Size` plus the shared chunk |
-| `First Load JS shared by all` | React, the router and anything imported by a layout or by many routes — paid on **every** route |
+The two ideas the old columns named are still real, and they are what this Key Concept is about:
 
-The number to watch when you move a provider is not the route's `Size`; it is the **shared by
-all** line. A provider in the root layout moves bytes from one route's `Size` into the shared
-total, which looks like a small change on one row and is a change on every row.
+| Idea | Means |
+|---|---|
+| Route JavaScript | JavaScript unique to that route — its own client components and their imports |
+| Shared JavaScript | React, the router and anything imported by a layout or by many routes — paid on **every** route |
+| First Load JS | what a visitor landing on that URL downloads: the two above, deduplicated |
+
+The bytes are still on disk and still attributed per route, in `.next/app-build-manifest.json`.
+One command reads them, and it is the seed of the budget gate Module 21.4 builds:
+
+```bash
+# next-app, after `npm run build`. `node -e` runs as CommonJS, which is why
+# `require` works here even though this package is "type": "module".
+node -e '
+const { gzipSync } = require("node:zlib");
+const { readFileSync } = require("node:fs");
+const read = (p) => JSON.parse(readFileSync(".next/" + p, "utf8"));
+const shared = read("build-manifest.json").rootMainFiles;
+const kb = (f) => gzipSync(readFileSync(".next/" + f), { level: 9 }).length / 1024;
+for (const [route, chunks] of Object.entries(read("app-build-manifest.json").pages)) {
+  const files = [...new Set([...shared, ...chunks])].filter((f) => f.endsWith(".js"));
+  console.log(route.padEnd(40), files.reduce((s, f) => s + kb(f), 0).toFixed(1) + " kB");
+}'
+```
+
+The number to watch when you move a provider is not one route's figure; it is what happens to
+**every** route at once. A provider in the root layout moves bytes into the shared set, which
+looks like a small change on one row and is a change on all of them.
 
 Exact figures depend on your Next patch version and on your Module 08 code, so compare *your*
-before and after rather than these illustrative numbers.
+before and after rather than any number printed here.
 
 ---
 
@@ -493,12 +512,12 @@ one before you continue.
 npm run build
 ```
 
-Write down two numbers from the route table:
+Then run the `node -e` command from Key Concept 9 and write down two numbers:
 
 | Number | Where |
 |---|---|
-| `First Load JS` for `/[locale]/incidents` | the route row |
-| `First Load JS shared by all` | the `+ First Load JS shared by all` line |
+| First Load JS for `/[locale]/incidents/page` | that row of the output |
+| First Load JS for `/[locale]/page` | the home page row — it has no filters, and that is the point |
 
 Keep them in a scratch note; Step 6 compares against them.
 
@@ -514,15 +533,16 @@ exists to price:
       </body>
 ```
 
-Add the matching import, run `npm run build` again, and compare all four numbers.
+Add the matching import, run `npm run build` and the Key Concept 9 command again, and compare all
+four numbers.
 
 **Verify §6:**
 
 - [ ] `/[locale]/incidents` still works, and `/en` still renders. Nothing broke — that is the
       point of Key Concept 4, and the reason this mistake survives code review.
-- [ ] `First Load JS shared by all` went **up**.
-- [ ] `First Load JS` for `/[locale]` — the home page, which has no filters — went up by roughly
-      the same amount. That is the whole cost, on a route that gets nothing for it.
+- [ ] **Every** route's figure went up, not just the one that uses the provider.
+- [ ] `/[locale]/page` — the home page, which has no filters — went up by roughly the same amount
+      as the route that needs it. That is the whole cost, on a route that gets nothing for it.
 - [ ] Now **revert both edits**: remove the wrapper and the import from `layout.tsx`, and confirm
       `git diff src/app/\[locale\]/layout.tsx` is empty.
 
@@ -588,8 +608,9 @@ curl -s http://localhost:3000/en/incidents | grep -c 'incident'
 
 # 5. A production build, and the two numbers from Step 5
 npm run build
-# Expected: `/[locale]/incidents` present in the route table. Its First Load JS is
-#           HIGHER than `/[locale]`'s, because only it ships the filter island.
+# Expected: the route table lists /[locale]/incidents. Re-run the Key Concept 9
+#           command: its First Load JS is HIGHER than /[locale]'s, because only
+#           it ships the filter island.
 
 # 6. NEGATIVE — the server-only log line is not in the client bundle
 grep -r 'rendered on the server' .next/static/
@@ -647,6 +668,6 @@ project, and Lesson 09.5 turns it on a real secret.
 - [`wp_localize_script()`](https://developer.wordpress.org/reference/functions/wp_localize_script/)
   — the WordPress version of the serialization boundary, and its silent failure mode
 - [Next.js production checklist](https://nextjs.org/docs/app/guides/production-checklist) — the
-  bundle-size section explains what "First Load JS shared by all" is measuring
+  bundle-size section explains what shared JavaScript is, and why Next 16 stopped printing it
 - [Hydration](https://react.dev/reference/react-dom/client/hydrateRoot) — what the browser does
   with the HTML a Client Component produced on the server, and why mismatches are errors

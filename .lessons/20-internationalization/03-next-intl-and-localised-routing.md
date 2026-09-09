@@ -2,8 +2,8 @@
 title: 'next-intl & Localised Routing'
 module: 20
 lesson: 3
-teaches: [next-intl, message-catalogues, icu-message-format, intl-formatting, locale-switcher, middleware-composition]
-produces: ['next-app/src/lib/i18n/routing.ts', 'next-app/src/lib/i18n/request.ts', 'next-app/src/lib/i18n/navigation.ts', 'next-app/src/messages/en.json', 'next-app/src/messages/uk.json', 'next-app/src/messages/de.json', 'next-app/src/components/layout/LocaleSwitcher.tsx', 'next-app/src/middleware.ts']
+teaches: [next-intl, message-catalogues, icu-message-format, intl-formatting, locale-switcher, proxy-composition]
+produces: ['next-app/src/lib/i18n/routing.ts', 'next-app/src/lib/i18n/request.ts', 'next-app/src/lib/i18n/navigation.ts', 'next-app/src/messages/en.json', 'next-app/src/messages/uk.json', 'next-app/src/messages/de.json', 'next-app/src/components/layout/LocaleSwitcher.tsx', 'next-app/src/proxy.ts']
 requires: [20.2, 09.4, 11.5]
 ---
 
@@ -15,7 +15,7 @@ WordPress content is translated; the UI chrome is not. "Submit an incident", "So
 severity", "3 incidents found" and every button label in the design system are strings that
 live in your codebase, and they need a translation layer of their own. next-intl is the one
 this course picks: it is built for the App Router, it works in Server Components without
-shipping the catalogue to the browser, and its middleware handles locale detection, prefixing
+shipping the catalogue to the browser, and its proxy handles locale detection, prefixing
 and the `NEXT_LOCALE` cookie so you are not writing that logic yourself. The alternative,
 `next-i18next`, is a Pages Router design retrofitted to App Router; `react-intl` alone leaves
 routing entirely to you.
@@ -37,7 +37,7 @@ By the end of this lesson you will have:
   next-intl's localised `pathnames` with the condition that reverses it
 - `src/lib/i18n/navigation.ts` — locale-aware `Link`, `redirect`, `usePathname` and `useRouter`
   wrappers, so no component ever hand-builds a `/de/...` href
-- next-intl middleware **composed** with the Module 15 auth gate in a single `middleware.ts`, in a
+- next-intl proxy **composed** with the Module 15 auth gate in a single `proxy.ts`, in a
   documented order
 - `src/messages/{en,uk,de}.json` — every UI string, namespaced by feature, with ICU plurals for counts
 - `LocaleSwitcher.tsx` — resolving the translated slug and preserving the query string
@@ -85,7 +85,7 @@ Three real candidates, judged on the one question that matters for an App Router
 |---|---|---|---|
 | Designed for | App Router, RSC-first | Pages Router, retrofitted | any React, no router opinion |
 | Server-only translation | ✅ `getTranslations()` | partial — its model is `getStaticProps` | ❌ everything is a hook |
-| Routing, prefixing, cookie | ✅ its middleware | ✅ but via `next.config` i18n, which App Router ignores | ❌ you write it |
+| Routing, prefixing, cookie | ✅ its proxy | ✅ but via `next.config` i18n, which App Router ignores | ❌ you write it |
 | Message format | ICU | i18next interpolation + a plurals plugin | ICU |
 | Module format | ESM only | CJS + ESM | ESM |
 | **Verdict** | ✅ **chosen** | ❌ the retrofit shows: its docs still route through `appWithTranslation` | ❌ fine library, half the job |
@@ -97,7 +97,7 @@ this exact package.
 
 ### 2. `routing.ts` is the single source of the locale list
 
-Everything that needs to know which locales exist — the middleware, the request config, the
+Everything that needs to know which locales exist — the proxy, the request config, the
 navigation wrappers, the layout's `generateStaticParams`, the switcher — reads one object.
 
 ```ts
@@ -283,7 +283,7 @@ unrelated feature, and **Lesson 21.3 measures the difference** with the bundle a
 
 ### 8. `localeDetection: false` — the URL is the only source of truth
 
-next-intl's middleware will, by default, resolve `/` from the `Accept-Language` header and the
+next-intl's proxy will, by default, resolve `/` from the `Accept-Language` header and the
 `NEXT_LOCALE` cookie. This project turns that off, and the argument is the same one Module 18
 spent four lessons on.
 
@@ -301,22 +301,22 @@ first hit and uses the switcher once. One click, in exchange for a `/` that has 
 CDN can hold and a search engine can index.
 
 The subtler consequence is `NEXT_LOCALE`. With detection off, **nothing in the routing path
-reads it** — the middleware neither consults it nor acts on it. It is written when a
+reads it** — the proxy neither consults it nor acts on it. It is written when a
 locale-prefixed request is handled, and its only remaining job is to *record* the visitor's
 choice for whatever later wants to know. It is a preference, not a credential, which is why
 [appendix 04 §4](../appendix/04-env-reference.md#session-cookies) makes it the one cookie here
 that is **not** `httpOnly`: JavaScript may read it, nothing is protected by it, and tampering
 with it changes nothing, because the URL decides.
 
-One more middleware default to turn off, for the same class of reason: **`alternateLinks`.**
+One more proxy default to turn off, for the same class of reason: **`alternateLinks`.**
 next-intl will otherwise add an HTTP `Link` header advertising every locale as an alternate for
 every path — which claims a German version of `/en/incidents/incident-40`, a URL that does not
 exist. Lesson 20.4 builds the `hreflang` cluster from real translation data, and two systems
 making the same claim from different data is how they disagree.
 
-### 9. Middleware composition: three responsibilities, one file, one order
+### 9. Proxy composition: three responsibilities, one file, one order
 
-`middleware.ts` already does two jobs (Lesson 15.5 Step 2). It now does three, and the order is
+`proxy.ts` already does two jobs (Lesson 15.5 Step 2). It now does three, and the order is
 not negotiable.
 
 ```
@@ -346,8 +346,8 @@ gate must not run against the un-prefixed path — `isGuarded('/incidents', '')`
 number of characters and reaches the wrong answer. Return, and let the gate run on the next hop.
 
 And `config.matcher` **does not change**, for exactly the reasons Lesson 15.5 §4 gave: adding
-`/api/auth/:path*` makes step 2 redirect to an endpoint that then runs middleware again, and
-dropping the `api` exclusion sends `/api/health` to `/en/api/health`. `grep -c 'fetch(' src/middleware.ts`
+`/api/auth/:path*` makes step 2 redirect to an endpoint that then runs proxy again, and
+dropping the `api` exclusion sends `/api/health` to `/en/api/health`. `grep -c 'fetch(' src/proxy.ts`
 stays `0` — locale resolution is string work, not a lookup.
 
 ### 10. `pathnames`: what it does, and why this course declines it
@@ -413,7 +413,7 @@ npm view next-intl license
       **no GPL or AGPL dependency** — and a licence check belongs in the lesson that installs the
       package, not in an audit six months later.
 - [ ] Pin it. `npm install` writes a caret range, and a minor version of the package that owns
-      your middleware is not CI's choice. Write the version `npm ls` printed back without a caret:
+      your proxy is not CI's choice. Write the version `npm ls` printed back without a caret:
 
 ```bash
 npm pkg set dependencies.next-intl=4.14.2   # substitute the version npm ls printed
@@ -433,7 +433,7 @@ The file lives at `next-app/src/lib/i18n/routing.ts`.
 
 ```ts
 // next-app/src/lib/i18n/routing.ts
-// THE locale list. Everything else — middleware, request config, navigation
+// THE locale list. Everything else — proxy, request config, navigation
 // wrappers, generateStaticParams, the switcher — reads this object.
 import { defineRouting } from 'next-intl/routing';
 
@@ -537,12 +537,12 @@ import { routing } from '@/lib/i18n/routing';
 import { isLocale } from '@/lib/i18n/locale';
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  // A Promise in Next 15, like `params` — and for the same reason.
+  // A Promise in Next 16, like `params` — and for the same reason.
   const requested = await requestLocale;
 
-  // Never trust the segment. Middleware would have redirected an unknown locale,
+  // Never trust the segment. Proxy would have redirected an unknown locale,
   // but a `import()` built from an unvalidated string is a path-traversal shape,
-  // and "middleware already checked" is not a property this file can verify.
+  // and "proxy already checked" is not a property this file can verify.
   const locale = requested !== undefined && isLocale(requested) ? requested : routing.defaultLocale;
 
   return {
@@ -576,7 +576,7 @@ export default withNextIntl(nextConfig);
 
 > **Lesson 21.3 adds a second wrapper.** `@next/bundle-analyzer` wraps the config too, and
 > wrappers compose: `withNextIntl(withBundleAnalyzer(nextConfig))`. Replacing this line rather
-> than nesting inside it removes i18n from the build: measured on Next 15.5, it compiles clean and
+> than nesting inside it removes i18n from the build: measured on Next 16.3, it compiles clean and
 > then dies at prerender with `Couldn't find next-intl config file`.
 
 **Verify §3:**
@@ -703,13 +703,13 @@ and cheapest way to find out.
 - [ ] `npm run lint` is clean — the catalogues are JSON, so Prettier formats them and ESLint
       ignores them.
 
-### Step 5: Compose the middleware
+### Step 5: Compose the proxy
 
-An anchored replacement of the whole `middleware()` body. `config` is shown **unchanged**, for
+An anchored replacement of the whole `proxy()` body. `config` is shown **unchanged**, for
 the reasons Lesson 15.5 §4 gave.
 
 ```ts
-// next-app/src/middleware.ts — the full new middleware() body
+// next-app/src/proxy.ts — the full new proxy() body
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -732,7 +732,7 @@ function isGuarded(pathname: string, locale: string): boolean {
   return GUARDED.some((prefix) => rest === prefix || rest.startsWith(`${prefix}/`));
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   // ── 1. LOCALE — next-intl owns prefixing and the NEXT_LOCALE cookie ──
@@ -786,7 +786,7 @@ export function middleware(request: NextRequest): NextResponse {
 }
 
 // UNCHANGED from Lesson 09.5 and Lesson 15.5, and that is the finding rather
-// than an oversight. Adding '/api/auth/:path*' would run middleware on the
+// than an oversight. Adding '/api/auth/:path*' would run proxy on the
 // endpoint step 2 redirects TO, and the redirect would loop. Removing the `api`
 // exclusion would send /api/health to /en/api/health.
 export const config = {
@@ -796,11 +796,11 @@ export const config = {
 
 **Verify §5:**
 
-- [ ] `git diff src/middleware.ts` shows **no change** to `config`.
+- [ ] `git diff src/proxy.ts` shows **no change** to `config`.
 - [ ] The `LOCALES` import Lesson 20.2 added is gone, replaced by `routing`. One locale list.
-- [ ] `grep -c 'NextResponse.next()' src/middleware.ts` and `grep -c 'fetch(' src/middleware.ts`
+- [ ] `grep -c 'NextResponse.next()' src/proxy.ts` and `grep -c 'fetch(' src/proxy.ts`
       both return `0` — every non-redirect path returns next-intl's response, and nothing in
-      middleware talks to WordPress.
+      proxy talks to WordPress.
 
 ### Step 6: Teach the root layout about the locale
 
@@ -827,8 +827,8 @@ export function generateStaticParams(): Array<{ locale: string }> {
 
 // …inside the layout component, after `const { locale } = await params;`:
 //
-//   // A route param is a string. Middleware would have redirected an unknown
-//   // locale; this line is why deleting middleware.ts still makes nothing
+//   // A route param is a string. Proxy would have redirected an unknown
+//   // locale; this line is why deleting proxy.ts still makes nothing
 //   // reachable (Lesson 15.5's thesis).
 //   if (!isLocale(locale)) notFound();
 //
@@ -1239,8 +1239,8 @@ npm run build >/dev/null
 grep -rl 'Bestenliste\|інцидентів' .next/static/ | wc -l
 # Expected: 0
 
-# 12. NEGATIVE — the middleware matcher did not move
-git diff src/middleware.ts | grep -E '^[-+].*matcher'
+# 12. NEGATIVE — the proxy matcher did not move
+git diff src/proxy.ts | grep -E '^[-+].*matcher'
 # Expected: no output. If the matcher appears in the diff, re-read Key Concept 9.
 
 # 13. NEGATIVE — the switcher is ONE client island, and the labels reach it as
@@ -1310,7 +1310,7 @@ E2E_MODE=1 npx playwright test --project=smoke
 4. Free Polylang cannot translate a custom post type's rewrite slug. Trace that single fact
    through to three concrete things that would break if this course adopted next-intl's
    `pathnames`, and state the condition under which the decision reverses.
-5. The middleware returns next-intl's response object on the non-redirect paths instead of
+5. The proxy returns next-intl's response object on the non-redirect paths instead of
    `NextResponse.next()`. Say what would be lost, why the symptom is not an error, and why the
    redirect case has to `return` before the auth gate runs.
 
@@ -1323,8 +1323,9 @@ E2E_MODE=1 npx playwright test --project=smoke
   version moved which option where
 - [next-intl — static rendering and `setRequestLocale`](https://next-intl.dev/docs/getting-started/app-router/with-i18n-routing#static-rendering)
   — the mechanism behind Key Concept 3, in the author's words
-- [next-intl — middleware](https://next-intl.dev/docs/routing/middleware) — its "Composing other
-  middlewares" section, read against Step 5's ordering
+- [next-intl — proxy](https://next-intl.dev/docs/routing/middleware) — its "Composing other
+  middlewares" section, read against Step 5's ordering. next-intl still exports
+  `createMiddleware`; only the Next file convention was renamed
 - [ICU message format — plural rules](https://unicode-org.github.io/icu/userguide/format_parse/messages/)
   — the syntax reference for `{count, plural, …}`, including why `other` is mandatory
 - [Unicode CLDR — plural rules by language](https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html)

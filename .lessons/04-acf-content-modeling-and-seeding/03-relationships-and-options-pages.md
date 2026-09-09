@@ -1259,7 +1259,7 @@ gql '{"query":"{ __type(name:\"SiteChrome\"){ fields{ name } } }"}' | jq -r '.da
 # 14. NEGATIVE: the options rows are NOT autoloaded
 docker compose run --rm wpcli wp db query \
   "SELECT option_name, autoload FROM wp_options WHERE option_name LIKE 'options\_%' LIMIT 6;"
-# Expected: every row shows off (or "no" on MySQL 8.0 before WP 6.6 renamed the values).
+# Expected: every row shows off (or "no" on WordPress before 6.6, which spelled the values differently).
 #           An autoloaded settings page is a tax on every GraphQL request.
 
 # 15. Term field values are in wp_termmeta, not wp_postmeta

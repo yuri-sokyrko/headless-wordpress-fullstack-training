@@ -41,9 +41,11 @@ By the end of this lesson you will have:
   secret
 - A test asserting `is_verified` is discarded from mutation input, using `Functions\expect` to show
   the update never receives it
-- A `test:unit` Composer script, run as `docker compose run --rm composer run test:unit` — the
-  `composer` service, not the `wordpress` container, because these tests need no WordPress at all
-  and the stock image has no Composer binary. Under a second, start to finish.
+- A `test:unit` Composer script, executed as
+  `docker compose run --rm phptest vendor/bin/pest --testsuite=unit` — in a **new PHP 8.3
+  container**, not the PHP 8.4 one the site runs on, because Pest 1 does not run on 8.4 and
+  WordPress core's PHPUnit 9 does not leave a choice. §1.1 is the whole argument. Under a second,
+  start to finish.
 
 ## Classic WP Analogy
 
@@ -392,10 +394,11 @@ practice.
 
 ## Task
 
-Everything here runs in the **`composer` service**, not the `wordpress` container. These tests mock
-WordPress out entirely, so they need no WordPress — and the stock `wordpress` image has no Composer
-binary. Lesson 23.5's integration suite is invoked the other way round, and §7 of that lesson
-explains why the asymmetry is a teaching point rather than a wart.
+Two containers do the work here, and neither is the one running your site. `composer` installs —
+the stock `wordpress` image has no Composer binary. **`phptest`, added in §1.1 below, executes** —
+because Pest 1 does not run on the PHP 8.4 the site runs on. These tests mock WordPress out
+entirely, so they need no WordPress at all; Lesson 23.5's integration suite runs in the same
+`phptest` container with a database behind it.
 
 ### Step 1: Extend the plugin's `composer.json`
 
@@ -456,7 +459,69 @@ Five changes, and one of them fixes something that was already broken:
 | `autoload-dev` PSR-4 for `tests/` | so a helper class under `tests/` is autoloadable without a `require`. Pest's own files do not need it; a shared fixture builder does |
 | `config.allow-plugins` | **Composer 2.2+ refuses to execute a plugin that is not allowlisted**, and it *throws* rather than warning — which is why the `config` command below has to run before the `require`. Both `phpcodesniffer-composer-installer` and `pest-plugin` are Composer plugins. Without this, `composer phpcs` reports zero installed standards and `pest` never resolves its own binary |
 | `scripts.test:unit` | the command Lesson 24.4's `_php.yml` calls verbatim |
-| — | `pestphp/pest:^1.0` is deliberate and it is not conservatism. Pest 3 pins PHPUnit 11 and Pest 2 pins PHPUnit 10; WordPress core's own test library needs PHPUnit **9**, so Pest 1 is the newest major that lets one `composer.json` serve both suites. Lesson 23.5 Key Concept 4 has the measured reason. `config.platform.php` still pins resolution to 8.3 |
+| — | `pestphp/pest:^1.0` is deliberate and it is not conservatism. Pest 3 pins PHPUnit 11 and Pest 2 pins PHPUnit 10; WordPress core's own test library needs PHPUnit **9**, so Pest 1 is the newest major that lets one `composer.json` serve both suites. Lesson 23.5 Key Concept 4 has the measured reason |
+| `config.platform.php` drops from `8.4` to **`8.3`** | and this is the one that will look like a mistake in review, so it gets §1.1 below to itself |
+
+### Step 1.1: The runner runs on PHP 8.3, and the application does not
+
+Module 02 put the `wordpress` service on `wordpress:7.1-php8.4-apache`, and Module 03 pinned
+`config.platform.php` to `8.4` to match it. This step lowers that pin to `8.3` and adds a
+test-only container, which is a real cost and worth understanding rather than copying.
+
+**Pest 1 does not run on PHP 8.4.** It fails at startup with a wall of "Implicitly marking
+parameter as nullable is deprecated" — PHPUnit 9's own code tripping an 8.4 deprecation that
+PHPUnit 9 will never fix, because PHPUnit 9 is in security-fix-only maintenance. And Pest 1 is
+not a choice: WordPress core's test library needs PHPUnit 9, Pest 2 is PHPUnit 10, Pest 3 is
+PHPUnit 11, and Lesson 23.5 Key Concept 4 has the measured proof that 10 and 11 both break core's
+`WP_UnitTestCase` before the first assertion.
+
+So the two ends of the chain want different PHPs, and there is no version that satisfies both:
+
+```
+   PRODUCTION                            THE PHP TEST RUNNER
+   wordpress:7.1-php8.4-apache           wordpress:7.1-php8.3-apache
+   PHP 8.4 — what you deploy             PHP 8.3 — the newest Pest 1 tolerates
+        │                                        │
+        └──────────── same code ─────────────────┘
+                          │
+        config.platform.php: "8.3"  ← Composer resolves for the LOWER of the two,
+                                       so it can never pick a package the runner
+                                       cannot execute. A package that runs on 8.3
+                                       runs on 8.4; the reverse is not true.
+```
+
+Add the runner as its own service, beside `wpcli` and `composer`:
+
+```yaml
+# wordpress-headless/docker-compose.yml (fragment — add under `services:`)
+  phptest:
+    # PHP 8.3 DELIBERATELY, while the application runs 8.4. Pest 1 — which is
+    # forced by WordPress core's PHPUnit 9 — dies on 8.4+. Same WordPress
+    # version as the `wordpress` service so the core under test is the core you
+    # ship; only the PHP minor differs. Revisit the day core's test library
+    # supports PHPUnit 10+, and delete this service when it does.
+    image: wordpress:7.1-php8.3-apache
+    entrypoint: ['php']
+    profiles: ['cli']
+    working_dir: /var/www/html/wp-content/plugins/blame-the-tech-core
+    volumes:
+      # The same bind mount the `wordpress` service and `composer` use, so
+      # vendor/ is the vendor/ Composer just wrote — not a second copy.
+      - ./wp-content/plugins:/var/www/html/wp-content/plugins
+    environment:
+      # Lesson 23.5's integration suite needs these; the unit suite ignores them.
+      WORDPRESS_DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [btt-net]
+```
+
+> **What this costs you, stated plainly.** The PHP that executes your tests is not the PHP that
+> executes your site. An 8.4-only deprecation in your own code will not be caught by this suite —
+> `phpcs` with `testVersion 8.4-` (Lesson 07.5) is what covers that gap, and it is now load-bearing
+> rather than belt-and-braces. Write that down in `docs/quality-gates.md`; it is exactly the kind
+> of constraint that gets silently forgotten and then bites during an upgrade.
 
 ```bash
 cd wordpress-headless
@@ -470,16 +535,18 @@ docker compose run --rm composer config --no-plugins allow-plugins.pestphp/pest-
 docker compose run --rm composer require --dev pestphp/pest:^1.0 brain/monkey:^2.6
 docker compose run --rm composer install
 
-# The resolved set, measured on PHP 8.3 — record it, because Lesson 23.5 depends on
-# every one of these numbers and the reason for the Pest major is in that lesson's
-# Key Concept 4:
+# The resolved set — record it, because Lesson 23.5 depends on every one of these
+# numbers and the reason for the Pest major is in that lesson's Key Concept 4:
 #   pestphp/pest 1.23.1   phpunit/phpunit 9.6.36   brain/monkey 2.7.0
-# Pest 1 runs on PHP 8.0-8.3 and DIES on 8.4+ with a wall of "Implicitly marking
-# parameter as nullable is deprecated". So the runner has to be PHP 8.3. If your
-# `composer` service is newer than that, run the suite in the `wordpress` container
-# instead — it is PHP 8.3, it sees vendor/ through the same bind mount, and a CLI
-# process there does NOT load WordPress, so Brain Monkey is still safe:
-#   docker compose exec -T -w /var/www/html/$PLUGIN wordpress php vendor/bin/pest --testsuite=unit
+#
+# NOTE the `composer` service image runs a NEWER PHP than either of the two above.
+# That is fine for resolving and installing, because config.platform.php pins what
+# it resolves FOR. It is NOT fine for running the suite: `composer run test:unit`
+# executes pest on the composer image's PHP and will hit the 8.4 deprecation wall.
+# Execute the suite in `phptest` instead — PHP 8.3, the same vendor/ through the
+# same bind mount, and a CLI process there does not load WordPress, so Brain
+# Monkey is still safe:
+docker compose run --rm phptest vendor/bin/pest --testsuite=unit
 ```
 
 **Verify §1:**
@@ -622,7 +689,7 @@ function load_plugin_file( string $relative ): void {
 
 **Verify §3:**
 
-- [ ] `docker compose run --rm composer run test:unit` prints `No tests found` and exits non-zero.
+- [ ] `docker compose run --rm phptest vendor/bin/pest --testsuite=unit` prints `No tests found` and exits non-zero.
       That is correct — `tests/Unit/` is empty — and it proves the configuration resolves before
       any test can mislead you about it.
 - [ ] `grep -c 'Monkey\\tearDown' tests/Pest.php` is `1`. Step 9 removes it on purpose and watches
@@ -751,7 +818,7 @@ it( 'treats missing meta as zero rather than throwing', function (): void {
 
 **Verify §4:**
 
-- [ ] `docker compose run --rm composer run test:unit` reports **six** passing tests, in well
+- [ ] `docker compose run --rm phptest vendor/bin/pest --testsuite=unit` reports **six** passing tests, in well
       under a second including Composer's own startup.
 - [ ] Change one test to reuse post ID `101` and re-run. It fails, or worse, **passes for the
       wrong reason**. That is the static memo from Key Concept 6, and it is worth seeing once.
@@ -1196,11 +1263,11 @@ printf '%s\n' '<?php' \
   '});' > $PLUGIN/tests/Unit/ZLeakProbeTest.php
 
 sed -i.bak 's|Monkey\\tearDown();|// Monkey\\tearDown();|' $PLUGIN/tests/Pest.php
-docker compose run --rm composer run test:unit; echo "exit=$?"   # 31 passed, exit 0
+docker compose run --rm phptest vendor/bin/pest --testsuite=unit; echo "exit=$?"   # 31 passed, exit 0
 mv $PLUGIN/tests/Pest.php.bak $PLUGIN/tests/Pest.php
-docker compose run --rm composer run test:unit; echo "exit=$?"   # 1 failed, 30 passed
+docker compose run --rm phptest vendor/bin/pest --testsuite=unit; echo "exit=$?"   # 1 failed, 30 passed
 rm $PLUGIN/tests/Unit/ZLeakProbeTest.php
-docker compose run --rm composer run test:unit                   # 30 passed
+docker compose run --rm phptest vendor/bin/pest --testsuite=unit                   # 30 passed
 ```
 
 **Verify §9:**
@@ -1226,14 +1293,14 @@ cd wordpress-headless
 PLUGIN=wp-content/plugins/blame-the-tech-core
 
 # 1. The whole unit suite, from the COMPOSER service — no WordPress involved
-time docker compose run --rm composer run test:unit
+time docker compose run --rm phptest vendor/bin/pest --testsuite=unit
 # Expected: 30 passed, and the wall time dominated by Composer's own startup
 #           rather than by the tests. Under a second of test time, no MySQL, no
 #           container boot, no fixture. That ratio is the argument for suite 3.
 
 # 2. NEGATIVE — this suite genuinely does not need WordPress. Stop it and re-run.
 docker compose stop wordpress db
-docker compose run --rm composer run test:unit; echo "exit=$?"
+docker compose run --rm phptest vendor/bin/pest --testsuite=unit; echo "exit=$?"
 docker compose start wordpress db
 # Expected: 30 passed and exit=0 with WordPress and MySQL both down. If it fails,
 #           something in tests/Unit/ reached a real WordPress and the suite has
@@ -1242,9 +1309,10 @@ docker compose start wordpress db
 # 3. NEGATIVE — the wordpress container cannot run this suite, and that is correct
 docker compose exec -T $( echo wordpress ) sh -c 'command -v composer || echo "no composer here"'
 # Expected: "no composer here". The stock image ships neither Composer nor WP-CLI
-#           (Lesson 02.2), which is why suite 3 runs in the `composer` service and
-#           suite 4 runs in this one. `composer test:unit` still works verbatim on
-#           a CI runner, where PHP and Composer are both native.
+#           (Lesson 02.2), which is why installing happens in `composer`. Both Pest
+#           suites execute in `phptest` — PHP 8.3, per §1.1. `composer test:unit`
+#           still works verbatim on a CI runner, where PHP and Composer are both
+#           native and the runner's PHP is pinned to 8.3 (Lesson 24.4).
 
 # 4. Pest is really PHPUnit underneath, so every PHPUnit affordance still works
 docker compose run --rm composer exec -- pest --list-suites
@@ -1319,7 +1387,7 @@ rm $PLUGIN/tests/Unit/ZLeakProbeTest.php
 #           Mockery is verified at the end of every test whether tearDown() is
 #           there or not, so that one always fails where it was written. The silent
 #           row of Key Concept 3's table is the `when()` row, not the `expect()`.
-docker compose run --rm composer run test:unit; echo "exit=$?"
+docker compose run --rm phptest vendor/bin/pest --testsuite=unit; echo "exit=$?"
 # Expected: 30 passed, exit=0 — restored
 
 # 10. NEGATIVE — the static memo hazard is real. Prove it once.

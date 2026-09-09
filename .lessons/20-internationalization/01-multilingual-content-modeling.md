@@ -536,7 +536,7 @@ function polylang_options(): array {
 
 		// NO automatic browser redirect. Polylang would otherwise 302 a visitor
 		// from `/` to their Accept-Language match, which fights next-intl's
-		// middleware (Lesson 20.3) and makes the canonical URL depend on who is
+		// proxy (Lesson 20.3) and makes the canonical URL depend on who is
 		// asking. One system owns locale detection, and it is the front end.
 		'browser'       => 0,
 

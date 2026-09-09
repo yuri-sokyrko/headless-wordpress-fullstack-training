@@ -24,9 +24,9 @@ You are going to install it **beside** the app you have built, as its own siblin
 **spike**, not a rewrite: no existing route changes, no existing dependency is replaced, and the
 whole thing is deleted in Lesson 17.4, which is why it never appears in the expected tree in
 `next-app/README.md`. A sibling app rather than a route group inside `next-app/`, for three
-reasons you will meet in Step 1: `next-app` has no `src/app/layout.tsx` and its middleware
+reasons you will meet in Step 1: `next-app` has no `src/app/layout.tsx` and its proxy
 redirects any first segment that is not a locale, so a `/faust` path there needs a root layout it
-does not have and a middleware exception it should not get; Faust pins its own React and Next
+does not have and a proxy exception it should not get; Faust pins its own React and Next
 ranges and brings Apollo, and a spike that can break the lockfile the other twenty-three modules
 depend on is not reversible; and Lesson 07.1 §9's licence rule means `next-app` takes no GPL
 dependency until somebody has actually checked. The point of a spike is to buy
@@ -357,7 +357,7 @@ is `src/app/[locale]/layout.tsx` — **there is no `src/app/layout.tsx`**, delib
 locale segment owns the `lang` attribute. A `/faust` path would need a second root layout, and
 `/faust` also matches `[locale]` with `locale = 'faust'`, so the two routes collide.
 
-**Two: `middleware.ts` would 307 it away.** Lesson 15.5's middleware normalises any first segment
+**Two: `proxy.ts` would 307 it away.** Lesson 15.5's proxy normalises any first segment
 that is not in `LOCALES` to `/en/<path>`, and Lesson 15.5 §4 spends a Key Concept explaining why
 `config.matcher` must not be edited. Adding `/faust` to the matcher exclusions to accommodate a
 spike you intend to delete is the definition of a change you cannot justify at review.
@@ -375,7 +375,7 @@ is exactly backwards.
    next-app/                                repo-root/
      package.json      ← rewritten            next-app/        untouched
      package-lock.json ← rewritten            wordpress-headless/  shared
-     src/middleware.ts ← matcher edited       faust-spike/     ← all of it here
+     src/proxy.ts ← matcher edited            faust-spike/     ← all of it here
      src/app/faust/    ← needs a root           package.json
                           layout, and             node_modules/
                           collides with          :3001
@@ -875,7 +875,7 @@ grep -c '@faustwp\|@apollo/client' next-app/package-lock.json
 # 7. NEGATIVE — there is no Faust route inside the app you ship
 test ! -d next-app/src/app/faust && echo 'no faust route: correct'
 # Expected: no faust route: correct
-grep -c 'faust' next-app/src/middleware.ts
+grep -c 'faust' next-app/src/proxy.ts
 # Expected: 0. The matcher was NOT edited. Lesson 15.5 §4 is intact.
 
 # 8. NEGATIVE — next-app's manifest and lockfile are byte-identical to Step 1
@@ -903,7 +903,7 @@ cd faust-spike && npm ci; cd ..
 # 11. NEGATIVE — the Faust app is not reachable on 3000
 curl -s http://localhost:3000/incidents/incident-01 -o /dev/null -w '%{http_code} %{redirect_url}\n'
 # Expected: 307 http://localhost:3000/en/incidents/incident-01
-#           next-app's middleware normalised the missing locale. It did NOT serve
+#           next-app's proxy normalised the missing locale. It did NOT serve
 #           the Faust template, because the Faust app is a different process on a
 #           different port and shares nothing with this one.
 

@@ -33,7 +33,7 @@ By the end of this lesson you will have:
 
 - `src/lib/logger.ts` — structured JSON logging with levels, a request ID, and a redaction list
   applied before serialisation
-- A request ID generated in middleware, propagated on `X-BTT-Request-Id`, and logged on both sides
+- A request ID generated in proxy, propagated on `X-BTT-Request-Id`, and logged on both sides
 - `instrumentation.ts` plus Sentry configured for the Next server, edge and client runtimes, with
   source maps uploaded at build time and **not** served publicly
 - Sentry for PHP wired through `includes/observability.php`, sharing the same request ID
@@ -104,13 +104,13 @@ to debug. You cannot retrofit correlation onto logs that have already been writt
 
 ### 2. `X-BTT-Request-Id`, and where it does and does not exist
 
-One header, minted in middleware, forwarded on every outbound GraphQL call that happens **inside
+One header, minted in proxy, forwarded on every outbound GraphQL call that happens **inside
 a request**, logged on both sides. It is the only new `X-BTT-*` header in Modules 21 to 24 — the
 others are `X-BTT-App-Token`, `X-BTT-Signature`, `X-BTT-Timestamp` and `X-BTT-E2E-Secret`.
 
 ```
 POST /en/incidents/submit
-  middleware:  id = 3f9a…                          → x-btt-request-id on request AND response
+  proxy:  id = 3f9a…                          → x-btt-request-id on request AND response
   Server Action: logger({ requestId: '3f9a…' })    → {"lvl":"info","rid":"3f9a…","msg":"submit"}
   execute():    X-BTT-Request-Id: 3f9a…            → outbound to /graphql
   WordPress:    error_log('[btt] rid=3f9a… …')     → wp-content/debug.log
@@ -121,7 +121,7 @@ POST /en/incidents/submit
 | Context | Has a request id? | What correlates instead |
 |---|---|---|
 | Route handler, Server Action | **yes** — read it off `request.headers` | — |
-| Middleware | **yes** — it mints it | — |
+| Proxy | **yes** — it mints it | — |
 | Dynamic (personalised) route render | yes | — |
 | **Static prerender at build time** | **no. There is no request.** | build id + route |
 | **ISR regeneration** | **no** — see §8 | revalidation event id + tag |
@@ -132,8 +132,9 @@ the Full Route Cache, which is precisely the failure Lesson 18.1 spent a whole l
 A logging library is not worth forfeiting static rendering for.
 
 The alternative is `AsyncLocalStorage` from `node:async_hooks`, which threads the id invisibly
-and is genuinely nicer at the call sites. Its cost: it does not exist in the edge runtime, so
-middleware cannot participate; and an invisible dependency is one a future refactor breaks
+and is genuinely nicer at the call sites. On Next 16 proxy runs in the Node runtime, so the old
+objection — that `node:async_hooks` does not exist at the edge — no longer applies. The cost that
+remains is the one that always mattered: an invisible dependency is one a future refactor breaks
 without a type error. This course threads an explicit optional parameter instead, so
 `requestId: null` shows up in the log and in the type when there is no request — **which is
 information, not a defect.**
@@ -197,7 +198,7 @@ a scrubber in TypeScript does nothing for a PHP `error_log()`.
 | What logs | Goes to | How you read it |
 |---|---|---|
 | `logger.info()` in the Next Node runtime | stdout | `vercel logs` / the aggregator |
-| `logger.info()` in middleware (edge) | edge stdout | same, different retention |
+| `logger.info()` in proxy | proxy stdout — the Node runtime on Next 16, not an edge isolate | same, and hosts often keep it separately from the render logs |
 | `console.*` in a client component | the browser console only | not collected at all |
 | PHP `error_log()` in WordPress | **`wp-content/debug.log`** | `docker compose exec wordpress tail -f /var/www/html/wp-content/debug.log` |
 | An uncaught PHP fatal | `debug.log` **and** Apache's error log | both |
@@ -470,7 +471,7 @@ export function createLogger(context: LogContext): Logger {
   };
 }
 
-/** Read the id middleware set. No headers() call — the caller holds the Request. */
+/** Read the id proxy set. No headers() call — the caller holds the Request. */
 export function requestIdFrom(request: Request): string | null {
   return request.headers.get('x-btt-request-id');
 }
@@ -492,7 +493,7 @@ export function errorFields(error: unknown): Record<string, unknown> {
 - [ ] `npm run type-check` passes. `redact` returns `unknown` deliberately; the cast at the one
       call site is where the narrowing is documented.
 
-### Step 2: Mint the id in middleware, as concern **one**
+### Step 2: Mint the id in proxy, as concern **one**
 
 The frozen order is: **(1) mint the request id, (2) next-intl, (3) the auth gate, (4) attach
 response headers.** This step inserts concern 1 at the very top. It must be first because the id
@@ -500,14 +501,14 @@ has to be on **every** response including a redirect — mint it after next-intl
 redirect leaves the trace.
 
 ```ts
-// next-app/src/middleware.ts — an anchored insertion at the TOP of the existing
-// middleware() body, ABOVE Lesson 20.3's `const response = handleLocale(request)`.
+// next-app/src/proxy.ts — an anchored insertion at the TOP of the existing
+// proxy() body, ABOVE Lesson 20.3's `const response = handleLocale(request)`.
 // Concerns 2, 3 and 4 are unchanged. `config.matcher` is unchanged.
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   // ── 1. REQUEST ID — first, so it is on every response including a redirect ──
-  // crypto.randomUUID() is available in the edge runtime with no import.
+  // crypto.randomUUID() is a global in the Node runtime proxy runs in — no import.
   // Honour an inbound id so a load balancer or a client that already has a trace
   // keeps it; mint one otherwise. Length-capped because an unbounded header from
   // the internet is a header you have not validated.
@@ -523,7 +524,7 @@ export function middleware(request: NextRequest): NextResponse {
 Then one line in concern 4, beside Lesson 24.2's headers:
 
 ```ts
-// next-app/src/middleware.ts — inside concern 4, beside the CSP lines from 24.2.
+// next-app/src/proxy.ts — inside concern 4, beside the CSP lines from 24.2.
   // On the RESPONSE too, so a browser bug report can quote the id. This is the
   // only X-BTT-* header that is deliberately visible to a client.
   response.headers.set('x-btt-request-id', requestId);
@@ -531,12 +532,12 @@ Then one line in concern 4, beside Lesson 24.2's headers:
 
 **Verify §2:**
 
-- [ ] `git diff src/middleware.ts | grep -cE '^[-+].*matcher'` is `0`. Lesson 15.5 §4 forbids
+- [ ] `git diff src/proxy.ts | grep -cE '^[-+].*matcher'` is `0`. Lesson 15.5 §4 forbids
       editing the matcher and Lesson 20.3 obeyed it.
 - [ ] The mint is **above** `handleLocale(request)`. If it is below, `curl -sI` on a path that
       redirects (`http://localhost:3000/incidents`) shows no `x-btt-request-id` on the 307 — and
       that redirect is the hop you most want to trace.
-- [ ] `grep -c 'crypto.randomUUID' src/middleware.ts` is `1`.
+- [ ] `grep -c 'crypto.randomUUID' src/proxy.ts` is `1`.
 - [ ] The inbound id is validated against a pattern. An unvalidated header from the internet
       lands verbatim in your log aggregator, which is a log-injection surface.
 
@@ -628,7 +629,7 @@ describe('createLogger', () => {
 export interface ExecuteOptions {
   // … every existing field, unchanged …
   /**
-   * From middleware, via the route handler or Server Action that holds the
+   * From proxy, via the route handler or Server Action that holds the
    * Request. Absent during a static prerender and during an ISR regeneration —
    * both have no request, and `undefined` is the honest value (Key Concept 2).
    */
@@ -695,7 +696,7 @@ function request_id(): ?string {
 		? sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_X_BTT_REQUEST_ID'] ) )
 		: '';
 
-	// Same pattern middleware validates against. An unbounded header from the
+	// Same pattern proxy validates against. An unbounded header from the
 	// internet in a log line is a log-injection surface.
 	$id = (bool) preg_match( '/^[A-Za-z0-9-]{8,64}$/', $raw ) ? $raw : null;
 
@@ -1037,13 +1038,13 @@ git commit -m "feat: correlated structured logging, request ids and Sentry on bo
 
 **Verify §8:**
 
-- [ ] `rid` is a non-empty UUID-shaped string. Empty means concern 1 is not first in middleware,
+- [ ] `rid` is a non-empty UUID-shaped string. Empty means concern 1 is not first in proxy,
       or you are looking at a route the matcher excludes.
 - [ ] The `grep -c` is `1` or more **for a dynamic route**. For `/en/incidents`, which is
       prerendered, expect `0` — the page was rendered at build time and no WordPress call
       happened during your request. That is Key Concept 2 and Key Concept 8, observed rather than
       asserted. Repeat against `/en/account` while signed in to see a non-zero count.
-- [ ] `git diff HEAD~1 --stat` includes `logger.ts`, `logger.test.ts`, `middleware.ts`,
+- [ ] `git diff HEAD~1 --stat` includes `logger.ts`, `logger.test.ts`, `proxy.ts`,
       `client.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `observability.php`,
       `Plugin.php` and `docs/runbook.md`.
 

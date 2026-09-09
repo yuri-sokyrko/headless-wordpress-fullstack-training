@@ -44,7 +44,7 @@ GraphQL, Docker, npm and the modern JS toolchain, automated testing, CI/CD.
 | Tool | Version | Why |
 |---|---|---|
 | Docker Desktop | latest | WordPress + MySQL + Adminer + Mailpit run in containers (Module 02) |
-| Node.js | **22 LTS** — see `.nvmrc` | Next.js 15, the block build, every test runner |
+| Node.js | **22 LTS** — see `.nvmrc` | Next.js 16, the block build, every test runner |
 | Git | any recent | You commit after every lesson |
 | A code editor | VS Code recommended | `.editorconfig` is respected by all major editors |
 

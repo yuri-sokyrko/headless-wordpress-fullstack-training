@@ -109,21 +109,21 @@ this lesson.
    ────────────────────────────────────       ────────────────────────────────────
    GET /protected                             GET /en/account
      ▼                                          ▼
-   HTML sent to everyone            ✅ 200     middleware: no btt_at cookie
+   HTML sent to everyone            ✅ 200     proxy: no btt_at cookie
      ▼                                          ▼
    JS hydrates, useAuth runs                  307 → /en/login?next=/en/account
      ▼                                          ▼  ← no HTML for that route was
    location = loginUrl                            ever produced
      ▼                                          requireSession() would refuse it
    the DATA never arrived, because             again, server-side, even if the
-   WordPress refused the query                 middleware were deleted
+   WordPress refused the query                 proxy were deleted
 ```
 
 Both are secure, and it is worth being precise about **why** each is secure, because the reasons are
 different. Faust's page is safe because **WordPress refuses the query** without a valid token — not
 because the page was hidden. Module 15's route is safe because the HTML does not exist for an
 anonymous caller *and* `requireSession()` refuses it independently (Lesson 15.5's thesis: delete
-`middleware.ts` and nothing becomes reachable).
+`proxy.ts` and nothing becomes reachable).
 
 The practical difference shows up the first time somebody puts something in the page shell that
 should not be public — a customer name in a `<title>`, a count in an empty-state message. In the
@@ -368,7 +368,7 @@ existed.
 // faust-spike/pages/protected.js
 // A page that renders only for an authenticated WordPress user — Faust's layer
 // three. Compare with next-app/src/app/[locale]/account/, which is guarded by
-// middleware AND by requireSession() on the server.
+// proxy AND by requireSession() on the server.
 //
 // NOTE what is missing: getStaticProps, getServerSideProps, and any server-side
 // check at all. The gate is `useAuth`, and useAuth runs in a browser. That is
@@ -597,18 +597,21 @@ jsbytes http://localhost:3000 /en/incidents/incident-01
 jsbytes http://localhost:3001 /incidents/incident-01
 ```
 
-Also read it out of each build's own summary, which reports gzipped First Load JS and is the number
-Module 21 will budget against:
+The build summary used to carry this too, and on Next 16 it does not — the `Size` and
+`First Load JS` columns were removed (Lesson 09.2 §9). So `jsbytes` above *is* the measurement
+here, and the manifest command from 09.2 §9 is the cross-check on the App Router side:
 
 ```bash
 ( cd next-app    && npm run build 2>&1 | sed -n '/Route (app)/,$p'   | head -20 )
 ( cd faust-spike && npm run build 2>&1 | sed -n '/Route (pages)/,$p' | head -20 )
+# Route shapes and rendering markers, not sizes. Both are still worth reading:
+# the Pages Router spike and the App Router app do not prerender the same set.
 ```
 
 **Verify §5:**
 
-- [ ] You have two byte counts and two First Load JS figures, from production builds. Record all
-      four in the table.
+- [ ] You have two byte counts from `jsbytes` and two manifest figures, from production builds.
+      Record all four in the table.
 - [ ] Whatever the numbers say, record them. If they are within a kilobyte, "the same" is the
       finding, and it is a useful one — the interesting Faust cost is not bundle size.
 - [ ] Stop both production servers afterwards. `npx playwright test` starts its own dev server on
@@ -671,10 +674,10 @@ Measured on production builds. Content: seeded `incident-01`, "Deployed on a Fri
 | Title present at first byte | yes | yes | yes |
 | `__NEXT_DATA__` hydration payload | absent (RSC flight data instead) | absent | present — (write the byte count) |
 | Client JS, sum of referenced chunks | (bytes) | (bytes) | (bytes) |
-| First Load JS, from the build summary | (kB) | (kB) | (kB) |
+| First Load JS, from the build manifests (09.2 §9) | (kB) | (kB) | (kB) |
 | Cacheable under a tag | yes — `incident:incident-01`, `incidents` | **no, deliberately** — `no-store`, and `fetchGraphQLAuthed` has no options parameter | no — no call site passes `next: { tags }` |
 | Where the auth token lives | httpOnly `btt_at`, unreadable from JS | httpOnly `btt_preview_jwt` | (write what you found in Step 3) |
-| Who gates the page | middleware + `requireSession()`, server-side | a single-use token exchanged server-to-server | `useAuth`, in the browser |
+| Who gates the page | proxy + `requireSession()`, server-side | a single-use token exchanged server-to-server | `useAuth`, in the browser |
 
 Commands that produced each row: Step 4 (a)-(c), Step 5 `jsbytes` and the build summaries,
 Step 6 checks 1-2, Step 3.
@@ -769,7 +772,7 @@ curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:3000/e
 # Expected: 307 http://localhost:3000/en/login?next=/en/account
 #           No HTML for /en/account was produced at all, for anybody. And
 #           `grep -rn 'requireSession' src/app/` shows the second, independent
-#           server-side check that holds even if middleware.ts is deleted
+#           server-side check that holds even if proxy.ts is deleted
 #           (Lesson 15.5's thesis).
 
 # 5. NEGATIVE — revalidateTag has nothing to attach to on the Faust side

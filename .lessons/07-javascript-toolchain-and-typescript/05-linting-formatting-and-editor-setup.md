@@ -449,8 +449,8 @@ docker compose run --rm composer require --dev \
   <!-- s = show sniff names, so an exclusion can be written accurately -->
   <arg value="sp"/>
 
-  <config name="minimum_wp_version" value="6.8"/>
-  <config name="testVersion" value="8.3-"/>
+  <config name="minimum_wp_version" value="7.1"/>
+  <config name="testVersion" value="8.4-"/>
 
   <rule ref="WordPress">
     <!-- WPCS wants class-plugin.php; PSR-4 (Lesson 03.1) requires Plugin.php.

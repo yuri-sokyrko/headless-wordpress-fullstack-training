@@ -1,28 +1,28 @@
 ---
-title: 'Route Handlers & Middleware'
+title: 'Route Handlers & Proxy'
 module: 9
 lesson: 5
-teaches: [route-handlers, middleware, edge-runtime, next-public-boundary, health-endpoint]
-produces: ['next-app/src/app/api/health/route.ts', 'next-app/src/middleware.ts']
+teaches: [route-handlers, proxy, proxy-runtime, next-public-boundary, health-endpoint]
+produces: ['next-app/src/app/api/health/route.ts', 'next-app/src/proxy.ts']
 requires: [9.4]
 ---
 
-# Lesson 09.5 — Route Handlers & Middleware
+# Lesson 09.5 — Route Handlers & Proxy
 
 ## Quick Overview
 
 Not everything a front end needs is a page. Next.js has two non-page entry points, and this
 lesson builds one of each. A **Route Handler** is a `route.ts` file exporting `GET`, `POST` and
-friends — a real HTTP endpoint, the direct counterpart of `register_rest_route()`. **Middleware**
-is a single `middleware.ts` that runs before every matched request and can rewrite, redirect or
+friends — a real HTTP endpoint, the direct counterpart of `register_rest_route()`. **Proxy**
+is a single `proxy.ts` that runs before every matched request and can rewrite, redirect or
 pass through — the counterpart of a `template_redirect` or `init` hook, running at the edge
 before any page code executes.
 
 You will build `/api/health`, a liveness endpoint that reports whether Next can reach WordPress
-without echoing a single configuration value, and a `middleware.ts` that normalises the locale
-prefix so `/incidents` redirects to `/en/incidents`. That middleware is the second half of the
+without echoing a single configuration value, and a `proxy.ts` that normalises the locale
+prefix so `/incidents` redirects to `/en/incidents`. That proxy is the second half of the
 `[locale]` decision from Lesson 09.1: the segment is required, so something has to add it, and
-doing that in middleware means Module 15's auth gate and Module 20's locale negotiation both
+doing that in proxy means Module 15's auth gate and Module 20's locale negotiation both
 have a place to live that already exists. The lesson closes by proving the client bundle holds
 no secrets, with the `grep` from
 [the env reference](../appendix/04-env-reference.md#32-public-next_public_--all-five-of-them) —
@@ -31,10 +31,10 @@ the same check Module 24 turns into a CI gate.
 By the end of this lesson you will have:
 
 - `next-app/src/app/api/health/route.ts` — `GET` returning JSON status, with no endpoint URL or token in the body
-- `next-app/src/middleware.ts` — locale prefix normalisation with an explicit `matcher` that excludes `/api` and static assets
+- `next-app/src/proxy.ts` — locale prefix normalisation with an explicit `matcher` that excludes `/api` and static assets
 - `/incidents` redirecting to `/en/incidents`, verified with `curl -I`
 - A production build whose `.next/static/` contains none of your server-only variables
-- A written note of what middleware must never be used for, and why the auth gate in Module 15 is only half of a check
+- A written note of what proxy must never be used for, and why the auth gate in Module 15 is only half of a check
 
 ## Classic WP Analogy
 
@@ -44,7 +44,7 @@ Both new concepts map onto hooks and APIs you already use:
 |---|---|
 | `register_rest_route('btt/v1','/health',…)` | `src/app/api/health/route.ts` exporting `GET` |
 | `permission_callback` on that route | an explicit check inside the handler |
-| `add_action('template_redirect', …)` | `middleware.ts` |
+| `add_action('template_redirect', …)` | `proxy.ts` |
 | `wp_safe_redirect()` + `exit` | `NextResponse.redirect()` |
 | `add_rewrite_rule()` internal rewrite | `NextResponse.rewrite()` |
 | `wp_get_environment_type()` branching | `process.env.NODE_ENV` branching |
@@ -59,22 +59,26 @@ must return no information an attacker could use. It reports `ok` or `degraded` 
 timestamp. It does not report which endpoint it tried, what the error said, or which
 environment variables are set.
 
-The analogy breaks hardest on middleware, in two ways that matter.
+The analogy breaks hardest on proxy, in two ways that matter.
 
-**Middleware runs everywhere, including on requests you did not think about** — RSC payload
+**Proxy runs everywhere, including on requests you did not think about** — RSC payload
 fetches, prefetches, static assets, `/api` routes. WordPress's `template_redirect` fires only
 on front-end page loads. This is why `matcher` is not an optimisation but a correctness
-requirement: middleware without one will run on your own asset requests and produce redirect
+requirement: proxy without one will run on your own asset requests and produce redirect
 loops that are very hard to read.
 
-**Middleware runs in a restricted runtime with no database and no Node APIs.** It cannot call
-`WP_Query`, cannot open a socket to MySQL, and cannot verify a JWT signature against
-WordPress's secret — because, as
+**Proxy runs on every request, before anything is rendered, and it is the wrong place for
+work.** On Next 16 it runs in the Node.js runtime — the `runtime` segment option does not
+exist in a proxy file and setting it throws — so the old "it is a restricted V8 isolate"
+answer is out of date: Node APIs are *available*. What has not changed is that using them
+here is a mistake. Proxy sits in front of every matched request, so anything slow you do in
+it is paid on every navigation, every prefetch and every RSC payload fetch. It still cannot
+verify a JWT signature against WordPress's secret — not for runtime reasons but because, as
 [appendix 04 §5](../appendix/04-env-reference.md#5-why-graphql_jwt_auth_secret_key-must-differ-from-auth_key)
-states, Next never holds that secret at all. So middleware can cheaply check whether a session
+states, Next never holds that secret at all. So proxy can cheaply check whether a session
 cookie is *present* and redirect if it is not, but it can never decide whether a session is
-*valid*. Treating a middleware check as authorisation is the single most common security
-mistake in Next.js applications. Module 15 states the rule precisely: middleware is a
+*valid*. Treating a proxy check as authorisation is the single most common security
+mistake in Next.js applications. Module 15 states the rule precisely: proxy is a
 convenience redirect, and the real check happens where the data is.
 
 ---
@@ -120,8 +124,8 @@ Route handlers work with web-standard `Request`/`Response`. Next adds subclasses
 | `NextRequest` | when you need `request.cookies`, `request.nextUrl`, or `request.headers` |
 | `Request` | fine for everything else, including `await request.json()` |
 
-This lesson uses `Response.json()` in the handler and `NextResponse` in the middleware, because
-middleware's whole job is redirect/rewrite/continue and those are `NextResponse` static methods.
+This lesson uses `Response.json()` in the handler and `NextResponse` in the proxy, because
+proxy's whole job is redirect/rewrite/continue and those are `NextResponse` static methods.
 
 `Response.json()` sets `Content-Type: application/json` for you. The status code is the second
 argument, and choosing it deliberately matters more here than in a page: a monitor reads the status
@@ -138,7 +142,7 @@ public too, and every helpful detail in it is reconnaissance.
 | `"endpoint": "http://localhost:8080/graphql"` | your CMS host and path, straight from your own API |
 | `"error": "getaddrinfo ENOTFOUND wp-prod-3.internal"` | internal hostnames and your network topology |
 | `"env": { "WP_APP_TOKEN": "set" }` | which secrets exist, and therefore what to phish for |
-| `"wpVersion": "6.8"`, `"next": "15.1.2"` | a version to match against a CVE list |
+| `"wpVersion": "7.1"`, `"next": "16.3.4"` | a version to match against a CVE list |
 | a stack trace, on failure | file paths, package versions, your directory layout |
 
 So the contract is two keys and nothing else:
@@ -181,14 +185,22 @@ A cached health check is not a health check. It is a recording of a moment when 
 served with a fresh timestamp, to a monitor that will believe it. That failure is worse than having
 no endpoint at all, because it converts an outage into a silent outage.
 
-In Next 15, `GET` route handlers are **not** cached by default — that changed from Next 14, where a
+In Next 16, `GET` route handlers are **not** cached by default — that changed from Next 14, where a
 `GET` with no dynamic APIs was cached and this exact bug was easy to ship. `force-dynamic` is
 therefore not a fix here; it is a statement of intent that survives a future default change and
 tells the next reader that the absence of caching is deliberate. Write it down.
 
-### 5. Middleware runs on requests you never thought about
+### 5. Proxy runs on requests you never thought about
 
-`src/middleware.ts` exports one function that runs **before the router**, on every request that
+> **This file was called `middleware.ts` until Next 16.** Next 16 deprecated the `middleware`
+> convention and renamed it to `proxy`: same position in the request lifecycle, new file name
+> (`src/proxy.ts`), new exported function name (`export function proxy`). Every tutorial,
+> Stack Overflow answer and AI completion you meet will say `middleware.ts` — they are describing
+> the same feature under its old name, and `npx @next/codemod@canary middleware-to-proxy .`
+> renames both. Two things did *not* change: `next-intl` still exports `createMiddleware`
+> (Module 20), and `NextRequest`/`NextResponse` are untouched.
+
+`src/proxy.ts` exports one function that runs **before the router**, on every request that
 matches its `matcher`. With no matcher, that means every request: pages, RSC payload fetches for
 client-side navigations, `<Link>` prefetches, `/api` routes, `/_next/static/*` chunks, images,
 `favicon.ico`, `robots.txt`.
@@ -200,16 +212,16 @@ PHP at all. Next has no such separation.
 ```
 WITHOUT a matcher                        WITH the matcher below
 ─────────────────────────────────        ─────────────────────────────────
-GET /                → middleware        GET /                → middleware → 307 /en
-GET /en              → middleware        GET /en              → middleware → next()
-GET /api/health      → middleware        GET /api/health      → skipped
-GET /_next/static/…  → middleware        GET /_next/static/…  → skipped
-GET /favicon.ico     → middleware        GET /favicon.ico     → skipped
-GET /robots.txt      → middleware        GET /robots.txt      → skipped
+GET /                → proxy             GET /                → proxy → 307 /en
+GET /en              → proxy             GET /en              → proxy → next()
+GET /api/health      → proxy             GET /api/health      → skipped
+GET /_next/static/…  → proxy             GET /_next/static/…  → skipped
+GET /favicon.ico     → proxy             GET /favicon.ico     → skipped
+GET /robots.txt      → proxy             GET /robots.txt      → skipped
 ```
 
 Follow the left column through this lesson's logic: `/api/health` has no locale prefix, so the
-middleware redirects it to `/en/api/health`, which does not exist, so your monitor gets a 404 and
+proxy redirects it to `/en/api/health`, which does not exist, so your monitor gets a 404 and
 your on-call engineer gets a page. `/_next/static/chunk.js` becomes `/en/_next/static/chunk.js`,
 the browser cannot load the application, and the site is blank with no error in the server log.
 
@@ -217,41 +229,47 @@ That is why the `matcher` is a **correctness requirement, not an optimisation**.
 the single most likely thing in this lesson to be wrong, which is why Step 4 tests each excluded
 class separately rather than trusting one happy-path check.
 
-> **A middleware file with no `matcher` is a redirect loop waiting for a deploy.** The symptom is
+> **A proxy file with no `matcher` is a redirect loop waiting for a deploy.** The symptom is
 > the worst kind: the site loads blank, the server log is clean, and the browser console shows
 > asset requests returning HTML. If you ever see that, read the matcher first and everything else
 > second.
 
-### 6. The middleware runtime is restricted, and that is not an inconvenience
+### 6. Proxy runs in Node now, and the constraint that matters is not the runtime
 
-Middleware runs in a constrained runtime — a small, fast, V8-isolate environment rather than a full
-Node process. So:
+Until Next 15 this section would have told you that middleware runs in a small V8 isolate with
+no `fs`, no sockets and no native modules. **That is no longer true.** Next 16 pins proxy to the
+Node.js runtime, and the `runtime` segment option is not merely ignored in a proxy file — setting
+it throws. Every Node API is reachable.
 
-| Not available | Consequence |
+Read that as a warning rather than a licence. The reasons not to do work here never depended on
+the isolate:
+
+| Do not | Because |
 |---|---|
-| `fs`, `net`, `child_process` | no file reads, no raw sockets |
-| A MySQL driver | **no database.** There is no `WP_Query` equivalent, at any price |
-| Long CPU work | a low execution-time budget, enforced |
-| Most npm packages with native bindings | including several JWT libraries |
+| Query MySQL, or anything else | proxy is on the path of *every* matched request — pages, prefetches, RSC payload fetches. A 20 ms query becomes 20 ms on every navigation |
+| Do long CPU work | same reason, and hosts enforce a proxy execution budget independently of the runtime |
+| Import a module carrying `import 'server-only'` | proxy is not a React Server Component context; the package throws. Lesson 15.4 splits the auth library precisely for this |
+| Verify a JWT signature | see below — and this one is not about runtimes at all |
 
-Add one more constraint that is architectural rather than technical, and more important than all of
-the above: **Next never holds `GRAPHQL_JWT_AUTH_SECRET_KEY`.**
+The last row is the constraint that actually binds, and it is architectural rather than technical:
+**Next never holds `GRAPHQL_JWT_AUTH_SECRET_KEY`.**
 [Appendix 04 §5](../appendix/04-env-reference.md#5-why-graphql_jwt_auth_secret_key-must-differ-from-auth_key)
 explains the reasoning — if Vercel held WordPress's signing secret, a Vercel compromise would mint
-valid WordPress administrator tokens. So even in a full Node runtime, this application *could not*
-verify a session token locally. It can only ask WordPress.
+valid WordPress administrator tokens. The full Node runtime Next 16 gives you changes nothing here:
+this application *could not* verify a session token locally even with `jose` installed, because it
+has nothing to verify it against. It can only ask WordPress.
 
-Therefore middleware can check whether a cookie is **present**. It can never check whether it is
+Therefore proxy can check whether a cookie is **present**. It can never check whether it is
 **valid**.
 
-### 7. A middleware check is a convenience redirect, never authorisation
+### 7. A proxy check is a convenience redirect, never authorisation
 
 This follows from Key Concept 6, and it is the single most common security mistake in Next.js
 applications. The pattern looks like a security control and is not one.
 
 ```
 ❌  WHAT PEOPLE BUILD                     ✅  WHAT IS ACTUALLY TRUE
-middleware: no cookie → redirect         middleware: no cookie → redirect
+proxy: no cookie → redirect              proxy: no cookie → redirect
 therefore /account is protected          /account is protected by the check
                                          inside /account that asks WordPress
 ```
@@ -263,13 +281,13 @@ checked.
 
 Module 15 states the rule precisely and enforces it in code: **every route that reads
 user-specific data re-verifies the session where the data is fetched**, by presenting the token to
-WordPress, which is the only party able to judge it. Middleware saves a round trip for the common
+WordPress, which is the only party able to judge it. Proxy saves a round trip for the common
 case. That is its entire contribution to security, and Step 6 of this Task makes you write that
 sentence down in `docs/architecture.md`, because it is the sentence people forget.
 
-> **Test for it like this:** if deleting `src/middleware.ts` would make any data reachable that was
+> **Test for it like this:** if deleting `src/proxy.ts` would make any data reachable that was
 > not reachable before, the application is already broken. That question has a yes-or-no answer, it
-> takes thirty seconds to ask, and it is the only middleware security review anyone needs.
+> takes thirty seconds to ask, and it is the only proxy security review anyone needs.
 
 ### 8. `redirect` versus `rewrite` versus `next`, and why 307
 
@@ -332,7 +350,7 @@ a mistake nobody made on purpose.
 ```ts
 // next-app/src/app/api/health/route.ts
 
-// A cached health check is a recording, not a check. In Next 15 GET handlers are
+// A cached health check is a recording, not a check. In Next 16 GET handlers are
 // uncached by default; this states the intent so no future default or refactor can
 // quietly turn this endpoint into a file. Key Concept 4.
 export const dynamic = 'force-dynamic';
@@ -366,7 +384,7 @@ async function wordpressIsReachable(): Promise<boolean> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ __typename }' }),
-      // Explicit here even though it is the Next 15 default: a health check must
+      // Explicit here even though it is the Next 16 default: a health check must
       // never read a cache, and this line says so to the next reader.
       cache: 'no-store',
       // Without a timeout, a hung WordPress hangs your health check, and the monitor
@@ -453,10 +471,10 @@ design.
       seconds, and note that the timeout means a slow start looks like `degraded` rather than
       hanging.
 
-### Step 3: Write the middleware
+### Step 3: Write the proxy
 
 ```ts
-// next-app/src/middleware.ts
+// next-app/src/proxy.ts
 import { NextResponse, type NextRequest } from 'next/server';
 
 // One locale today (Lesson 09.1 Key Concept 6). Module 20 adds 'uk' and 'de' here, plus
@@ -467,7 +485,7 @@ const LOCALES: readonly string[] = ['en'];
 // harmless: it is a two-letter language code that is already in the URL.
 const DEFAULT_LOCALE = process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? 'en';
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   // '/en/incidents'.split('/') -> ['', 'en', 'incidents']. noUncheckedIndexedAccess
@@ -484,7 +502,7 @@ export function middleware(request: NextRequest): NextResponse {
   url.pathname = `/${DEFAULT_LOCALE}${pathname === '/' ? '' : pathname}`;
 
   // No status argument: redirect() defaults to 307, which preserves the method and the
-  // body. Module 16 POSTs Server Actions through paths this middleware may touch, and a
+  // body. Module 16 POSTs Server Actions through paths this proxy may touch, and a
   // 302 that turns a POST into a GET loses the submission silently. Key Concept 8.
   return NextResponse.redirect(url);
 }
@@ -501,14 +519,14 @@ export const config = {
 };
 ```
 
-Two details that are easy to get wrong. The file is `src/middleware.ts` — **beside** `src/app/`,
-not inside it; a `middleware.ts` in `src/app/` does nothing at all and produces no warning. And
+Two details that are easy to get wrong. The file is `src/proxy.ts` — **beside** `src/app/`,
+not inside it; a `proxy.ts` in `src/app/` does nothing at all and produces no warning. And
 `clone()` keeps the query string and the hash, so `/incidents?severity=s1-catastrophic` redirects
 to `/en/incidents?severity=s1-catastrophic` rather than losing the filter.
 
 **Verify §3:**
 
-- [ ] The dev server restarted itself and logged that it compiled the middleware. If it did not,
+- [ ] The dev server restarted itself and logged that it compiled the proxy. If it did not,
       the file is in the wrong directory.
 - [ ] `http://localhost:3000/` lands on `/en` with the locale visible in the address bar.
 
@@ -544,7 +562,7 @@ curl -s -o /dev/null -w '%{redirect_url}\n' 'http://localhost:3000/incidents?sev
 - [ ] All five behave as expected. If 4c or 4d returns 307, fix the regex before continuing —
       a redirected asset request is the "blank page, no errors" failure from Key Concept 5.
 - [ ] Click through the nav from Lesson 09.4 in the browser. Client-side navigation still works,
-      which means the middleware is passing RSC requests through rather than redirecting them.
+      which means the proxy is passing RSC requests through rather than redirecting them.
 
 ### Step 5: Grep the production bundle for your endpoint
 
@@ -573,30 +591,32 @@ until you have shown it can find something.
 - [ ] `NEXT_PUBLIC_SITE_URL`'s value is present. Both results are correct, and the difference
       between them is one prefix.
 
-### Step 6: Write down what middleware is not for
+### Step 6: Write down what proxy is not for
 
 Append to `docs/architecture.md`. This is the shortest note in the course and the one most likely
 to prevent a real incident:
 
 ```markdown
-## Middleware: what it is for, and what it must never be
+## Proxy: what it is for, and what it must never be
 
-`src/middleware.ts` runs before the router, in a restricted runtime with no database and no
-Node APIs, on every request its `matcher` selects.
+`src/proxy.ts` runs before the router, on every request its `matcher` selects, in the
+Node.js runtime. Next 16 renamed this file from `middleware.ts` and pinned it to Node; the
+runtime is not configurable. Node APIs being reachable is not permission to use them —
+everything here is on the hot path of every request.
 
 **It is for:** normalising URLs (the locale prefix), cheap redirects for the common case, and
 setting request-scoped headers.
 
 **It must never be:** an authorisation check.
 
-Middleware cannot verify a session, because Next.js never holds
+Proxy cannot verify a session, because Next.js never holds
 GRAPHQL_JWT_AUTH_SECRET_KEY — see appendix 04 §5. It can see that a cookie exists. It cannot
 know whether the cookie is valid, unexpired, or belongs to a user with the capability being
 exercised. Only WordPress can answer that.
 
 So the auth gate Module 15 adds here is **half a check**: it saves a logged-out visitor from
 a broken page. Every route that reads user-specific data re-verifies the session where the
-data is fetched. If the middleware were deleted tomorrow, no data would become accessible
+data is fetched. If the proxy were deleted tomorrow, no data would become accessible
 that was not accessible before — and if that statement ever stops being true, the security
 model has been broken.
 
@@ -695,12 +715,12 @@ them the first thing you automate in Module 24.
 2. The degraded response is `{"status":"degraded","checkedAt":"…"}` with a 503. Name three things
    you could add to that body that would each help you debug faster, and for each one say precisely
    what an attacker would learn from it.
-3. Middleware with no `matcher` runs on `/_next/static/chunk.js`. Walk through what this lesson's
+3. Proxy with no `matcher` runs on `/_next/static/chunk.js`. Walk through what this lesson's
    redirect logic would do to that request, what the user sees, and why the server log would not
    tell you what happened.
-4. A colleague proposes moving the Module 15 auth check into middleware, "so it is in one place".
+4. A colleague proposes moving the Module 15 auth check into proxy, "so it is in one place".
    Give the two independent reasons that cannot work — one about the runtime, one about who holds
-   the signing secret — and name the request shape that bypasses a middleware-only gate entirely.
+   the signing secret — and name the request shape that bypasses a proxy-only gate entirely.
 5. `NextResponse.redirect()` was used rather than `.rewrite()`, and its default 307 was left alone.
    Explain what would break in Module 19 with a rewrite, and what would break in Module 16 with a
    302.
@@ -711,7 +731,7 @@ them the first thing you automate in Module 24.
   convention, the exported method names, and the `page.tsx` conflict rule
 - [`NextRequest` and `NextResponse`](https://nextjs.org/docs/app/api-reference/functions/next-response)
   — `redirect`, `rewrite`, `next` and the cookie helpers Module 15 uses
-- [Middleware](https://nextjs.org/docs/app/api-reference/file-conventions/middleware) — the
+- [Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy) — the
   `matcher` syntax, the runtime limits, and Next's own warning about using it for authorisation
 - [Route segment config](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config)
   — `dynamic`, `revalidate` and `runtime`; Lesson 10.3 comes back to the first two

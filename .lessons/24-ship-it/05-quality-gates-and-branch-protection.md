@@ -430,7 +430,7 @@ cd wordpress-headless
 docker compose run --rm composer require --dev \
   phpstan/phpstan:^2.0 \
   szepeviktor/phpstan-wordpress:^2.0 \
-  php-stubs/wordpress-stubs:^6.8
+  php-stubs/wordpress-stubs:^7.1
 ```
 
 `--dev` matters twice: it keeps the analyser out of `composer install --no-dev`, which is what

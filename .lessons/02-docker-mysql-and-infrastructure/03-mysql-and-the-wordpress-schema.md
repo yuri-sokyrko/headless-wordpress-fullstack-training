@@ -25,7 +25,7 @@ The specific fact worth carrying out of this lesson: `wp_postmeta` is an
 the matched key's rows, and two meta conditions mean two self-joins. Add a `LIKE '%…%'` and the
 prefix index stops helping at all. The second fact: `wp_options` rows whose `autoload` column
 holds `yes`, `on`, `auto` or `auto-on` — WordPress 6.6 replaced the old `yes`/`no` pair, and a
-query written against `'yes'` alone now matches **nothing** on 6.8 — are loaded in their entirety
+query written against `'yes'` alone now matches **nothing** on 7.1 — are loaded in their entirety
 on *every single request*, which in a headless build means every
 GraphQL query pays for them — a 4 MB autoload set is a 4 MB tax on an API call that returns
 three fields. You will measure both, in your own database, rather than take it on trust.
@@ -284,7 +284,7 @@ any of your code runs, `wp_load_alloptions()` executes:
 
 ```sql
 -- wp-includes/option.php, inside wp_load_alloptions(). The IN list is built by
--- wp_autoload_values_to_autoload(), which returns exactly these four values on 6.8.
+-- wp_autoload_values_to_autoload(), which returns exactly these four values on 7.1.
 -- Pre-6.6 this read `autoload = 'yes'`; that predicate now matches zero rows.
 SELECT option_name, option_value FROM wp_options
  WHERE autoload IN ( 'yes', 'on', 'auto', 'auto-on' );
@@ -413,7 +413,7 @@ Read `Key_name`, `Column_name` and `Sub_part`. `Sub_part` is the prefix length �
 
 > **Every `wp db …` command prints a warning to stderr, and it is not your problem.**
 > `WARNING: option --ssl-verify-server-cert is disabled, because of an insecure passwordless
-> login.` comes from the MariaDB client shipped inside `wordpress:cli-php8.3` — WP-CLI hands it
+> login.` comes from the MariaDB client shipped inside `wordpress:cli-php8.4` — WP-CLI hands it
 > the credentials through a temporary defaults file, which the client reads as "no password on
 > the command line". It appears on every `wp db query`, `wp db export` and `wp db import` for
 > the rest of the course. Nothing is unencrypted that should not be: this is a localhost socket
@@ -595,12 +595,12 @@ docker compose run --rm wpcli wp db query "SHOW CREATE TABLE wp_options;"
 
 **Verify §7:**
 
-- [ ] `autoload_bytes` on a bare install is small — measured on a fresh 6.8.3 install it is
+- [ ] `autoload_bytes` on a bare install is small — measured on a fresh 7.1 install it is
       **26 428 bytes across 118 options**, of which `_transient_wp_core_block_css_files` alone
       is 20 314. Write your own number down and re-measure after Modules 03, 05 and 13. Keep it
       under roughly `800000`.
 - [ ] `autoloaded` is a number, not `NULL`. A `NULL` means you narrowed on `autoload='yes'`
-      somewhere — that value no longer exists on 6.8. Key Concept 7.
+      somewhere — that value no longer exists on 7.1. Key Concept 7.
 - [ ] `SHOW CREATE TABLE wp_options` shows `option_name` as `varchar(191)` and the table charset
       as `utf8mb4`. That `191` is the number from Key Concept 8.
 
@@ -706,7 +706,7 @@ docker compose run --rm wpcli wp db query "SELECT SUM(LENGTH(option_value)) AS a
      FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='btt'
        AND TABLE_NAME='wp_options' AND COLUMN_NAME='option_name') AS name_column
   FROM wp_options WHERE autoload IN ('yes','on','auto','auto-on');"
-# Expected: roughly 26000 bytes across 118 options on a bare 6.8 install, and
+# Expected: roughly 26000 bytes across 118 options on a bare 7.1 install, and
 #           "utf8mb4 191". A NULL autoload_bytes means the predicate matched no
 #           rows — i.e. you wrote autoload='yes', which 6.6 removed.
 

@@ -831,7 +831,7 @@ import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 ```tsx
 // next-app/src/app/[locale]/blog/[slug]/page.tsx — the component body, edited
 // `locale` joins the destructure: BlockRenderer passes it to every block, so an
-// in-content link can be locale-correct. params is a Promise in Next 15.
+// in-content link can be locale-correct. params is a Promise in Next 16.
 const { locale, slug } = await params;
 
 // …the fetchGraphQL call is UNCHANGED — same document constant, same

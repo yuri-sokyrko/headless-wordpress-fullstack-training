@@ -485,7 +485,7 @@ b64url_d "$P" | jq -r '.exp - .iat | "lifetime: \(.) seconds"'
 | `iss` | issuer — the WordPress site URL | nobody in this app; useful when one client talks to several backends |
 | `iat` | issued at, Unix seconds | Lesson 15.4, to explain what `exp` is measured from |
 | `nbf` | not before — the token is invalid earlier than this | WordPress, during verification |
-| `exp` | expiry, Unix seconds | **`decodeExpiry()` in Lesson 15.4, and the middleware in 15.5** |
+| `exp` | expiry, Unix seconds | **`decodeExpiry()` in Lesson 15.4, and the proxy in 15.5** |
 | `data.user.id` | the WordPress user ID, as a **string** | WordPress, to resolve `get_current_user_id()` |
 
 **Verify §2:**
