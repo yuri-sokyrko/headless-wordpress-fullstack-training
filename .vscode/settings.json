@@ -180,8 +180,8 @@
   //  Prettier does not format PHP. Letting an unconfigured formatter reflow
   //  WordPress-standard PHP produces a diff PHPCS then complains about.
   "[php]": {
-    "editor.defaultFormatter": null,
-    "editor.formatOnSave": false,
+    "editor.defaultFormatter": "bmewburn.vscode-intelephense-client",
+    "editor.formatOnSave": true,
     // WordPress Coding Standards mandates TABS. The repo-wide 2-space default
     // above would fail Generic.WhiteSpace.DisallowSpaceIndent on every line.
     "editor.insertSpaces": false,
@@ -226,7 +226,12 @@
   //  11.4), and without the two patterns below autocomplete, the colour swatch
   //  and the hover preview all go silent in exactly the helpers the course
   //  tells you to use.
-  "tailwindCSS.classAttributes": ["class", "className", "classNames", "containerClassName"],
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "classNames",
+    "containerClassName"
+  ],
   "tailwindCSS.experimental.classRegex": [
     ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
     ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
