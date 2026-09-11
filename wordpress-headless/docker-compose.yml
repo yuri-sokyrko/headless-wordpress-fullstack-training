@@ -24,6 +24,7 @@ services:
       - btt-uploads:/var/www/html/wp-content/uploads
       - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
       - ./php.ini:/usr/local/etc/php/conf.d/zz-btt.ini:ro
+      - ./wp-config.php:/var/www/html/wp-config.php:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks: [btt-net]
@@ -114,6 +115,7 @@ services:
       # BOTH PHP config files, same as the web container.
       - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
       - ./php.ini:/usr/local/etc/php/conf.d/zz-btt.ini:ro
+      - ./wp-config.php:/var/www/html/wp-config.php:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks: [btt-net]
