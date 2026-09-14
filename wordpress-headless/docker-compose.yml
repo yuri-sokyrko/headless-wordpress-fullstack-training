@@ -120,6 +120,18 @@ services:
       - "host.docker.internal:host-gateway"
     networks: [btt-net]
 
+  composer:
+    image: composer:2.9
+    profiles: ["cli"]
+    working_dir: /app
+    volumes:
+      - ./wp-content/plugins/blame-the-tech-core:/app
+    environment:
+      COMPOSER_HOME: /tmp/composer
+      COMPOSER_ALLOW_SUPERUSER: 1
+    user: "${UID:-1000}:${GID:-1000}"
+    networks: [btt-net]
+
 volumes:
   btt-db-data:
   btt-uploads:
