@@ -29,7 +29,7 @@ final class Plugin
 	 */
 	private const INCLUDES = array(
 		'includes/post-types.php',
-		// 'includes/taxonomies.php',   ← Lesson 03.3
+		'includes/taxonomies.php',
 		// 'includes/statuses.php',     ← Lesson 03.4
 		// 'includes/roles.php',        ← Lesson 03.5
 	);
@@ -68,10 +68,13 @@ final class Plugin
 	public static function activate(): void
 	{
 		register_post_types();
+
+		register_taxonomies();
+		seed_default_terms();
+
 		grant_incident_caps_to_core_roles();
 		ensure_permalink_structure();
 		// Later lessons add their calls here, above the flush:
-		//   03.3  register_taxonomies();  seed_default_terms();
 		//   03.5  register_reporter_role();
 
 		// LAST. Everything that adds a rewrite rule must already have run.
