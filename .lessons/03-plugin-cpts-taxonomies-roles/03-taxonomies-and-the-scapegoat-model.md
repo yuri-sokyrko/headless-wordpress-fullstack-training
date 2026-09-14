@@ -16,8 +16,10 @@ Three taxonomies, one modelling argument. `scapegoat` classifies what an inciden
 `post`. All three are registered per
 [appendix 03 §2](../appendix/03-content-model-reference.md#2-taxonomies), with their terms
 seeded on activation behind a `term_exists()` guard so a redeploy does not duplicate them.
-`severity` gets an extra restriction: a closed set of four terms and a `meta_box_cb` that
-renders radio buttons, so no editor can invent "S5 kinda bad" and break a front-end filter.
+`severity` gets an extra restriction: a closed set of four terms, rendered as a checkbox panel
+nobody can add to, so no editor — and no administrator — can invent "S5 kinda bad" and break a
+front-end filter. Getting that to hold in the block editor is less obvious than it sounds, and
+Key Concept 3 is mostly a tour of the two ways it silently does not.
 
 The interesting half of this lesson is *why* these are taxonomies at all, and it is a
 performance argument you can now measure yourself with the `EXPLAIN` skills from Lesson 02.3.
@@ -35,8 +37,9 @@ By the end of this lesson you will have:
 - `includes/taxonomies.php` registering `scapegoat`, `severity` and `tech_stack` with the
   contract's GraphQL names and rewrite bases
 - 24 terms seeded on activation — 10 scapegoats, 4 severities, 10 tech stacks — idempotently
-- `severity` locked to its four terms with a radio-button `meta_box_cb`, and `tech_stack`
-  attached to three post types
+- `severity` locked to its four terms — a hierarchical checkbox panel with no "Add New" for
+  anyone, and a `set_object_terms` guard that collapses a multi-tick back to one — and
+  `tech_stack` attached to three post types
 - `EXPLAIN` output for a `tax_query` on `severity` next to the equivalent `meta_query`, with
   the row estimates compared
 - A one-read leaderboard query against `wp_term_taxonomy.count`, and the grouped `COUNT(*)` it
@@ -134,36 +137,96 @@ and must not be able to *invent* them, because the front end filters on the slug
 `?severity=s5-kinda-bad` returns an empty page with no error. Three mechanisms could enforce
 that, and they are not equally strong:
 
-| Mechanism | Stops the classic editor | Stops the block editor | Stops REST | Stops WP-CLI |
+"Closed" is really two rules — *nobody invents a fifth severity*, and *no incident carries two*
+— and they need different mechanisms. Four candidates, and half of them are traps:
+
+| Mechanism | Classic editor | Block editor | REST | WP-CLI |
 |---|---|---|---|---|
-| A radio-button `meta_box_cb` | ✅ | it is not even rendered | ❌ | ❌ |
-| Validating in a `save_post` handler | ✅ | ✅ | ❌ | ❌ |
+| A radio-button `meta_box_cb` | ✅ | ❌ **never renders at all** | ❌ | ❌ |
+| Validating in a `save_post` handler | ✅ | ❌ **never runs** | ❌ | ❌ |
+| **Collapsing on `set_object_terms`** | ✅ | ✅ | ✅ | ✅ |
 | **`capabilities` on `register_taxonomy`** | ✅ | ✅ | ✅ | ✅ |
 
-The capability map is the only one that is enforced by WordPress's own authorisation layer:
+The bottom two are the real ones: capabilities stop *inventing*, the `set_object_terms` guard
+stops *multi-assign*. The top two are worth understanding precisely, because both look correct
+and neither works in the editor this project actually ships.
+
+**Why `meta_box_cb` never renders.** Core registers every taxonomy meta box with a flag:
+
+```php
+// wp-admin/includes/meta-boxes.php — note that this is unconditional
+add_meta_box(
+    $tax_meta_box_id, $label, $taxonomy->meta_box_cb, null, 'side', 'core',
+    array( 'taxonomy' => $tax_name, '__back_compat_meta_box' => true )
+);
+```
+
+and the block editor skips every box carrying it:
+
+```php
+// wp-admin/includes/post.php, the_block_editor_meta_boxes()
+// If a meta box is just here for back compat, don't show it in the block editor.
+if ( isset( $meta_box['args']['__back_compat_meta_box'] ) && $meta_box['args']['__back_compat_meta_box'] ) {
+    continue;
+}
+```
+
+A custom `meta_box_cb` is therefore a classic-editor-only feature, whatever its callback does.
+Pair it with `show_in_rest => false` — which removes Gutenberg's own panel — and you get **no
+severity UI whatsoever**: no radio box, no checkboxes, nothing in the sidebar. The two settings
+cancel out, and the failure is silent, because both halves look individually reasonable.
+
+**What to do instead.** Register `severity` as **hierarchical**, and leave it in REST:
+
+```php
+'hierarchical' => true,   // a UI decision, not a data one — severities have no parents
+'show_in_rest' => true,   // the panel does not exist without it
+```
+
+`hierarchical => true` is what makes Gutenberg draw its category-style **checkbox** list instead
+of the free-text token input it uses for flat taxonomies — a closed set rendered as a closed set,
+with no JavaScript build step, which matters because `@wordpress/scripts` does not arrive until
+Module 13. Nothing about the data is hierarchical and nothing ever will be; you are choosing a
+control, and that is a legitimate reason to set the flag.
+
+**Why `save_post` is the second trap.** Once the taxonomy is in REST, Gutenberg writes terms
+through the REST API, not through a form post. A `save_post` handler guarded by a nonce — the
+obvious place to validate — never sees that write at all, so it silently does nothing. Enforce on
+`set_object_terms` instead, the one chokepoint REST, the classic editor, WP-CLI and the Module 04
+seeder all pass through.
+
+**The capability map, and the detail that bites.** This is the half WordPress's own authorisation
+layer enforces:
 
 ```php
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/taxonomies.php
 'capabilities' => array(
-    'manage_terms' => 'manage_options',   // see the term admin screen
-    'edit_terms'   => 'manage_options',   // create or rename a term
-    'delete_terms' => 'manage_options',   // remove a term
-    'assign_terms' => 'edit_incidents',   // attach an existing term to a post
+    'manage_terms' => 'manage_options', // read the term list
+    'edit_terms'   => 'do_not_allow',   // nobody creates or renames — not even an admin
+    'delete_terms' => 'do_not_allow',   // nobody deletes
+    'assign_terms' => 'edit_incidents', // editors still tick a box
 ),
 ```
 
-An editor has `edit_incidents` and not `manage_options`, so they can assign and cannot create.
-REST respects it too — the `wp:action-create-severity` link is simply absent from the response,
-which is how the block editor knows not to render an "Add New" control. This is the same
-structural-versus-procedural argument Lesson 03.5 makes about `publish_incidents`, one layer
-down. The radio box is still worth writing: it makes "exactly one severity" a property of the UI
-and documents the intent where the next developer will look. Belt and braces, not the belt.
+`edit_terms` is the one that matters, and `manage_options` is not strict enough. Gutenberg renders
+its "Add New Category" form whenever the post's REST response advertises
+`wp:action-create-severity`, and core emits that link for anyone holding `edit_terms`. Set it to
+`manage_options` and every administrator gets a term-creation form in the incident sidebar —
+parent-category dropdown and all — which is exactly what a closed set must not have. The link
+only appears under `context=edit`, the context the editor sends, so it is invisible to a casual
+REST poke and easy to miss.
 
-> **`severity` is registered with `show_in_rest => false` while `scapegoat` and `tech_stack`
-> are `true`.** That is not a contradiction of Lesson 03.2 §2 — that rule is about *post types*,
-> where REST is what the block editor loads the post through. A taxonomy out of REST costs you
-> Gutenberg's own term panel, which is precisely what you want here, because you are replacing
-> it with the radio box. Free-form taxonomies keep the panel, because it is good.
+`do_not_allow` is WordPress's idiom for "no role, ever". It closes the sidebar form and the
+add/delete forms on `edit-tags.php` in one move, while `manage_terms` left at `manage_options`
+still lets an administrator *read* the list. Seeding is unaffected: `wp_insert_term()` is a
+low-level function with no capability check, so `seed_default_terms()` below keeps working. The
+set is defined in `SEVERITY_TERMS` and changed by editing code, which is what calling it closed
+should mean.
+
+> **`severity` is hierarchical and `scapegoat` and `tech_stack` are not.** That asymmetry is
+> about the control, not the content. Free-form taxonomies want the token input — typing a new
+> scapegoat is the point. A closed set wants checkboxes and no "Add New", and in the block editor
+> `hierarchical` is the only switch that produces them without shipping JavaScript.
 
 ### 4. Taxonomy, CPT with a relationship, or ACF select
 
@@ -238,7 +301,7 @@ Every slug and every GraphQL name comes from
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/taxonomies.php
 <?php
 /**
- * Taxonomies, their closed term sets, and the severity radio box.
+ * Taxonomies, their closed term sets, and the severity single-select rule.
  *
  * Contract: .lessons/appendix/03-content-model-reference.md §2
  *
@@ -362,19 +425,32 @@ function register_taxonomies(): void {
 
 				// There is nothing to manage: the set is closed.
 				'show_in_menu'       => false,
-				'show_in_quick_edit' => false, // quick edit is a free-text field. No.
+				'show_in_quick_edit' => false, // one more surface to get it wrong on.
 
-				// Deliberately out of REST so the block editor does not render a
-				// second, unrestricted term panel next to our radio box.
-				'show_in_rest'       => false,
+				// HIERARCHICAL IS A UI DECISION HERE, NOT A DATA ONE. Severities
+				// have no parents and never will. What `true` buys is the block
+				// editor's category-style CHECKBOX panel instead of the free-text
+				// token input Gutenberg draws for a flat taxonomy — the closed set
+				// rendered as a closed set, with no JS build step. Key Concept 3.
+				'hierarchical'       => true,
 
-				'meta_box_cb'        => __NAMESPACE__ . '\\render_severity_meta_box',
+				// Inherited as `true` from taxonomy_defaults(), and it must stay
+				// that way: the panel does not exist without it. Which also means
+				// Gutenberg writes terms over REST and never reaches a `save_post`
+				// handler — hence enforce_single_severity() on `set_object_terms`.
+
 				'capabilities'       => array(
-					// Only an administrator may create, rename or delete one.
-					'manage_terms' => 'manage_options',
-					'edit_terms'   => 'manage_options',
-					'delete_terms' => 'manage_options',
-					'assign_terms' => 'edit_incidents',
+					// `edit_terms` is the one that matters. Gutenberg renders its
+					// "Add New Category" form whenever the REST response carries
+					// `wp:action-create-severity`, and core emits that link for
+					// anyone holding this cap. At `manage_options` every admin gets
+					// a term-creation form in the sidebar. `do_not_allow` is
+					// WordPress's idiom for "no role, ever" — and it does not block
+					// seeding, because wp_insert_term() has no capability check.
+					'manage_terms' => 'manage_options', // read the list
+					'edit_terms'   => 'do_not_allow',   // nobody creates or renames
+					'delete_terms' => 'do_not_allow',   // nobody deletes
+					'assign_terms' => 'edit_incidents', // editors still tick a box
 				),
 			)
 		)
@@ -396,96 +472,74 @@ function register_taxonomies(): void {
 	);
 }
 
-/**
- * Render `severity` as radio buttons: exactly one, from a closed list. This
- * replaces the checkbox list core would draw, and is the UI half of the lock —
- * the capability map above is the enforcement half.
- *
- * @param \WP_Post $post The post being edited.
- */
-function render_severity_meta_box( \WP_Post $post ): void {
-	$terms = get_terms(
-		array(
-			'taxonomy'   => 'severity',
-			'hide_empty' => false,
-			'orderby'    => 'slug',
-			'order'      => 'ASC',
-		)
-	);
-
-	if ( is_wp_error( $terms ) || array() === $terms ) {
-		echo '<p>' . esc_html__( 'No severities are registered.', 'blame-the-tech-core' ) . '</p>';
-		return;
-	}
-
-	$assigned = wp_get_object_terms( $post->ID, 'severity', array( 'fields' => 'ids' ) );
-	$selected = is_wp_error( $assigned ) ? 0 : (int) ( $assigned[0] ?? 0 );
-
-	// "not set" first, so clearing a severity is possible at all.
-	$choices = array( 0 => __( '— not set —', 'blame-the-tech-core' ) );
-
-	foreach ( $terms as $term ) {
-		$choices[ (int) $term->term_id ] = $term->name;
-	}
-
-	wp_nonce_field( 'btt_save_severity', 'btt_severity_nonce' );
-	echo '<ul class="categorychecklist form-no-clear">';
-
-	foreach ( $choices as $term_id => $label ) {
-		printf(
-			'<li><label class="selectit"><input type="radio" name="btt_severity" value="%1$d"%2$s> %3$s</label></li>',
-			(int) $term_id,
-			checked( $selected, (int) $term_id, false ),
-			esc_html( $label )
-		);
-	}
-
-	echo '</ul>';
-}
-
-add_action( 'save_post_incident', __NAMESPACE__ . '\\save_severity_selection' );
+add_action( 'set_object_terms', __NAMESPACE__ . '\\enforce_single_severity', 10, 6 );
 
 /**
- * Persist the radio selection, validating it against the closed set.
+ * Collapse a multi-term severity assignment back to one.
  *
- * @param int $post_id Post ID.
+ * The checkbox panel lets an editor tick all four. Nothing in WordPress stops
+ * them, because "exactly one" is our rule, not core's — there is no `single`
+ * flag on a taxonomy, hierarchical or otherwise.
+ *
+ * This runs on `set_object_terms`, which fires AFTER the write, for every
+ * caller: the REST request Gutenberg sends, a classic `$_POST`, `wp term add`,
+ * and the Module 04 seeder. Enforcing here rather than in a `save_post` handler
+ * is the whole point — a `save_post` guard never sees Gutenberg's write.
+ *
+ * @param int    $object_id  Object ID.
+ * @param mixed  $terms      Terms as passed to wp_set_object_terms().
+ * @param int[]  $tt_ids     Term taxonomy IDs written by this call.
+ * @param string $taxonomy   Taxonomy slug.
+ * @param bool   $append     Whether terms were appended.
+ * @param int[]  $old_tt_ids Term taxonomy IDs assigned before this write.
  */
-function save_severity_selection( int $post_id ): void {
-	if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || wp_is_post_revision( $post_id ) ) {
+function enforce_single_severity(
+	int $object_id,
+	$terms,
+	array $tt_ids,
+	string $taxonomy,
+	bool $append,
+	array $old_tt_ids
+): void {
+	// Re-entrancy guard: the corrective write below fires this hook again.
+	static $collapsing = false;
+
+	if ( 'severity' !== $taxonomy || $collapsing ) {
 		return;
 	}
 
-	// Absent nonce means this save did not come from our meta box — a REST
-	// request, WP-CLI, or the seeder. Do nothing rather than clearing the term.
-	if ( ! isset( $_POST['btt_severity_nonce'], $_POST['btt_severity'] ) ) {
+	// Read the RESULT, never count( $tt_ids ). On an append core passes only the
+	// tt_ids THIS call added, so a second term landing beside an existing one
+	// arrives here as a single-element $tt_ids while the object now holds two.
+	$current = wp_get_object_terms( $object_id, 'severity' );
+
+	if ( is_wp_error( $current ) || count( $current ) <= 1 ) {
 		return;
 	}
 
-	$nonce = sanitize_text_field( wp_unslash( $_POST['btt_severity_nonce'] ) );
+	// Whichever term this write introduced wins, so ticking S1 while S2 is set
+	// does the obvious thing. $old_tt_ids is what makes that distinguishable.
+	$added   = array_values( array_diff( $tt_ids, $old_tt_ids ) );
+	$keep_tt = (int) ( $added[0] ?? ( $tt_ids[0] ?? 0 ) );
 
-	if ( ! wp_verify_nonce( $nonce, 'btt_save_severity' ) ) {
-		return;
+	$keep = null;
+
+	foreach ( $current as $term ) {
+		if ( (int) $term->term_taxonomy_id === $keep_tt ) {
+			$keep = $term;
+			break;
+		}
 	}
 
-	$assign_cap = get_taxonomy( 'severity' )->cap->assign_terms;
+	$keep = $keep ?? $current[0];
 
-	if ( ! current_user_can( 'edit_post', $post_id ) || ! current_user_can( $assign_cap ) ) {
-		return;
-	}
+	$collapsing = true;
+	wp_set_object_terms( $object_id, array( $keep->term_id ), 'severity', false );
+	$collapsing = false;
 
-	$term_id = absint( wp_unslash( $_POST['btt_severity'] ) );
-
-	if ( 0 === $term_id ) {
-		wp_set_object_terms( $post_id, array(), 'severity' );
-		return;
-	}
-
-	// The closed-set check: a term_id from another taxonomy is discarded.
-	$term = get_term( $term_id, 'severity' );
-
-	if ( $term instanceof \WP_Term ) {
-		wp_set_object_terms( $post_id, array( $term->term_id ), 'severity', false );
-	}
+	// Observable, so Module 23 can assert on it and the CLI can report it,
+	// rather than a silent correction the editor never learns about.
+	do_action( 'btt_severity_collapsed', $object_id, (int) $keep->term_id, $current );
 }
 
 /**
@@ -587,13 +641,17 @@ docker compose run --rm wpcli wp term list tech_stack --format=count
 
 ### Step 4: Classify the incident from Lesson 03.2 by hand
 
-Open the incident in wp-admin. There is now a **Scapegoats** panel (Gutenberg's own, because
-`show_in_rest` is `true`) and a **Severities** box drawn by your radio callback.
+Open the incident in wp-admin. All three panels are Gutenberg's own, because all three
+taxonomies are in REST — but they do not look alike, and the difference is the lesson.
 
 - [ ] Assign the scapegoat `DNS` and the severity `S1 — Catastrophic`, and update the post.
-- [ ] The Severities box is radio buttons plus "— not set —", with no text input: your callback
-      renders no way to create a term. The capability map closes the other doors, which
-      Verification check 9 proves.
+- [ ] **Scapegoats** and **Tech Stack** are free-text token inputs that will happily create a
+      term as you type. That is correct: those sets are open.
+- [ ] **Severities** is a list of exactly four checkboxes, and there is **no "Add New Category"
+      link beneath it** — not for you, even as an administrator. If you see one, `edit_terms` is
+      not `do_not_allow`; Verification checks 9 and 10 are the ones that catch it.
+- [ ] Tick a second severity and update. It collapses back to one, and the one you just ticked
+      is the one that survives. That is `enforce_single_severity()`, not the UI.
 - [ ] Assign a `tech_stack` term to a blog post too, proving the taxonomy spans three types.
 
 ### Step 5: Measure the leaderboard, both ways
@@ -640,12 +698,15 @@ cd wordpress-headless
 docker compose run --rm wpcli wp eval '
 foreach ( array( "scapegoat", "severity", "tech_stack" ) as $t ) {
   $o = get_taxonomy( $t );
-  printf( "%s -> %s | rest=%s gql=%s/%s%s", $t, implode( ",", $o->object_type ),
-    var_export( $o->show_in_rest, true ), $o->graphql_single_name, $o->graphql_plural_name, PHP_EOL );
+  printf( "%s -> %s | rest=%s hier=%s gql=%s/%s%s", $t, implode( ",", $o->object_type ),
+    var_export( $o->show_in_rest, true ), var_export( $o->hierarchical, true ),
+    $o->graphql_single_name, $o->graphql_plural_name, PHP_EOL );
 }'
-# Expected: scapegoat  -> incident                    | rest=true  gql=Scapegoat/Scapegoats
-#           severity   -> incident                    | rest=false gql=Severity/Severities
-#           tech_stack -> incident,tech_review,post   | rest=true  gql=TechStack/TechStacks
+# Expected: scapegoat  -> incident                  | rest=true hier=false gql=Scapegoat/Scapegoats
+#           severity   -> incident                  | rest=true hier=TRUE  gql=Severity/Severities
+#           tech_stack -> incident,tech_review,post | rest=true hier=false gql=TechStack/TechStacks
+#           `severity` is the only hierarchical one, and that is a UI decision — it is
+#           what makes Gutenberg draw checkboxes instead of a token input. Key Concept 3.
 
 # 2. Exactly 24 terms, with the contract's slugs — and seeding is idempotent
 docker compose run --rm wpcli wp term list severity --field=slug --orderby=slug
@@ -690,21 +751,55 @@ curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json
   -d '{"query":"{ severity(id:\"s1-catastrophic\",idType:SLUG){ name count incidents(first:10){ nodes { title } } } }"}'
 # Expected: name "S1 — Catastrophic", count 1, and the incident from Step 4
 
-# 9. NEGATIVE: the closed set really is closed for a non-administrator.
-#    `editor` has edit_incidents (so may assign) and not manage_options.
+# 9. NEGATIVE: the closed set is closed for EVERYONE, administrators included.
+#    This is the check that would have caught the "Add New Category" form.
 docker compose run --rm wpcli wp eval '
-$editor = get_role( "editor" );
-printf( "editor can edit_terms(severity)? %s%s",
-  var_export( $editor->has_cap( "manage_options" ), true ), PHP_EOL );
-printf( "editor can assign_terms(severity)? %s%s",
-  var_export( $editor->has_cap( "edit_incidents" ), true ), PHP_EOL );'
-# Expected: editor can edit_terms(severity)?   false
-#           editor can assign_terms(severity)? true
+wp_set_current_user( 1 );
+$t = get_taxonomy( "severity" );
+foreach ( array( "manage_terms", "edit_terms", "delete_terms", "assign_terms" ) as $c ) {
+  printf( "admin %-13s (%-14s) = %s%s", $c, $t->cap->$c,
+    var_export( current_user_can( $t->cap->$c ), true ), PHP_EOL );
+}'
+# Expected: admin manage_terms  (manage_options) = true   ← may READ the list
+#           admin edit_terms    (do_not_allow)   = false  ← may NOT create or rename
+#           admin delete_terms  (do_not_allow)   = false
+#           admin assign_terms  (edit_incidents) = true   ← may still tick a box
 
-# 10. NEGATIVE: severity is absent from REST, so Gutenberg draws no second panel
-curl -s -o /dev/null -w 'severity=%{http_code}\n'   http://localhost:8080/wp-json/wp/v2/severity
-curl -s -o /dev/null -w 'scapegoats=%{http_code}\n' http://localhost:8080/wp-json/wp/v2/scapegoats
-# Expected: severity=404 and scapegoats=200 — deliberate asymmetry, Key Concept 3
+# 10. NEGATIVE: no create-term link, so Gutenberg draws no "Add New Category" form.
+#     `context=edit` is essential — the wp:action-* links do not exist without it,
+#     which is exactly why this was easy to miss.
+docker compose run --rm wpcli wp eval '
+wp_set_current_user( 1 );
+$id  = get_posts( array( "post_type" => "incident", "numberposts" => 1, "fields" => "ids" ) )[0];
+$req = new WP_REST_Request( "GET", "/wp/v2/incidents/" . $id );
+$req->set_param( "context", "edit" );
+$data = rest_get_server()->response_to_data( rest_do_request( $req ), false );
+foreach ( array_keys( $data["_links"] ) as $rel ) {
+  if ( str_contains( $rel, "action-" ) && str_contains( $rel, "severity" ) ) { echo $rel, PHP_EOL; }
+}'
+# Expected: wp:action-assign-severity — and NOTHING else.
+#           If wp:action-create-severity appears, `edit_terms` is not do_not_allow
+#           and every admin has a term-creation form in the incident sidebar.
+
+# 10b. NEGATIVE: severity IS in REST (the panel needs it), but creating is refused.
+docker compose run --rm wpcli wp eval '
+wp_set_current_user( 1 );
+$req = new WP_REST_Request( "POST", "/wp/v2/severity" );
+$req->set_body_params( array( "name" => "S5 — Invented By An Admin" ) );
+printf( "create severity via REST: %d%s", rest_do_request( $req )->get_status(), PHP_EOL );
+printf( "severity terms still: %d%s",
+  count( get_terms( array( "taxonomy" => "severity", "hide_empty" => false ) ) ), PHP_EOL );'
+# Expected: create severity via REST: 403
+#           severity terms still: 4
+
+# 10c. NEGATIVE: ticking every box still stores exactly one severity.
+docker compose run --rm wpcli wp eval '
+$id  = get_posts( array( "post_type" => "incident", "numberposts" => 1, "fields" => "ids" ) )[0];
+$all = get_terms( array( "taxonomy" => "severity", "hide_empty" => false, "fields" => "ids" ) );
+wp_set_object_terms( $id, array_map( "intval", $all ), "severity", false );
+printf( "after assigning all 4: [%s]%s",
+  implode( ",", wp_get_object_terms( $id, "severity", array( "fields" => "slugs" ) ) ), PHP_EOL );'
+# Expected: exactly ONE slug. enforce_single_severity() collapsed the other three.
 
 # 11. Term archive rewrites were flushed, and the extra incident is cleaned up
 docker compose run --rm wpcli wp rewrite list --match=/scapegoats/dns/ --fields=match,query
@@ -723,20 +818,30 @@ shows moderated reality and one that shows whatever anybody submitted three minu
    where the trade would be the wrong way round.
 2. `count` for `the-cache` was `0` while a row existed in `wp_term_relationships`. Explain the
    discrepancy, and say which of the two numbers a moderation dashboard should use.
-3. Three mechanisms could keep `severity` to four terms: a radio meta box, a `save_post`
-   validator and the `capabilities` array. Rank them by strength and justify the ranking in terms
-   of the doors each one covers.
-4. `severity` is registered with `show_in_rest => false` while Lesson 03.2 insisted
-   `show_in_rest => true` is mandatory. Reconcile the two statements precisely, naming what each
-   flag controls.
-5. `tech_stack` spans `incident`, `tech_review` and `post`. Describe what a query for
+3. A radio-button `meta_box_cb` and a `save_post` validator both look like reasonable ways to
+   keep `severity` to one term, and neither does anything in this project. Explain what silences
+   each one, naming the core flag responsible for the first and the request path responsible for
+   the second.
+4. `severity` is the only hierarchical taxonomy here, yet a severity will never have a parent.
+   Justify the flag, and say what the editor sidebar would show instead if it were `false`.
+5. `edit_terms` was `manage_options` and the set was still not closed. Describe what an
+   administrator saw in the incident sidebar, name the REST link that put it there, and say why
+   `context=edit` is the reason nobody noticed.
+6. `tech_stack` spans `incident`, `tech_review` and `post`. Describe what a query for
    "everything tagged React" returns, and name the GraphQL construct and the TypeScript
    construct you will need in Modules 05 and 14 to consume it.
 
 ## Learn More
 
 - [`register_taxonomy()`](https://developer.wordpress.org/reference/functions/register_taxonomy/) —
-  the full argument list; read `capabilities`, `meta_box_cb` and `show_in_quick_edit` together
+  the full argument list; read `capabilities`, `hierarchical` and `show_in_rest` together, and
+  note that the docs for `meta_box_cb` never mention the block editor ignoring it
+- [Meta boxes in the block editor](https://developer.wordpress.org/block-editor/how-to-guides/metabox/) —
+  the `__back_compat_meta_box` flag from Key Concept 3, and why a taxonomy meta box is always
+  marked with it
+- [`set_object_terms`](https://developer.wordpress.org/reference/hooks/set_object_terms/) — the
+  hook `enforce_single_severity()` uses; read the `$append` parameter's effect on `$tt_ids`
+  carefully, because it is the reason the naive `count( $tt_ids )` guard is wrong
 - [Taxonomy database schema](https://developer.wordpress.org/apis/handbook/database/#term-tables) —
   the three tables in Key Concept 1, in core's own diagram, with the indexed columns marked
 - [`wp_update_term_count()`](https://developer.wordpress.org/reference/functions/wp_update_term_count/) —
