@@ -30,7 +30,8 @@ final class Plugin
 	private const INCLUDES = array(
 		'includes/post-types.php',
 		'includes/taxonomies.php',
-		// 'includes/statuses.php',     ← Lesson 03.4
+		'includes/statuses.php',
+		'includes/admin/incident-columns.php',
 		// 'includes/roles.php',        ← Lesson 03.5
 	);
 
