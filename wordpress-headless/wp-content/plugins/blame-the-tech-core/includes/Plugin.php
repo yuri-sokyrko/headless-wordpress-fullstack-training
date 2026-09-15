@@ -32,7 +32,7 @@ final class Plugin
 		'includes/taxonomies.php',
 		'includes/statuses.php',
 		'includes/admin/incident-columns.php',
-		// 'includes/roles.php',        ← Lesson 03.5
+		'includes/roles.php',
 	);
 
 	/**
@@ -74,9 +74,11 @@ final class Plugin
 		seed_default_terms();
 
 		grant_incident_caps_to_core_roles();
+
+		ensure_reporter_role();
+		close_wp_registration();
+
 		ensure_permalink_structure();
-		// Later lessons add their calls here, above the flush:
-		//   03.5  register_reporter_role();
 
 		// LAST. Everything that adds a rewrite rule must already have run.
 		flush_rewrite_rules();
@@ -92,6 +94,12 @@ final class Plugin
 	 */
 	public static function deactivate(): void
 	{
+		// Our capabilities on core roles are ours to clean up.
+		revoke_incident_caps_from_core_roles();
+
+		// `incident_reporter` is deliberately LEFT IN PLACE — users hold it.
+		// It is removed in uninstall.php, after reassigning those users.
+
 		// Soft flush. The plugin is still loaded right now, so
 		// flush_rewrite_rules() would rebuild the rule set *including* our own
 		// rules. Deleting the option lets WordPress rebuild it on the next
