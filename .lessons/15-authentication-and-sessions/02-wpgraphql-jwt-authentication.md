@@ -292,7 +292,7 @@ the reason went to a log the browser will never see.
 
 So `execute()` gains one parameter and each public function chooses for itself:
 
-`fetchGraphQL` passes `'partial'` and keeps Option B: its typical partial is one ACF sub-field a
+`fetchGraphQL` passes `'partial'` and keeps Option B: its typical partial is one SCF sub-field a
 plugin could not resolve, a gap in a page that is still 95% useful. `fetchGraphQLAuthed` passes
 `'strict'` and takes Option A — **any** `errors` entry throws, because it has no typical partial
 and a null field means the operation was refused. Neither exposes the policy at its call site.

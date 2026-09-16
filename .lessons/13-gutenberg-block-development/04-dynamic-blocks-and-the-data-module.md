@@ -321,7 +321,7 @@ detail?**
 again in Module 16. It is stored **kebab-case** — `hobt-hero`, `hobt-cta-block`, `hobt-footer`,
 `incident-sidebar` — because that is what the `wp_btt_leads.source` column holds
 ([appendix 03 §5](../appendix/03-content-model-reference.md#5-the-one-thing-that-is-not-a-post-wp_btt_leads))
-and what the ACF select convention uses. The GraphQL enum is `SCREAMING_SNAKE_CASE` —
+and what the SCF select convention uses. The GraphQL enum is `SCREAMING_SNAKE_CASE` —
 `HOBT_CTA_BLOCK` — because that is GraphQL's convention
 ([appendix 03 §3](../appendix/03-content-model-reference.md#3-registered-graphql-enums)).
 
@@ -364,7 +364,7 @@ core/query  providesContext: { queryId: 'queryId' }
 `postId` and `postType` are provided by core in the editor and by the render pipeline on the
 server, which is what makes context useful even when there is no `core/query` in sight. Lesson
 13.5's optional `btt/tech-verdict-card` declares `usesContext: [ 'postId' ]` so a Block Binding
-can read the surrounding post's ACF `verdict` field, rather than copying the value into an
+can read the surrounding post's SCF `verdict` field, rather than copying the value into an
 attribute and going stale.
 
 The reason it is only introduced here: context is the mechanism, and it does nothing on its own.
@@ -802,7 +802,7 @@ import { __ } from '@wordpress/i18n';
 import { InspectorControls, RichText, useBlockProps } from '@wordpress/block-editor';
 import { PanelBody, SelectControl, TextControl } from '@wordpress/components';
 
-// Kebab-case, matching wp_btt_leads.source and the ACF select convention.
+// Kebab-case, matching wp_btt_leads.source and the SCF select convention.
 // The GraphQL enum is SCREAMING_SNAKE and Module 16 maps between them, in one
 // place, on the way into submitHobtLead. Key Concept 7.
 const LEAD_SOURCES = [

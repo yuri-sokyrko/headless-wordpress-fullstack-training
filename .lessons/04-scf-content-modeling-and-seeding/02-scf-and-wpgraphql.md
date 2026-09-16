@@ -1,13 +1,13 @@
 ---
-title: 'ACF & WPGraphQL'
+title: 'SCF & WPGraphQL'
 module: 4
 lesson: 2
-teaches: [wpgraphql-for-acf, acf-repeater-types, graphql-field-naming, acf-select-to-enum]
+teaches: [wpgraphql-for-acf, scf-repeater-types, graphql-field-naming, scf-select-to-enum]
 produces: ['wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/acf-json/group_tech_review_fields.json']
 requires: [4.1]
 ---
 
-# Lesson 04.2 — ACF & WPGraphQL
+# Lesson 04.2 — SCF & WPGraphQL
 
 ## Quick Overview
 
@@ -16,7 +16,7 @@ post type it is attached to, so `Incident.incidentDetails.downtimeMinutes` exist
 and every field name is transformed from `snake_case` to `camelCase` automatically. This lesson
 builds `Tech Review Fields` from
 [appendix 03 §4.3](../appendix/03-content-model-reference.md#43-tech-review-fields) and then
-looks hard at what WPGraphQL for ACF actually generated, because the mapping is not always the
+looks hard at what WPGraphQL for SCF actually generated, because the mapping is not always the
 one you would guess.
 
 The **repeaters** are why this lesson exists. `pros` and `cons` are repeaters with a single Text
@@ -55,7 +55,7 @@ array of arrays keyed by sub-field name, which you index by hand and never think
 being PHP, lets you treat that shape however you like.
 
 GraphQL is typed, so that shape must be *named*. There is no anonymous array-of-maps in a
-GraphQL schema; every object needs a type, so WPGraphQL for ACF generates one per repeater from
+GraphQL schema; every object needs a type, so WPGraphQL for SCF generates one per repeater from
 the group name and the field name. `pros { item }` is the same data as the loop above, described
 in a system that requires the description to be explicit. Once you see it that way the generated
 names stop looking strange — they are the price of the schema being knowable in advance, which
@@ -78,7 +78,7 @@ actually there".
 ### 1. What `show_in_graphql` on a field group actually generates
 
 Two JSON keys — `show_in_graphql` and `graphql_field_name` — produce four things in the schema.
-Knowing all four by name is what lets you read a WPGraphQL for ACF problem instead of guessing at
+Knowing all four by name is what lets you read a WPGraphQL for SCF problem instead of guessing at
 it.
 
 ```
@@ -89,7 +89,7 @@ it.
                 ▼
   ┌─────────────────────────────────────────────────────────────────────┐
   │ 1. an OBJECT TYPE          TechReviewFields                         │
-  │      one GraphQL field per ACF field, snake_case → camelCase        │
+  │      one GraphQL field per SCF field, snake_case → camelCase        │
   │                                                                     │
   │ 2. an INTERFACE            WithAcfTechReviewFields                   │
   │      declares `techReviewFields: TechReviewFields`                  │
@@ -111,26 +111,26 @@ open GraphiQL:
 | Group object type | `graphql_field_name` in PascalCase | `techReviewFields` → `TechReviewFields` |
 | Interface | `WithAcf` + the group type name | `WithAcfTechReviewFields` |
 | Field on a content type | `graphql_field_name` verbatim | `TechReview.techReviewFields` |
-| A field inside the group | ACF field `name`, `snake_case` → `camelCase` | `rating_incident_response` → `ratingIncidentResponse` |
+| A field inside the group | SCF field `name`, `snake_case` → `camelCase` | `rating_incident_response` → `ratingIncidentResponse` |
 | A repeater's row type | group type name + field name in PascalCase | `pros` → `TechReviewFieldsPros` |
 
 > **`graphql_field_name` must be unique across the entire schema and must be a valid GraphQL
-> name** — camelCase, starting with a letter, no hyphens. WPGraphQL for ACF will refuse to
+> name** — camelCase, starting with a letter, no hyphens. WPGraphQL for SCF will refuse to
 > register a group whose name collides with an existing field and tells you so in an admin
 > notice, which you will not see if you only ever work through WP-CLI. Check
 > `wp-admin/edit.php?post_type=acf-field-group` after adding a group.
 
-### 2. The full ACF type to GraphQL type mapping
+### 2. The full SCF type to GraphQL type mapping
 
-This is the table to keep open. The left column is what you pick in the ACF UI; the right column
+This is the table to keep open. The left column is what you pick in the SCF UI; the right column
 is what the front end has to consume. They do not always line up with intuition.
 
-| ACF field type | GraphQL type | Watch out for |
+| SCF field type | GraphQL type | Watch out for |
 |---|---|---|
 | Text, Textarea, Email, Password | `String` | |
 | WYSIWYG, oEmbed | `String` | HTML — goes through the one sanitising component in Module 14 |
 | URL | `String` | not a URL scalar; validate it yourself |
-| Number | `Float` | **not `Int`** — ACF stores meta as strings and does not promise integers |
+| Number | `Float` | **not `Int`** — SCF stores meta as strings and does not promise integers |
 | Range | `Float` | same reason |
 | True/False | `Boolean` | |
 | Select (single), Radio, Button Group | `String` | Lesson 06.1 replaces this with a real enum |
@@ -156,7 +156,7 @@ of four values, and why Lesson 06.1 exists. And **images are connections**, so `
 a URL — you need `logo { node { sourceUrl altText } }`.
 
 > **Verify the mapping against your own GraphiQL rather than against this table.** WPGraphQL for
-> ACF v2 was a rewrite and changed several of these names from v1. The docs pane in GraphiQL is
+> SCF v2 was a rewrite and changed several of these names from v1. The docs pane in GraphiQL is
 > generated from the schema you actually have installed, which makes it the only source that
 > cannot be out of date.
 
@@ -175,10 +175,10 @@ get_field( 'pros' ) === array(
 
 An array of associative arrays. PHP does not need to name that shape, so it never does. GraphQL
 **must** name it, because a schema is a set of named types and there is no anonymous
-object-with-these-keys in the type system. So WPGraphQL for ACF generates one:
+object-with-these-keys in the type system. So WPGraphQL for SCF generates one:
 
 ```
-        ACF                          GraphQL                    TypeScript (Module 10)
+        SCF                          GraphQL                    TypeScript (Module 10)
   ─────────────────────       ────────────────────────      ──────────────────────────────
   pros  (Repeater)            type TechReviewFieldsPros {   type TechReviewFieldsPros = {
     └── item  (Text)            item: String                  __typename?: 'TechReviewFieldsPros'
@@ -212,8 +212,8 @@ real CPT would model it better.
 
 ### 4. How a field group finds the type it attaches to
 
-A field group's location rules are ACF's answer to "where does this form appear". WPGraphQL for
-ACF reuses them to answer a different question — "which GraphQL types get this field" — and the
+A field group's location rules are SCF's answer to "where does this form appear". WPGraphQL for
+SCF reuses them to answer a different question — "which GraphQL types get this field" — and the
 translation is not always one to one.
 
 | Location rule | GraphQL types it maps to |
@@ -239,7 +239,7 @@ That is what the manual escape hatch is for:
 }
 ```
 
-Set the first key to `1` and WPGraphQL for ACF ignores the location rules entirely and uses your
+Set the first key to `1` and WPGraphQL for SCF ignores the location rules entirely and uses your
 explicit list. **Use it whenever the location rules are not a clean statement about types** — and
 leave it at `0` when they are, so the two never drift apart. All five groups in this course leave
 it at `0`; `HOBT Promo` in Lesson 04.3 is the closest call, and it resolves cleanly to `Page`.
@@ -301,7 +301,7 @@ The typo on the left compiles, ships, and renders nothing for one of four verdic
 invisible in code review and invisible in tests that only cover the happy path.
 
 You are not fixing it in this lesson, and the reason is worth being explicit about: a registered
-GraphQL enum needs `register_graphql_enum_type()` plus a resolver that maps between ACF's
+GraphQL enum needs `register_graphql_enum_type()` plus a resolver that maps between SCF's
 kebab-case storage and GraphQL's `SCREAMING_SNAKE_CASE` convention. That is server-side GraphQL
 work and it belongs in Module 06 with the rest of it. What you do today is **write the observation
 down** — because the way this course gets to Lesson 06.1 is by having felt the problem, not by
@@ -309,7 +309,7 @@ being told about it.
 
 ### 7. Images are connections, so there is always a `node` hop
 
-`logo` is an ACF Image field. Its GraphQL type is `AcfMediaItemConnectionEdge`, so:
+`logo` is an SCF Image field. Its GraphQL type is `AcfMediaItemConnectionEdge`, so:
 
 ```
   ❌  techReviewFields { logo }                  → validation error, needs subfields
@@ -317,61 +317,50 @@ being told about it.
   ✅  techReviewFields { logo { node { sourceUrl altText mediaDetails { width height } } } }
 ```
 
-The `node` hop exists because an ACF image field is a **relationship to an attachment**, and
+The `node` hop exists because an SCF image field is a **relationship to an attachment**, and
 WPGraphQL models relationships as connections so that edge-level data has somewhere to live.
 Lesson 05.2 §2 explains the general principle; the practical consequence here is that
-`return_format` in the ACF JSON — `id`, `array` or `url` — is **ignored by WPGraphQL for ACF**.
+`return_format` in the SCF JSON — `id`, `array` or `url` — is **ignored by WPGraphQL for SCF**.
 It always resolves the attachment and returns the edge. Set `return_format` for the benefit of
 any PHP that reads the field, and read the shape you actually get from GraphiQL.
 
 ---
 ## Task
 
-### Step 1: Upgrade to ACF PRO
+### Step 1: Confirm SCF is installed
 
-`pros` and `cons` are Repeater fields, and **Repeater is an ACF PRO field type**. Free ACF loads a
-JSON group containing one without complaint and then renders nothing for it, which is a confusing
-way to lose an afternoon. Lesson 04.1 Key Concept 8 has the full breakdown of which group needs
-which edition.
+`pros` and `cons` are Repeater fields, and in ACF the Repeater was a PRO field type behind a paid
+licence. In SCF it is not: Repeater, Flexible Content, Clone, Gallery, Options Pages and Blocks
+are all in the wordpress.org plugin. That is the single biggest practical reason this course uses
+SCF, and it is why this step is one command rather than the licence dance a Classic WordPress
+developer will be bracing for.
 
-ACF PRO is a paid zip from your account rather than a wordpress.org slug, so the install is a file
-install. The plugins directory is already a bind mount, and everything in it except this course's
-two plugins is gitignored, which makes it the obvious drop point:
+If Lesson 04.1 already installed it, this is a no-op:
 
 ```bash
 cd wordpress-headless
 
-# 1. Free and PRO are two different plugin directories and cannot both be active.
-docker compose run --rm wpcli wp plugin deactivate advanced-custom-fields
-
-# 2. Stage the zip where the container can see it.
-cp ~/Downloads/advanced-custom-fields-pro.zip wp-content/plugins/_acf-pro.zip
-
-docker compose run --rm wpcli wp plugin install \
-  /var/www/html/wp-content/plugins/_acf-pro.zip --activate
-
-# 3. Do not leave a plugin zip lying in the plugins directory.
-rm wp-content/plugins/_acf-pro.zip
-
+docker compose run --rm wpcli wp plugin install secure-custom-fields --activate
 docker compose run --rm wpcli wp plugin list --status=active --field=name
 ```
 
-> **The licence key is only needed for updates, not for features.** ACF PRO's Repeater, Options
-> Pages and Blocks all work on an unlicensed install; what you lose is the update channel. If you
-> do want updates, ACF reads the `ACF_PRO_LICENSE` constant — so the key goes in the gitignored
-> `.env` as `ACF_PRO_LICENSE=__CHANGE_ME__` and is defined from `getenv()` in the
-> `WORDPRESS_CONFIG_EXTRA` block of `docker-compose.dev.yml` (Lesson 02.2 Step 6), alongside the
-> other `define()` calls. Never in a tracked file, and never as a build argument.
+> **There is no licence key in this course, and no `ACF_PRO_LICENSE`.** SCF is GPL, hosted on
+> wordpress.org, and updates through the normal plugin updater like any other. One fewer secret
+> in `.env`, one fewer thing that can expire, and — the part that matters in Module 23 — one
+> fewer reason for a CI runner to skip a test. Compare that with ACF PRO, where the zip comes
+> from your account and the update channel needs a key defined in `wp-config.php`.
 
 **Verify §1:**
 
-- [ ] `advanced-custom-fields-pro` shows in the active list and `advanced-custom-fields` does not.
+- [ ] `secure-custom-fields` shows in the active list.
 - [ ] `http://localhost:8080/wp-admin/edit.php?post_type=acf-field-group` still lists **Incident
-      Details**. Local JSON is edition-independent — the file did not move and did not change.
-- [ ] `docker compose logs --tail=40 wordpress` shows no fatal error. Two ACF copies active at
-      once is the one way to get one, which is why Step 1 deactivates first.
+      Details**. Note the `acf-field-group` post type in that URL: SCF is a fork of ACF and keeps
+      its internal names, which is Key Concept 1's point made in a query string.
+- [ ] `docker compose logs --tail=40 wordpress` shows no fatal error. Installing SCF alongside
+      ACF or ACF PRO is the one reliable way to get one — they define the same functions, so SCF
+      deactivates them on activation rather than letting PHP fatal.
 
-### Step 2: Install WPGraphQL and WPGraphQL for ACF
+### Step 2: Install WPGraphQL and WPGraphQL for SCF
 
 ```bash
 docker compose run --rm wpcli wp plugin install wp-graphql --activate
@@ -647,7 +636,7 @@ Ten fields, both repeaters, names fixed by
 
 ### Step 4: Do the sync round trip once, deliberately
 
-You have now hand-written two field groups. That will not be how you work day to day — the ACF UI
+You have now hand-written two field groups. That will not be how you work day to day — the SCF UI
 is a much faster field builder than a JSON editor — so do the round trip once and watch what
 happens to the file.
 
@@ -665,7 +654,7 @@ happens to the file.
 - [ ] The `git diff` is exactly two lines: `"max": 8` becoming `"max": 6`, and a new `"modified"`
       timestamp. **That diff is the review artifact.** A field-model change that does not show up
       here only exists in your database.
-- [ ] The filename did not change. ACF names the file from the group key, and Lesson 04.1's
+- [ ] The filename did not change. SCF names the file from the group key, and Lesson 04.1's
       `save_file_name` filter names it from the title — both give
       `group_tech_review_fields.json`.
 - [ ] Put `max` back to 6 or 8, whichever you prefer, and commit whatever the file says. The
@@ -674,7 +663,7 @@ happens to the file.
 > **After a Sync the group exists in two places: the JSON file and a `wp_posts` row.** That is
 > normal and correct. The JSON is the deployed artifact and the source of truth; the database copy
 > is a local editing convenience, recreated by one click on any machine that pulls the repo. It is
-> also why `git diff` — not the ACF UI — is the answer to "did my change land".
+> also why `git diff` — not the SCF UI — is the answer to "did my change land".
 
 ### Step 5: Author one review, with populated repeaters
 
@@ -768,16 +757,17 @@ Then commit: `git add -A && git commit -m "feat(wp): tech review field group, wi
 ```bash
 cd wordpress-headless
 
-# 1. The right four plugins are active, and the free ACF is not
+# 1. The right four plugins are active
 docker compose run --rm wpcli wp plugin list --status=active --field=name | sort
-# Expected: includes advanced-custom-fields-pro, blame-the-tech-core, wp-graphql, wpgraphql-acf
-#           and does NOT include advanced-custom-fields
+# Expected: secure-custom-fields, blame-the-tech-core, wp-graphql, wpgraphql-acf.
+#           Exactly ONE field plugin: no advanced-custom-fields alongside it,
+#           because SCF and ACF define the same functions.
 
 # 2. Two field groups, two files
 ls wp-content/plugins/blame-the-tech-core/includes/acf-json/
 # Expected: group_incident_details.json  group_tech_review_fields.json
 
-# 3. ACF loaded both, with the GraphQL names the contract fixes
+# 3. SCF loaded both, with the GraphQL names the contract fixes
 docker compose run --rm wpcli wp eval 'foreach ( acf_get_field_groups() as $g ) { echo $g["key"], " => ", ( $g["graphql_field_name"] ?? "-" ), "\n"; }'
 # Expected: group_incident_details => incidentDetails
 #           group_tech_review_fields => techReviewFields
@@ -816,7 +806,7 @@ echo "http=$STATUS"; jq -r '.errors[0].message' /tmp/gql.json
 # 10. NEGATIVE: the shape you assumed a repeater had does not exist
 gql '{"query":"query($s:ID!){ techReview(id:$s, idType:SLUG){ techReviewFields{ pros{ label } } } }","variables":{"s":"hyperscale-cloud-co"}}' | jq -r '.errors[0].message'
 # Expected: Cannot query field "label" on type "TechReviewFieldsPros".
-#           One field only, named after the ACF sub-field: `item`.
+#           One field only, named after the SCF sub-field: `item`.
 
 # 11. `verdict` is a SCALAR today, not an ENUM. Record it; Lesson 06.1 changes it.
 gql '{"query":"{ __type(name:\"TechReviewFields\"){ fields{ name type{ kind name } } } }"}' | jq -c '.data.__type.fields[] | select(.name=="verdict")'
@@ -850,7 +840,7 @@ find you again in Module 10, and recognising them instantly is worth more than t
 1. `HOBT Promo` has a `modules` repeater whose sub-fields include a `lessons` repeater. Predict
    both generated GraphQL type names from the naming rules in Key Concept 1, then say what that
    tells you about the content model.
-2. A field group's only location rule is `post_status == draft`. Explain what WPGraphQL for ACF
+2. A field group's only location rule is `post_status == draft`. Explain what WPGraphQL for SCF
    derives from that, why the result is almost certainly wrong, and give the exact two JSON keys
    you would set to fix it.
 3. A teammate reports that "the GraphQL endpoint is down" because their request returned HTTP 200
@@ -865,13 +855,13 @@ find you again in Module 10, and recognising them instantly is worth more than t
 
 ## Learn More
 
-- [WPGraphQL for ACF — documentation](https://acf.wpgraphql.com/) — the v2 rewrite's own docs;
+- [WPGraphQL for SCF — documentation](https://acf.wpgraphql.com/) — the v2 rewrite's own docs;
   start with "Field Types" and compare it against the table in Key Concept 2
-- [WPGraphQL for ACF — Repeater field](https://acf.wpgraphql.com/field-types/repeater/) — the
+- [WPGraphQL for SCF — Repeater field](https://acf.wpgraphql.com/field-types/repeater/) — the
   generated type naming, stated by the plugin that generates it
-- [WPGraphQL for ACF — options pages and field group settings](https://acf.wpgraphql.com/) — the
+- [WPGraphQL for SCF — options pages and field group settings](https://acf.wpgraphql.com/) — the
   `show_in_graphql`, `graphql_field_name` and manual type mapping settings in one place
-- [ACF — Repeater field](https://www.advancedcustomfields.com/resources/repeater/) — the PHP side,
+- [SCF — Repeater field](https://www.advancedcustomfields.com/resources/repeater/) — the PHP side,
   including `have_rows()` and the nesting limits worth knowing before you nest
 - [GraphQL specification — Field selection merging and leaf field selections](https://spec.graphql.org/October2021/#sec-Leaf-Field-Selections) —
   three paragraphs that explain check 9's error message better than any tutorial

@@ -287,7 +287,7 @@ is greppable.
 ### 7. Typing the builders against codegen'd input makes a schema change a compile error
 
 Each builder takes a narrow structural type describing only the fields it reads, and the routes
-pass codegen'd fragment data straight in. Rename `ratingOverall` in ACF, run
+pass codegen'd fragment data straight in. Rename `ratingOverall` in SCF, run
 `npm run schema:pull` and `npm run codegen`, and `reviewJsonLd`'s call site stops compiling.
 
 That is the whole reason not to reach for `schema-dts`. It would give you nominal types for
@@ -323,7 +323,7 @@ it. State the fragility plainly, because it is real:
 |---|---|---|
 | Walk `core/heading` ending in `?` plus the following `core/paragraph` | fragile: rests on a convention nothing enforces | ✅ **today** — no new block, no content-model change, and it works on content that already exists |
 | A `btt/faq` block with a repeatable question/answer pair | correct and self-documenting; costs a Module 13 block, a Module 14 component, a schema pull and a codegen run | ✅ the right answer the moment FAQ markup carries commercial weight |
-| An ACF repeater on `HOBT Promo` | cheapest to validate | ❌ the FAQ then cannot live in the page body, where the editor composes everything else |
+| An SCF repeater on `HOBT Promo` | cheapest to validate | ❌ the FAQ then cannot live in the page body, where the editor composes everything else |
 
 > **Google no longer shows FAQ rich results for sites like this one.** Since August 2023 the FAQ
 > rich result is limited to well-known authoritative government and health sites, so emitting
@@ -420,14 +420,14 @@ export function organizationId(siteUrl: string): string {
 /**
  * WPGraphQL's `*Gmt` fields are GMT with NO offset marker — `2024-09-02T08:00:00`.
  * schema.org wants an ISO 8601 value, so append the `Z` that WordPress omits.
- * An ACF Date Picker value is a plain date and is already valid. Anything
+ * An SCF Date Picker value is a plain date and is already valid. Anything
  * unparseable returns null, which trips the caller's guard.
  */
 export function isoInstant(value: string | null | undefined): string | null {
   const raw = (value ?? '').trim();
   if (raw === '') return null;
 
-  // ACF Date Picker: a Date, not a DateTime. schema.org accepts both.
+  // SCF Date Picker: a Date, not a DateTime. schema.org accepts both.
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
 
   const withZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(raw) ? raw : `${raw}Z`;
@@ -1074,7 +1074,7 @@ describe('incompleteness guards', () => {
     );
     expect(node?.itemReviewed).toEqual({ '@type': 'Organization', name: 'Acme' });
     expect(node?.reviewRating).toEqual({ '@type': 'Rating', ratingValue: 7, bestRating: 10, worstRating: 1 });
-    // An ACF Date Picker value is already a valid schema.org Date.
+    // An SCF Date Picker value is already a valid schema.org Date.
     expect(node?.datePublished).toBe('2024-09-02');
     // A single review must never carry an average.
     expect('aggregateRating' in (node ?? {})).toBe(false);
@@ -1153,7 +1153,7 @@ describe('jsonLdScriptProps', () => {
 });
 
 describe('isoInstant', () => {
-  it('handles the three shapes WordPress and ACF actually send', () => {
+  it('handles the three shapes WordPress and SCF actually send', () => {
     expect(isoInstant('2024-09-02T08:00:00')).toBe('2024-09-02T08:00:00Z');
     expect(isoInstant('2024-09-02')).toBe('2024-09-02');
     expect(isoInstant('not a date')).toBeNull();

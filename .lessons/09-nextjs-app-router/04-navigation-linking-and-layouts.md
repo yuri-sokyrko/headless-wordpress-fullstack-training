@@ -15,7 +15,7 @@ Blame The Tech has one working section. This lesson builds the other three — t
 reviews and the scapegoat leaderboard — and connects them with real navigation. The routes
 themselves are repetition of Lesson 09.3, which is intentional: writing the same server-fetch
 shape four times is how it stops being novel, and the reviews route adds the one genuinely new
-data problem in Phase 2, the ACF repeater that arrives as a list of objects rather than a list
+data problem in Phase 2, the SCF repeater that arrives as a list of objects rather than a list
 of strings.
 
 The new mechanics are navigational. `<Link>` replaces `<a>` and gives you client-side
@@ -230,9 +230,9 @@ the bill for Lesson 09.1's explicitness: nothing is decided at runtime, so nothi
 at runtime either. Two habits make it survivable — always compose hrefs from the `locale` you
 already awaited, and never write a bare `/blog` string in a component that is not the nav.
 
-### 7. The ACF repeater shape, and the moment your type surprises you
+### 7. The SCF repeater shape, and the moment your type surprises you
 
-`pros` and `cons` are ACF **repeaters** with a single Text sub-field called `item`. They do not
+`pros` and `cons` are SCF **repeaters** with a single Text sub-field called `item`. They do not
 arrive as `string[]`. They arrive as a list of objects:
 
 ```json
@@ -252,7 +252,7 @@ first time it reaches TypeScript, and the mapping is where people write the bug:
 ```
 
 Every layer of a repeater is nullable: the repeater itself (no rows), each row (present but empty),
-and the sub-field. That is not ACF being awkward — it is ACF being honest, because none of the
+and the sub-field. That is not SCF being awkward — it is SCF being honest, because none of the
 three can be guaranteed by a field group. Module 10's generated types spell all three out, which is
 the moment "why is my generated type so full of `| null`?" gets its answer: because your content
 model really is.
@@ -322,7 +322,7 @@ export interface PostBySlugQueryResponse {
 /* ── Tech reviews ─────────────────────────────────────────────────────── */
 
 /**
- * One row of an ACF repeater. NOT a string — appendix 03 §4.3.
+ * One row of an SCF repeater. NOT a string — appendix 03 §4.3.
  * All three levels are nullable: the list, the row, and the sub-field.
  */
 export interface RepeaterItemResponse {
@@ -565,7 +565,7 @@ error the moment Lesson 10.2 collects every document in the project into one cod
 
 ### Step 3: Build the reviews routes — structured data next to a blob
 
-The list page renders the ACF ratings as real markup. Nothing here is a string of HTML.
+The list page renders the SCF ratings as real markup. Nothing here is a string of HTML.
 
 ```tsx
 // next-app/src/app/[locale]/reviews/page.tsx
@@ -1189,5 +1189,5 @@ work to remove; three files is the number it expects.
   — how to say "you are here" without relying on colour, which Module 22 audits
 - [WPGraphQL: connections and where arguments](https://www.wpgraphql.com/docs/connections/) — the
   `orderby: COUNT` and `hideEmpty` arguments the leaderboard depends on
-- [ACF repeater field](https://www.advancedcustomfields.com/resources/repeater/) — the field type
+- [SCF repeater field](https://www.advancedcustomfields.com/resources/repeater/) — the field type
   behind Key Concept 7, and why its rows are objects

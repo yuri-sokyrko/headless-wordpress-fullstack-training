@@ -635,7 +635,7 @@ docker compose run --rm wpcli wp plugin list --status=active --field=name
 **Verify §5:**
 
 - [ ] The second command lists `blame-the-tech-blocks` alongside `blame-the-tech-core`,
-      `wp-graphql` and `advanced-custom-fields-pro` (Pro, not free ACF — Lesson 04.2 swapped
+      `wp-graphql` and `secure-custom-fields` (Lesson 04.2 installed
       them).
 - [ ] `docker compose logs --tail=20 wordpress` shows no new PHP notice. A notice here is
       almost always a typo in the plugin header docblock or a missing `defined( 'ABSPATH' )`.

@@ -509,7 +509,7 @@ Two things to keep from the reference verbatim:
   is a deliberate statement that the cost of that exception is never worth paying. Compare
   [Lesson 24.5](05-quality-gates-and-branch-protection.md) Key Concept 4, where every *gate* has a
   recorded escape hatch: this is the one place in the repository that refuses to have one.
-- The **"ACF field keys unchanged"** line. It is not obvious and it is expensive: a field key
+- The **"SCF field keys unchanged"** line. It is not obvious and it is expensive: a field key
   rename is a public contract change that fails the integration tests from
   [Lesson 23.5](../23-testing-deep-dive-and-agentic-qa/05-wp-integration-and-graphql-contract-tests.md),
   and it is exactly the kind of thing a reviewer will not think to ask about.

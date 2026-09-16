@@ -17,7 +17,7 @@ uses, and you are going to open `wp_posts`, `wp_postmeta`, `wp_terms`, `wp_term_
 `wp_term_relationships` and `wp_options`, read their indexes, and then run `EXPLAIN` on the SQL
 that `WP_Query` generates for a `tax_query` and for a `meta_query`. The two plans do not look
 alike, and the difference is the reason [appendix 03 §2](../appendix/03-content-model-reference.md#2-taxonomies)
-makes `severity` a taxonomy instead of an ACF select.
+makes `severity` a taxonomy instead of an SCF select.
 
 The specific fact worth carrying out of this lesson: `wp_postmeta` is an
 **entity-attribute-value** table with an index on `meta_key` (prefixed to 191 characters) and
@@ -77,11 +77,11 @@ not in an appendix.
 | Table | Rows grow with | What lives here |
 |---|---|---|
 | `wp_posts` | content | Posts, pages, attachments, revisions, menu items, **and every custom post type** |
-| `wp_postmeta` | content × fields | Every `get_post_meta()` value, every ACF field, every plugin's per-post setting |
+| `wp_postmeta` | content × fields | Every `get_post_meta()` value, every SCF field, every plugin's per-post setting |
 | `wp_terms` | terms | The term's name and slug, once |
 | `wp_term_taxonomy` | term × taxonomy | Which taxonomy a term is in, its parent, and **its `count`** |
 | `wp_term_relationships` | content × terms | The join table: which post has which term |
-| `wp_termmeta` | term × fields | ACF term fields — [appendix 03 §4.2](../appendix/03-content-model-reference.md#42-scapegoat-profile) |
+| `wp_termmeta` | term × fields | SCF term fields — [appendix 03 §4.2](../appendix/03-content-model-reference.md#42-scapegoat-profile) |
 | `wp_users` / `wp_usermeta` | users, users × fields | Logins; and capabilities, as a serialised array |
 | `wp_options` | settings | Site and plugin config, transients, the autoload set — §7 |
 
@@ -109,7 +109,7 @@ them.
 
 Both paths hang off `wp_posts.ID`. The left one is a bag of untyped strings with no index on the
 value. The right one is a normalised join, indexed in both directions, carrying a pre-computed
-count. **When you choose between an ACF select and a taxonomy, that diagram is the choice you
+count. **When you choose between an SCF select and a taxonomy, that diagram is the choice you
 are making** — and the rest of this lesson is the evidence.
 
 ### 2. `wp_posts` — the only content table with indexes you can rely on
@@ -152,7 +152,7 @@ One incident with the nine fields from
 [appendix 03 §4.1](../appendix/03-content-model-reference.md#41-incident-details) is one row in
 `wp_posts` and **nine or more** in `wp_postmeta`, plus whatever core and your plugins add. EAV
 buys one genuinely valuable thing: you can add a field without a migration. That is why
-WordPress uses it, why ACF is possible at all, and why "just add a custom field" has never
+WordPress uses it, why SCF is possible at all, and why "just add a custom field" has never
 required a schema change in twenty years. The price is paid at read time in two currencies:
 `meta_value` is `LONGTEXT`, so there is no type and numeric comparison needs a cast; and
 `meta_value` has **no index**, because the column is too large to index without a prefix and a
@@ -358,7 +358,7 @@ in post meta when it is per-post data you display but do not filter on, or when 
 a range.**
 
 That is exactly why [appendix 03 §2](../appendix/03-content-model-reference.md#2-taxonomies)
-models `severity` as a closed-list taxonomy rather than an ACF select, and `scapegoat` as a
+models `severity` as a closed-list taxonomy rather than an SCF select, and `scapegoat` as a
 taxonomy rather than a post type with a relationship field:
 
 | Facet | Modelled as | Because |
@@ -366,7 +366,7 @@ taxonomy rather than a post type with a relationship field:
 | `severity` | taxonomy, locked terms | `/incidents?severity=s1-catastrophic` is one indexed integer join, not a string comparison against unindexed `meta_value` |
 | `scapegoat` | taxonomy | The leaderboard is `ORDER BY wp_term_taxonomy.count` — §6 |
 | `downtime_minutes`, `estimated_cost_usd` | post meta | Numeric ranges. **Cannot** be taxonomies — a term per minute is absurd |
-| `resolution_status` | post meta (ACF select) | Set by moderators and displayed; not a public facet |
+| `resolution_status` | post meta (SCF select) | Set by moderators and displayed; not a public facet |
 
 > **The cost, stated plainly:** a term has no revisions and no rich editorial body, and a locked
 > term list means a fifth severity is a code change rather than an editor action. Both are real
@@ -566,7 +566,7 @@ the plan and compare the product against the post count you actually have.
 ### Step 7: The leaderboard both ways, then your own autoload set
 
 The denormalised count, then the same answer computed from scratch — which is what you would be
-doing if `scapegoat` were an ACF field. Compare `actual rows`, `actual time` and `Using
+doing if `scapegoat` were an SCF field. Compare `actual rows`, `actual time` and `Using
 temporary`: the first is bounded by your **term count**, the second by your **content volume**.
 
 ```bash

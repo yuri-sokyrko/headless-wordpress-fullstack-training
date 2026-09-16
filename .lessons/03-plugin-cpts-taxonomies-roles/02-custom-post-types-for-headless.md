@@ -32,7 +32,7 @@ change, not a cosmetic edit.
 By the end of this lesson you will have:
 
 - `includes/post-types.php` registering `incident` and `tech_review` per the contract
-- `supports` arrays matching §1 exactly — including `custom-fields` on `incident`, which ACF
+- `supports` arrays matching §1 exactly — including `custom-fields` on `incident`, which SCF
   and the REST meta endpoints both need
 - `capability_type => 'incident'` and `map_meta_cap => true` on `incident`, generating the
   granular capabilities Lesson 03.5 assigns
@@ -197,13 +197,13 @@ several cases, a REST or GraphQL field.
 | `editor` | ✓ | `post_content`, `contentBlocks` in Module 14 |
 | `revisions` | ✓ | `wp_posts` rows of type `revision`; Module 17's preview needs them |
 | `author` | ✓ | `post_author` is respected; without it every incident is authored by whoever saved it |
-| `custom-fields` | ✓ | **the `meta` REST field and `register_post_meta` visibility** — ACF and Lesson 03.4 both need it |
-| `thumbnail` | ✗ | `_thumbnail_id`; `incident` uses an ACF image field instead |
-| `excerpt` | ✗ | `post_excerpt`; the front end derives summaries from ACF fields |
+| `custom-fields` | ✓ | **the `meta` REST field and `register_post_meta` visibility** — SCF and Lesson 03.4 both need it |
+| `thumbnail` | ✗ | `_thumbnail_id`; `incident` uses an SCF image field instead |
+| `excerpt` | ✗ | `post_excerpt`; the front end derives summaries from SCF fields |
 | `comments` | ✗ | `wp_comments`; there is no comment UI in this application |
 
 The `custom-fields` entry is the one to remember. Leave it off and `register_post_meta` still
-registers the key, ACF still saves values, and the REST `meta` object is **absent** — so the
+registers the key, SCF still saves values, and the REST `meta` object is **absent** — so the
 block editor cannot read or write your meta, and the failure looks like "my field does not
 save".
 
@@ -373,7 +373,7 @@ function register_post_types(): void {
 
 			// ── Storage ─────────────────────────────────────────────────────
 			// `custom-fields` is what exposes the REST `meta` object. Lesson 03.4
-			// and ACF both depend on it.
+			// and SCF both depend on it.
 			'supports'            => array( 'title', 'editor', 'revisions', 'author', 'custom-fields' ),
 			'delete_with_user'    => false, // deleting a reporter must not delete the record
 

@@ -197,7 +197,7 @@ wordpress-headless/wp-content/plugins/*
 !wordpress-headless/wp-content/plugins/blame-the-tech-blocks/
 ```
 
-The problem it solves: `wp-content/plugins/` will hold WPGraphQL, ACF, Yoast, Polylang and
+The problem it solves: `wp-content/plugins/` will hold WPGraphQL, SCF, Yoast, Polylang and
 half a dozen other third-party plugins that must **never** enter git — they are somebody else's
 code, they are installed by a pinned command, and committing them makes every dependency
 upgrade a 40,000-line diff. But the same directory also holds `blame-the-tech-core` and
@@ -541,7 +541,7 @@ per-route caching, a typed data layer, and Core Web Vitals good enough to be a m
 Classic WordPress can serve every content requirement today. What it cannot do without
 significant fighting is the front-end half: PHP templates plus jQuery islands give no type
 safety, no build-time dependency graph, no component testing story, and no per-route cache
-granularity. Meanwhile the editorial requirements — Gutenberg, ACF, roles and capabilities,
+granularity. Meanwhile the editorial requirements — Gutenberg, SCF, roles and capabilities,
 revisions, moderation — are exactly what WordPress is best at, and rebuilding them in a
 headless CMS would be a year of work to reach parity.
 

@@ -444,7 +444,7 @@ max_execution_time = 300
 max_input_vars = 3000
 ```
 
-`max_input_vars` matters sooner than you would think: the block editor and ACF field groups both
+`max_input_vars` matters sooner than you would think: the block editor and SCF field groups both
 post large nested arrays, and PHP's default of 1000 silently truncates them. Silently. You lose
 field values with no error.
 

@@ -2,7 +2,7 @@
 title: 'Relationships & Options Pages'
 module: 4
 lesson: 3
-teaches: [acf-term-field-groups, acf-options-page, acf-relationship-vs-taxonomy, root-query-settings, page-template-location-rule]
+teaches: [scf-term-field-groups, scf-options-page, scf-relationship-vs-taxonomy, root-query-settings, page-template-location-rule]
 produces: ['wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/acf-json/group_scapegoat_profile.json', 'wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/acf-json/group_hobt_promo.json', 'wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/acf-json/group_site_settings.json', 'wordpress-headless/wp-content/themes/btt-headless/templates/hobt.php']
 requires: [4.1]
 ---
@@ -21,7 +21,7 @@ the Next.js root layout can fetch the tagline, the primary CTA and the social li
 request instead of per page.
 
 The lesson also settles a modelling question that comes up on every headless project: when do
-you use an ACF Relationship or Post Object field instead of a taxonomy? The short answer is
+you use an SCF Relationship or Post Object field instead of a taxonomy? The short answer is
 "when the thing on the other end needs its own editorial body, revisions and permalink" — and
 `scapegoat` does not, which is why it is a term with a field group rather than a CPT with a
 relationship. You will also meet `incident_submission_open` in Site Settings, a True/False that
@@ -30,7 +30,7 @@ code paths respect and others ignore is worse than no setting at all.
 
 By the end of this lesson you will have:
 
-- `group_scapegoat_profile.json` — an ACF **term** field group, queried through
+- `group_scapegoat_profile.json` — an SCF **term** field group, queried through
   `scapegoat.scapegoatProfile` in GraphiQL
 - `group_hobt_promo.json` with a two-condition location rule, and
   `themes/btt-headless/templates/hobt.php` for it to match
@@ -43,9 +43,9 @@ By the end of this lesson you will have:
 ## Classic WP Analogy
 
 Term meta is not new to you, even if you have rarely used it: `add_term_meta`,
-`get_term_meta` and `update_term_meta` have been in core since 4.4, and ACF term field groups
+`get_term_meta` and `update_term_meta` have been in core since 4.4, and SCF term field groups
 are a UI over exactly those functions plus `wp_termmeta`. Options pages are the same idea over
-`wp_options` — an ACF options page is `get_option()` with a nicer form, and the values land as
+`wp_options` — an SCF options page is `get_option()` with a nicer form, and the values land as
 autoloaded option rows, which is the thing Lesson 02.3 told you to be careful about. If you have
 ever built a Theme Options page with the Settings API and `register_setting`, this is that, with
 the boilerplate removed.
@@ -71,14 +71,14 @@ so an options page with a 200-row repeater is a tax on every API call.
 
 ## Key Concepts
 
-### 1. ACF's `$post_id` is not always a post id
+### 1. SCF's `$post_id` is not always a post id
 
-Every ACF read and write takes a second argument that names the *thing* the value belongs to, and
+Every SCF read and write takes a second argument that names the *thing* the value belongs to, and
 it accepts far more than a post id. This is the mechanism that makes term field groups and options
 pages work at all, and it is the first thing to learn here because everything else in this lesson
 is a special case of it.
 
-| Target | ACF identifier | Stored in | Example |
+| Target | SCF identifier | Stored in | Example |
 |---|---|---|---|
 | A post | the integer id | `wp_postmeta` | `get_field( 'downtime_minutes', 4218 )` |
 | The current post in the loop | omit the argument | `wp_postmeta` | `get_field( 'downtime_minutes' )` |
@@ -104,7 +104,7 @@ they are on different layers.
    location: post_type == incident         location: taxonomy == scapegoat
    values in wp_postmeta                   values in wp_termmeta
    GraphQL: Incident.incidentDetails       GraphQL: Scapegoat.scapegoatProfile
-   ACF id:  4218                           ACF id:  'term_45'
+   SCF id:  4218                           SCF id:  'term_45'
    admin UI: below the block editor        admin UI: on the Edit Term screen
 ```
 
@@ -115,7 +115,7 @@ read a term's fields cheaply by id, and you cannot **sort ten thousand terms by
 leaderboard in Lesson 05.4 orders by `wp_term_taxonomy.count`, a maintained counter, rather than
 by anything in this field group.
 
-The GraphQL side is what makes this lesson necessary rather than obvious. WPGraphQL for ACF
+The GraphQL side is what makes this lesson necessary rather than obvious. WPGraphQL for SCF
 resolves the location rule `taxonomy == scapegoat` to the `Scapegoat` type, so the group lands on
 a **term** type rather than a content type:
 
@@ -139,7 +139,7 @@ the editorial content that the taxonomy decision appeared to give up.
 
 ### 3. Post Object, Relationship, and why this project has neither
 
-ACF has three relational field types and they differ only in ergonomics, not in storage.
+SCF has three relational field types and they differ only in ergonomics, not in storage.
 
 | Field type | Stores | UI | Cardinality |
 |---|---|---|---|
@@ -154,7 +154,7 @@ taxonomy is a choice about queries.
 
 Compare the two ways to answer "which incidents relate to this review":
 
-| | ACF Relationship field on the review | `tech_stack` taxonomy on both |
+| | SCF Relationship field on the review | `tech_stack` taxonomy on both |
 |---|---|---|
 | Stored as | `a:3:{i:0;s:4:"4218";…}` in one meta row | rows in `wp_term_relationships` |
 | Query "incidents for this review" | unserialise, then `post__in` | `tax_query` — an indexed join |
@@ -175,7 +175,7 @@ add the field — and read Key Concept 4 first.
 
 ### 4. Relationship fields invite an N+1, and the invitation is easy to accept
 
-The performance trap is not in ACF. It is in what a GraphQL resolver does with a list of ids.
+The performance trap is not in SCF. It is in what a GraphQL resolver does with a list of ids.
 
 ```
    QUERY                              WHAT THE SERVER DOES
@@ -213,7 +213,7 @@ query-complexity limits that stop a client asking for 81 queries in the first pl
 `show_in_graphql` plus `graphql_field_name: siteSettings` puts it on the **root query**, which is
 the whole point. The page is a *type*, though, not a bag of fields: the field group hangs off it
 one level down, as `siteChrome`. So the shape is two levels, and it is two levels in every
-current release — WPGraphQL for ACF 2.x has no flattening mode:
+current release — WPGraphQL for SCF 2.x has no flattening mode:
 
 ```
    ROOT-QUERY SETTINGS (what this course does)        PER-COMPONENT SETTINGS (what not to do)
@@ -238,7 +238,7 @@ so the tagline cannot be stale in the footer and fresh in the header.
 
 The Classic WordPress reflex to unlearn is the one about autoload. `get_option()` was free because
 the row was already in memory; here the value crosses a network, and where you ask for it
-decides how many times. This course also turns ACF's autoload **off**:
+decides how many times. This course also turns SCF's autoload **off**:
 
 ```php
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/acf.php (fragment)
@@ -256,7 +256,7 @@ on every API call in the system.
 
 ### 6. A two-condition location rule, and the file it depends on
 
-ACF location rules are an array of arrays. The nesting is the boolean logic, and getting it
+SCF location rules are an array of arrays. The nesting is the boolean logic, and getting it
 backwards is a classic:
 
 ```
@@ -284,7 +284,7 @@ The second rule has a prerequisite that catches everyone: **WordPress will not o
 template it cannot find.** The Page Attributes box is populated from the active theme's files, so
 if `wp-content/themes/btt-headless/templates/hobt.php` does not exist, the dropdown has no HOBT
 entry, `_wp_page_template` is never set, the location rule never matches, and the field group
-never appears. The symptom is "my ACF fields are missing" and the cause is a missing PHP file in a
+never appears. The symptom is "my SCF fields are missing" and the cause is a missing PHP file in a
 theme that renders nothing.
 
 | Requirement | Detail |
@@ -495,7 +495,7 @@ any template is loaded.
  *
  *   1. WordPress lists "HOBT Landing" in the Page Attributes box, which sets
  *      _wp_page_template to 'templates/hobt.php';
- *   2. the ACF location rule `page_template == templates/hobt.php` can match,
+ *   2. the SCF location rule `page_template == templates/hobt.php` can match,
  *      which is what makes the HOBT Promo field group appear.
  *
  * Reaching this output means btt_headless_redirect() did not fire. Treat it as
@@ -802,8 +802,8 @@ Nine fields including two repeaters, names fixed by
 
 ### Step 4: Register the options page
 
-Two additions to the ACF integration file from Lesson 04.1. The `use` of `acf/init` is not
-optional — `acf_add_options_page()` does not exist until ACF has bootstrapped.
+Two additions to the SCF integration file from Lesson 04.1. The `use` of `acf/init` is not
+optional — `acf_add_options_page()` does not exist until SCF has bootstrapped.
 
 ```php
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/acf.php
@@ -819,11 +819,12 @@ add_action( 'acf/init', __NAMESPACE__ . '\\register_options_pages' );
 /**
  * Register the Site Settings options page.
  *
- * `acf/init` rather than `init`: acf_add_options_page() is defined by ACF's own
+ * `acf/init` rather than `init`: acf_add_options_page() is defined by SCF's own
  * bootstrap, and calling it on plain `init` is a race you sometimes win.
  *
- * Options pages are an ACF PRO feature, so the function is guarded. On free ACF
- * the screen is simply absent rather than fatal — see Lesson 04.1 Key Concept 8.
+ * The guard is defensive, not conditional: SCF ships acf_add_options_page(),
+ * but a plugin that registers a screen on a function it never checked for is a
+ * fatal waiting for the one install that lacks it — see Lesson 04.1 Key Concept 8.
  */
 function register_options_pages(): void {
 	if ( ! function_exists( 'acf_add_options_page' ) ) {
@@ -843,7 +844,7 @@ function register_options_pages(): void {
 			'redirect'           => false,
 			'update_button'      => __( 'Save settings', 'blame-the-tech-core' ),
 			'updated_message'    => __( 'Site settings saved.', 'blame-the-tech-core' ),
-			// Read by WPGraphQL for ACF: puts this page on the ROOT query, so the
+			// Read by WPGraphQL for SCF: puts this page on the ROOT query, so the
 			// Next root layout can fetch it without a node. Key Concept 5.
 			'show_in_graphql'    => true,
 			'graphql_field_name' => 'siteSettings',
@@ -1012,7 +1013,7 @@ string is the only thing tying the two together, and a mismatch produces an empt
 with no error.
 
 > **The field group is `siteChrome`, and the options page is `siteSettings`. They must not
-> match.** WPGraphQL for ACF derives a **type name** from `graphql_field_name`, so naming both
+> match.** WPGraphQL for SCF derives a **type name** from `graphql_field_name`, so naming both
 > of them `siteSettings` asks it to register the object type `SiteSettings` twice — once for the
 > page (`id`, `pageTitle`, `menuTitle`, `parentId`) and once for the group's fields. The second
 > registration loses. The six fields end up on an interface called `SiteSettings_Fields` that
@@ -1155,7 +1156,7 @@ With variables:
       back to Verify §2, not to the JSON.
 - [ ] Check the docs pane for the type of `siteSettings`. It is `SiteSettings`, an object with
       `id`, `pageTitle`, `menuTitle`, `parentId` and **`siteChrome`** — the field group. If you
-      see the six ACF fields directly on it, you are on a WPGraphQL-for-ACF older than 2.0 and
+      see the six SCF fields directly on it, you are on a WPGraphQL-for-SCF older than 2.0 and
       the rest of this course will not fit; upgrade rather than adapting.
 - [ ] `siteSettings { siteTagline }` **errors** with `Cannot query field "siteTagline" on type
       "SiteSettings"`. That is the correct failure, and provoking it once here is cheaper than
@@ -1183,7 +1184,7 @@ ls wp-content/plugins/blame-the-tech-core/includes/acf-json/
 # Expected: group_hobt_promo.json  group_incident_details.json
 #           group_scapegoat_profile.json  group_site_settings.json  group_tech_review_fields.json
 
-# 2. ACF loaded all five, with the GraphQL names the contract fixes
+# 2. SCF loaded all five, with the GraphQL names the contract fixes
 docker compose run --rm wpcli wp eval 'foreach ( acf_get_field_groups() as $g ) { echo $g["key"], " => ", ( $g["graphql_field_name"] ?? "-" ), "\n"; }' | sort
 # Expected: group_hobt_promo => hobtPromo
 #           group_incident_details => incidentDetails
@@ -1266,7 +1267,7 @@ docker compose run --rm wpcli wp db query \
 TID=$(docker compose run --rm wpcli wp term list scapegoat --slug=the-intern --field=term_id | tr -d '\r')
 docker compose run --rm wpcli wp db query \
   "SELECT meta_key FROM wp_termmeta WHERE term_id=$TID AND meta_key IN ('tagline','official_excuse','_tagline');"
-# Expected: tagline, official_excuse, and ACF's _tagline reference row
+# Expected: tagline, official_excuse, and SCF's _tagline reference row
 docker compose run --rm wpcli wp db query \
   "SELECT COUNT(*) AS wrong_table FROM wp_postmeta WHERE meta_key='official_excuse';"
 # Expected: 0
@@ -1281,7 +1282,7 @@ docker compose logs --tail=60 wordpress | grep -iE 'php (warning|notice|fatal)' 
 ```
 
 Check 12 is the one worth understanding rather than just running. The field is on the type and the
-*value* is null — a location rule filters data, never schema. Every ACF field group in a GraphQL
+*value* is null — a location rule filters data, never schema. Every SCF field group in a GraphQL
 schema behaves that way, and expecting the field to disappear is how people conclude their setup is
 broken when it is working exactly as designed.
 
@@ -1291,7 +1292,7 @@ broken when it is working exactly as designed.
    set. Give the correct call, say which table each of the two calls reads, and explain why the
    wrong one returns `null` instead of raising an error.
 2. A stakeholder wants the three incidents shown on a review page to be chosen and ordered by an
-   editor. Say which ACF field type you would add, then name the two things you lose relative to
+   editor. Say which SCF field type you would add, then name the two things you lose relative to
    the `tech_stack` taxonomy and the one thing you gain.
 3. The `hobtPromo` field is present on the `Page` type but resolves to `null` for the About page.
    Explain why the field is on the type at all, and say what would have to change for it to be
@@ -1305,17 +1306,17 @@ broken when it is working exactly as designed.
 
 ## Learn More
 
-- [ACF — `acf_add_options_page()`](https://www.advancedcustomfields.com/resources/acf_add_options_page/) —
+- [SCF — `acf_add_options_page()`](https://www.advancedcustomfields.com/resources/acf_add_options_page/) —
   every argument used in Step 4, including the ones this course does not use
-- [ACF — Options page](https://www.advancedcustomfields.com/resources/options-page/) — how values
+- [SCF — Options page](https://www.advancedcustomfields.com/resources/options-page/) — how values
   are stored as `options_<name>` rows, which is what check 14 inspects
-- [ACF — `acf/settings/autoload`](https://www.advancedcustomfields.com/resources/acf-settings/) —
+- [SCF — `acf/settings/autoload`](https://www.advancedcustomfields.com/resources/acf-settings/) —
   the one-line filter behind Key Concept 5's table
-- [ACF — Location rules](https://www.advancedcustomfields.com/resources/custom-location-rules/) —
+- [SCF — Location rules](https://www.advancedcustomfields.com/resources/custom-location-rules/) —
   the array-of-arrays AND/OR structure, and how to add your own rule type
-- [ACF — Term meta and the `$post_id` parameter](https://www.advancedcustomfields.com/resources/get_field/) —
+- [SCF — Term meta and the `$post_id` parameter](https://www.advancedcustomfields.com/resources/get_field/) —
   the `term_45` / `user_7` / `option` identifiers from Key Concept 1
-- [ACF — Relationship field](https://www.advancedcustomfields.com/resources/relationship/) — read
+- [SCF — Relationship field](https://www.advancedcustomfields.com/resources/relationship/) — read
   the "Bi-directional relationships" note, which is the honest version of Key Concept 3's table
 - [Page Templates in the Theme Handbook](https://developer.wordpress.org/themes/classic-themes/templates/page-template-files/) —
   the `Template Name` and `Template Post Type` headers, and the directory-scanning rules

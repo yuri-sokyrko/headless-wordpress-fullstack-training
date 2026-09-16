@@ -374,7 +374,7 @@ Now the trap. A URL replacement over a SQL file looks like a job for `sed`, and 
 
 `unserialize()` on that string returns `false`. WordPress does not raise an error; `get_option()`
 simply returns something falsy, and the consequence surfaces as "the theme options are empty",
-"the widgets disappeared", or "the ACF options page is blank". The data is still in the row and it
+"the widgets disappeared", or "the SCF options page is blank". The data is still in the row and it
 is unreadable.
 
 | Tool | Handles serialized values | Handles a `.sql` file | Verdict |
@@ -601,19 +601,19 @@ function migration_2_normalise_environment(): int {
 /**
  * 3. Default the incident-submission kill switch to OPEN when it has never been set.
  *
- * A missing ACF option reads as falsy, which would mean "submissions closed" —
+ * A missing SCF option reads as falsy, which would mean "submissions closed" —
  * the wrong direction to fail for a fresh install.
  */
 function migration_3_default_submission_switch(): int {
 	if ( ! function_exists( 'update_field' ) ) {
-		// ACF absent. Nothing to do, and not an error: this step is about a
+		// SCF absent. Nothing to do, and not an error: this step is about a
 		// default value, not about a structural change.
 		return 0;
 	}
 
 	// get_option() rather than get_field(), because get_field() would return the
 	// field's own default for a missing row and we need to know whether the row
-	// exists at all. ACF names options-page rows `options_<field_name>`.
+	// exists at all. SCF names options-page rows `options_<field_name>`.
 	if ( false !== get_option( 'options_incident_submission_open', false ) ) {
 		return 0;
 	}
@@ -1051,7 +1051,7 @@ function seed_incidents( array $users ): int {
 		wp_set_object_terms( $id, array( term_id( $scapegoats[ $i % 10 ], 'scapegoat' ) ), 'scapegoat', false );
 		wp_set_object_terms( $id, array( term_id( $stacks[ ( $i * 3 ) % 10 ], 'tech_stack' ) ), 'tech_stack', false );
 
-		// ACF field names fixed by appendix 03 section 4.1. update_field() writes
+		// SCF field names fixed by appendix 03 section 4.1. update_field() writes
 		// through the sanitisers registered in Lesson 03.4 — which is why
 		// occurred_at has to be in the past or it is stored as ''.
 		update_field( 'occurred_at', $occurred['post_date_gmt'], $id );
@@ -1114,7 +1114,7 @@ function seed_reviews( array $media ): int {
 		update_field( 'rating_docs', 1 + ( ( $i * 5 ) % 10 ), $id );
 		update_field( 'rating_incident_response', 1 + ( ( $i * 9 ) % 10 ), $id );
 		update_field( 'verdict', SEED_VERDICTS[ $i % 4 ], $id );
-		// ACF's Date Picker stores Ymd and reformats on read via return_format.
+		// SCF's Date Picker stores Ymd and reformats on read via return_format.
 		update_field( 'reviewed_at', str_replace( '-', '', substr( $dates['post_date_gmt'], 0, 10 ) ), $id );
 
 		// A repeater value is a list of rows keyed by SUB-FIELD NAME. This is
@@ -1660,7 +1660,7 @@ docker compose run --rm wpcli wp db query \
    WHERE meta_key='verdict' GROUP BY meta_value ORDER BY meta_value;"
 # Expected: adopt 2, assess 2, hold 2, trial 2
 
-# 7. The repeater rows are in ACF's array-of-rows shape
+# 7. The repeater rows are in SCF's array-of-rows shape
 docker compose run --rm wpcli wp eval 'print_r( get_field( "pros", get_page_by_path( "review-01", OBJECT, "tech_review" )->ID ) );'
 # Expected: Array( [0] => Array( [item] => ... ), [1] => Array( [item] => ... ) )
 

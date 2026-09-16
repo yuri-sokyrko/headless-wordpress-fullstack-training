@@ -5,7 +5,7 @@
 Before starting this module you should have completed:
 
 - **Module 03** — Plugin, CPTs, Taxonomies & Roles
-- **Module 04** — ACF, Content Modeling & WP-CLI Seeding, all five lessons
+- **Module 04** — SCF, Content Modeling & WP-CLI Seeding, all five lessons
 
 You need a seeded database. Querying an empty site teaches you nothing about pagination,
 filtering or connection counts, and half the exercises in this module depend on there being 40
@@ -28,7 +28,7 @@ docker compose run --rm wpcli wp post list --post_type=incident --format=count
 docker compose run --rm wpcli wp post list --post_type=tech_review --format=count
 # Expected: 8
 
-# 2. ACF field groups are files, not database rows
+# 2. SCF field groups are files, not database rows
 ls wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/acf-json/
 # Expected: five group_*.json files
 
@@ -36,8 +36,8 @@ ls wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/acf-json/
 docker compose run --rm wpcli wp term list scapegoat --fields=slug,count
 # Expected: 10 rows, counts summing to 40
 
-# 4. The endpoint answers — Lesson 04.2 installed WPGraphQL and WPGraphQL for ACF
-#    so that the ACF field groups could be inspected in GraphiQL as they were built
+# 4. The endpoint answers — Lesson 04.2 installed WPGraphQL and WPGraphQL for SCF
+#    so that the SCF field groups could be inspected in GraphiQL as they were built
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/graphql
 # Expected: 200 (this module is about USING it, not installing it)
 ```
@@ -61,7 +61,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/graphql
 
 ## What You'll Build
 
-- WPGraphQL, WPGraphQL for ACF and the supporting plugins installed and answering on
+- WPGraphQL, WPGraphQL for SCF and the supporting plugins installed and answering on
   `/graphql`
 - A verified query for every read the front end will need: the incidents list with facets, a
   single incident by slug, the scapegoat leaderboard, blog and review lists, media, menus, and

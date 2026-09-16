@@ -127,11 +127,11 @@ Three core functions do the priming, and knowing which one covers what is most o
   get_post_meta( $post_id, 'downtime_minutes' )        ✅  update_post_meta_cache
   get_the_terms( $post_id, 'severity' )                ✅  update_post_term_cache
   get_term_meta( $term_id, 'tagline' )                 ❌  nothing. one query per term.
-  get_field( 'avatar', 'scapegoat_' . $term_id )       ❌  term meta again, via ACF
+  get_field( 'avatar', 'scapegoat_' . $term_id )       ❌  term meta again, via SCF
   wp_get_attachment_image_src( $id )                   ❌  a separate post + its meta
 ```
 
-That fourth row is why ACF **term** fields and ACF **image** fields are the two most common
+That fourth row is why SCF **term** fields and SCF **image** fields are the two most common
 sources of N+1 in a WPGraphQL project. Both reach for data that no post query primes.
 
 ### 3. WPGraphQL's DataLoader and the deferred-resolution model
@@ -177,7 +177,7 @@ you can fetch by ID, fetch through a loader.
 | One `load_deferred` per node is correct | That is the design. Forty deferreds, one query. |
 | A loader only helps for **by-ID** lookups | A `WP_Query` in a resolver cannot be batched by anything |
 
-**The verdict: loaders solve the by-ID case completely and nothing else.** Term meta, ACF fields
+**The verdict: loaders solve the by-ID case completely and nothing else.** Term meta, SCF fields
 and image sizes are not by-ID lookups of a known type, so they need priming (§2) or a different
 question (§4).
 
@@ -210,7 +210,7 @@ choice made in Module 03 is what makes the fast query possible in Module 06.
 
 ### 5. Measure. Do not estimate, and do not trust this page
 
-Query counts move between WordPress versions, WPGraphQL versions, ACF versions and object-cache
+Query counts move between WordPress versions, WPGraphQL versions, SCF versions and object-cache
 configurations. The number you read in a tutorial is worthless; the number your stack prints is
 not.
 
@@ -492,7 +492,7 @@ function prime_connection_caches( $ids, $resolver ) {
 
 	if ( 'term' === $loader ) {
 		// Term meta is primed by NOTHING else (§2). This single line is what
-		// removes the ACF-term-field N+1.
+		// removes the SCF-term-field N+1.
 		update_termmeta_cache( $int_ids );
 	}
 
@@ -692,7 +692,7 @@ Fixed cost before any resolver runs: `wp_options` autoload — <your bytes> byte
 
 - A resolver on a type is called once per node, and the client chooses the node count. A resolver
   may compute; it must not fetch.
-- Term meta is primed by nothing. Any resolver reaching for `get_term_meta()` or an ACF term
+- Term meta is primed by nothing. Any resolver reaching for `get_term_meta()` or an SCF term
   field needs `update_termmeta_cache()` for the batch first.
 - A linear query shape is a review finding, not a performance opinion. Re-ask the question from
   the other side of the relationship before reaching for a cache.
@@ -833,7 +833,7 @@ for the linear one was a modelling decision made three modules ago — not a cac
 - [`_prime_post_caches()`](https://developer.wordpress.org/reference/functions/_prime_post_caches/) —
   read the source; the three arguments are exactly the three caches in Key Concept 2
 - [`update_termmeta_cache()`](https://developer.wordpress.org/reference/functions/update_termmeta_cache/) —
-  the one line that removes the ACF-term-field N+1
+  the one line that removes the SCF-term-field N+1
 - [WordPress `SAVEQUERIES`](https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/#savequeries) —
   what it stores, and the warning about production that this lesson repeats
 - [Query Monitor](https://querymonitor.com/) — the plugin version of Step 1's harness; it has a

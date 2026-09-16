@@ -134,7 +134,7 @@ things the app shell reads on **every page** were created by hand, once, months 
 | Thing | Created by | The seeder creates it | A fresh database has |
 |---|---|---|---|
 | The `Primary` menu, 5 items, assigned to the `primary` location | **you**, in Lesson 05.4, with `wp menu item add-custom` | ❌ until this lesson | an empty header nav |
-| The `Site Settings` ACF options page | **you**, in Lesson 04.3, with a `wp eval` one-liner | ❌ until this lesson | `siteSettings` resolving to `null` and an empty footer |
+| The `Site Settings` SCF options page | **you**, in Lesson 04.3, with a `wp eval` one-liner | ❌ until this lesson | `siteSettings` resolving to `null` and an empty footer |
 
 ```
    YOUR LAPTOP                                CI, or a colleague's clone
@@ -154,7 +154,7 @@ two-function fix.
 
 A third item is in the same category and stays unfixed on purpose: the **scapegoat term
 profiles** (`tagline`, `official_excuse`, `defensiveness`), also typed into a Lesson 04.3
-`wp eval`. No route asserts them and a null ACF field renders as absent rather than crashing, so
+`wp eval`. No route asserts them and a null SCF field renders as absent rather than crashing, so
 they wait for the spec that needs them — using the same shape as `seed_site_settings()`.
 
 ### 4. `upload_dir` and the month you happened to run the seeder
@@ -521,7 +521,7 @@ function seed_menu(): int {
 }
 
 /**
- * The `Site Settings` ACF options page from appendix 03 section 4.5, which
+ * The `Site Settings` SCF options page from appendix 03 section 4.5, which
  * SiteChrome reads in the root layout on every request.
  *
  * The values are exactly the ones Lesson 04.3 asked you to type into a `wp eval`,
@@ -529,10 +529,10 @@ function seed_menu(): int {
  */
 function seed_site_settings(): int {
 	if ( ! function_exists( 'update_field' ) ) {
-		WP_CLI::error( 'ACF is not active, so the Site Settings options page cannot be seeded.' );
+		WP_CLI::error( 'SCF is not active, so the Site Settings options page cannot be seeded.' );
 	}
 
-	// `option` is ACF's identifier for an options page — not a post id, not a
+	// `option` is SCF's identifier for an options page — not a post id, not a
 	// term_<id>. Lesson 04.3 Key Concept 3.
 	$fields = array(
 		'site_tagline'             => 'Every outage has a scapegoat.',
@@ -1195,7 +1195,7 @@ app-shell `describe`:
   test('the footer renders the seeded site settings', async ({ page }) => {
     await page.goto('/en');
 
-    // `footer_blurb` from the ACF options page — the second gap seed_site_settings()
+    // `footer_blurb` from the SCF options page — the second gap seed_site_settings()
     // closed. On a database nobody hand-built, this was an empty footer.
     await expect(page.getByRole('contentinfo')).toContainText(
       'Blame The Tech is satire. The outages are real.'
@@ -1217,7 +1217,7 @@ app-shell `describe`:
     await expect(main).not.toContainText('Deployed on a Friday (#1)');
   });
 
-  test('/en/hobt renders the seeded ACF promo values', async ({ page }) => {
+  test('/en/hobt renders the seeded SCF promo values', async ({ page }) => {
     await page.goto('/en/hobt');
 
     // seats_left = 12 and price_usd = 499, from seed_pages(). Formatted by

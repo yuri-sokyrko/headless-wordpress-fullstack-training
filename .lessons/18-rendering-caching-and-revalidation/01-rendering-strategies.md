@@ -715,7 +715,7 @@ query ScapegoatSlugs($first: Int!) {
   }
 }
 
-# The term, its ACF term field group (appendix 03 §4.2), and its incidents.
+# The term, its SCF term field group (appendix 03 §4.2), and its incidents.
 # `incidents` here is the term-to-post connection WPGraphQL generates because
 # `scapegoat` is registered for the `incident` post type — the same "the
 # taxonomy already knows" property that makes the leaderboard one indexed read
@@ -1213,7 +1213,7 @@ curl -s http://localhost:3000/en/scapegoats/the-intern | grep -c 'Times blamed'
 curl -s http://localhost:3000/en/scapegoats/the-intern | grep -c 'Defensiveness'
 # Expected: 0 — deliberately unseeded (Lesson 12.4 §3). Absent, not null, not 0.
 curl -s http://localhost:3000/en/scapegoats/the-intern | grep -cE 'null|undefined|NaN'
-# Expected: 0   — the strongest single assertion about nullable ACF term fields
+# Expected: 0   — the strongest single assertion about nullable SCF term fields
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/en/scapegoats/not-a-real-term
 # Expected: 404
 

@@ -53,7 +53,7 @@ of these was your model:
 | WPML | Same as Polylang — one post per language, grouped | Excellent, commercial, and its GraphQL story is weaker |
 | **Polylang** | One post per language, grouped by a hidden taxonomy | **Chosen.** Free, `wp-graphql-polylang` exists and is maintained |
 | Multisite | One site per language | Three databases, three plugin sets, three deploys. No. |
-| An ACF field per language | `title_de`, `title_uk` on one post | Unqueryable, unsortable, and the schema grows with every language |
+| An SCF field per language | `title_de`, `title_uk` on one post | Unqueryable, unsortable, and the schema grows with every language |
 | A language taxonomy you built | One post, terms for language | You will reinvent Polylang badly, over eighteen months |
 
 If you have used WPML or Polylang before, the model transfers exactly. `pll_get_post()`,
@@ -282,7 +282,7 @@ one.
 
 Twelve attachments duplicated three ways to change one string per image is a permanent
 maintenance cost bought with a small accessibility win. The honest mitigation: `alt` text on
-this project comes from the ACF field or the attachment's own `alt` meta and is therefore
+this project comes from the SCF field or the attachment's own `alt` meta and is therefore
 English everywhere, which Module 22 will notice and record as a known gap. If your project's
 media is text-heavy — screenshots with UI in them, infographics — flip this decision, because
 then the *image itself* differs per language and shared media is simply wrong.
@@ -878,9 +878,9 @@ const INCIDENTS_UK = 5;
  * Meta keys never copied to a translation.
  *
  * Everything else IS copied, deliberately: `_wp_page_template` (without which
- * the German HOBT page does not match the ACF location rule and `hobtPromo`
+ * the German HOBT page does not match the SCF location rule and `hobtPromo`
  * resolves to null), `_thumbnail_id` (media is shared, so the same attachment id
- * is correct in every language), and every ACF field including the repeater rows.
+ * is correct in every language), and every SCF field including the repeater rows.
  */
 const META_DENYLIST = array( '_edit_lock', '_edit_last', '_pll_strings_translations' );
 
@@ -1295,7 +1295,7 @@ docker compose run --rm -T wpcli wp eval '$p = get_page_by_path("відмова-
 #           If the slug came back transliterated or empty, sanitize_title() ran
 #           against a non-UTF8 connection — check the db charset (Lesson 02.2).
 
-# 9. The German HOBT page kept the page template, so its ACF group still applies
+# 9. The German HOBT page kept the page template, so its SCF group still applies
 docker compose run --rm -T wpcli wp eval '$id = get_page_by_path("hobt-de", OBJECT, "page")->ID; echo get_post_meta($id, "_wp_page_template", true), " thumb=", (int) get_post_thumbnail_id($id), PHP_EOL;'
 # Expected: templates/hobt.php thumb=<a non-zero id>
 #           A zero or an empty template means the meta copy in

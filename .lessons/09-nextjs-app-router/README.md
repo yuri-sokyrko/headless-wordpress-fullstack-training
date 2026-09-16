@@ -79,7 +79,7 @@ in that order.
 | `/en/incidents/[slug]` | `src/app/[locale]/incidents/[slug]/page.tsx` | One incident, body as an HTML blob |
 | `/en/blog` | `src/app/[locale]/blog/page.tsx` | `posts` connection |
 | `/en/blog/[slug]` | `src/app/[locale]/blog/[slug]/page.tsx` | One post, body as an HTML blob |
-| `/en/reviews` | `src/app/[locale]/reviews/page.tsx` | `techReviews` with ACF ratings |
+| `/en/reviews` | `src/app/[locale]/reviews/page.tsx` | `techReviews` with SCF ratings |
 | `/en/reviews/[slug]` | `src/app/[locale]/reviews/[slug]/page.tsx` | One review with the `pros` / `cons` repeaters |
 | `/en/scapegoats` | `src/app/[locale]/scapegoats/page.tsx` | The blame leaderboard from term counts |
 | `/api/health` | `src/app/api/health/route.ts` | JSON liveness, no secrets echoed |

@@ -23,7 +23,7 @@ you declare there are the options an editor sees in Gutenberg, and they are deli
 same tokens Lesson 11.1 defined in Tailwind — so when someone picks "S1 Catastrophic red" in
 wp-admin, they pick a value your front end already has a class for. The lesson closes with an
 **optional stretch block**, `btt/tech-verdict-card`, using `usesContext` and Block Bindings to
-read an ACF field from the surrounding post. It is genuinely useful and genuinely newer API
+read an SCF field from the surrounding post. It is genuinely useful and genuinely newer API
 surface than the rest of the module, so skipping it costs you nothing in Module 14.
 
 By the end of this lesson you will have:
@@ -378,7 +378,7 @@ you can influence; the site is used by everyone.
 
 ### 8. Block Bindings, and why binding beats copying
 
-The stretch block wants to show a `tech_review`'s ACF `verdict`. Three ways to get it there:
+The stretch block wants to show a `tech_review`'s SCF `verdict`. Three ways to get it there:
 
 | Approach | Verdict |
 |---|---|
@@ -414,7 +414,7 @@ register_block_bindings_source(
 
 **The allowlist is not optional.** A `get_value_callback` that calls
 `get_field( $source_args['key'], $post_id )` with no restriction is a general-purpose "read any
-ACF field on any post" primitive, reachable by anyone who can write a block comment — which is
+SCF field on any post" primitive, reachable by anyone who can write a block comment — which is
 every user with `edit_posts`. Restrict `key` to an explicit list, and return `null` otherwise.
 
 Two honest caveats, and they are why this block is optional:
@@ -859,7 +859,7 @@ If you are doing it: `verdict` is sourced from the block's **root** element, wit
   "version": "0.1.0",
   "title": "Tech Verdict Card",
   "category": "btt",
-  "description": "A tech review's verdict, bound to the review's ACF field rather than copied from it.",
+  "description": "A tech review's verdict, bound to the review's SCF field rather than copied from it.",
   "keywords": ["review", "verdict", "adopt", "hold"],
   "textdomain": "blame-the-tech-blocks",
   "attributes": {
@@ -969,7 +969,7 @@ register the binding source — an anchored edit to Lesson 13.1's bootstrap, **b
 // wordpress-headless/wp-content/plugins/blame-the-tech-blocks/blame-the-tech-blocks.php (fragment — append below register_category())
 
 /**
- * Resolve one allowlisted ACF field on a `tech_review`.
+ * Resolve one allowlisted SCF field on a `tech_review`.
  *
  * @param array<string, mixed> $source_args    `args` from the block comment's metadata.bindings.
  * @param \WP_Block            $block          The block instance.
@@ -978,7 +978,7 @@ register the binding source — an anchored edit to Lesson 13.1's bootstrap, **b
  */
 function resolve_review_field( array $source_args, \WP_Block $block, string $attribute_name ): ?string {
 	// ALLOWLIST, and it is not optional. Without it this source is a
-	// general-purpose "read any ACF field on any post" primitive, callable by
+	// general-purpose "read any SCF field on any post" primitive, callable by
 	// anyone who can write a block comment — which is every user with
 	// `edit_posts`. Publish the fields you meant to publish.
 	$btt_allowed = array( 'verdict', 'company_name', 'rating_overall' );

@@ -119,8 +119,8 @@ incidents(first: 10) { edges { cursor node { id title } } }
 Reach for `edges` in exactly two situations. The first is per-item cursors — you want to resume
 from an arbitrary row rather than from the end of a page, for example restoring a reading
 position. The second is **edge fields**: some connections carry data about the *relationship*
-rather than about either end of it, and that data can only live on the edge. WPGraphQL for ACF
-puts image relationships there — an ACF image field surfaces as
+rather than about either end of it, and that data can only live on the edge. WPGraphQL for SCF
+puts image relationships there — an SCF image field surfaces as
 `AcfMediaItemConnectionEdge` in [appendix 03 §4.2](../appendix/03-content-model-reference.md#42-scapegoat-profile),
 which is why `avatar { node { sourceUrl } }` has that extra hop.
 

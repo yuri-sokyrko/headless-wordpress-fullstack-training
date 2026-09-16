@@ -159,12 +159,12 @@ and the point at which a client has to make a decision. Three options:
 
 | Option | Behaviour | Cost |
 |---|---|---|
-| **A.** Throw whenever `errors` is non-empty | loudest. Every partial becomes an error page | one null ACF sub-field takes down a whole page that could have rendered 95% of itself |
+| **A.** Throw whenever `errors` is non-empty | loudest. Every partial becomes an error page | one null SCF sub-field takes down a whole page that could have rendered 95% of itself |
 | **B.** Throw only when `data` is null or missing; otherwise log and render | the page renders; the failure is in the log | a silent degradation if nobody reads logs |
 | **C.** Return `{ data, errors }` and let every caller decide | maximum flexibility | nineteen call sites each get it slightly differently — the exact problem Lesson 10.1 existed to remove |
 
 **The verdict is B**, and the reason is proportionality. The errors this stack actually produces
-in a partial response are small and local: one ACF sub-field a plugin could not resolve, one
+in a partial response are small and local: one SCF sub-field a plugin could not resolve, one
 node the caller may not read, one deprecated field. Failing a whole route because a sidebar
 statistic came back null is a worse outcome for a reader than a page with a gap in it. Meanwhile
 every failure that genuinely makes a page meaningless — validation, depth refusal, WordPress

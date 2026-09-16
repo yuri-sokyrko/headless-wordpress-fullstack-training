@@ -12,7 +12,7 @@ requires: [2.6]
 ## Quick Overview
 
 `blame-the-tech-core` is the plugin that owns every server-side registration in this course:
-post types, taxonomies, statuses, roles, ACF field-group loading, GraphQL enums, custom
+post types, taxonomies, statuses, roles, SCF field-group loading, GraphQL enums, custom
 mutations, the leads table, the revalidation webhook. One plugin, one directory, one bootstrap
 file, and a set of small files under `includes/` that later lessons add to. This lesson builds
 the shell — the plugin header, a guard against direct access, the bootstrap that requires each
@@ -311,7 +311,7 @@ This is the only file WordPress finds by itself. Everything else is reached from
 <?php
 /**
  * Plugin Name:       Blame The Tech — Core
- * Description:       Post types, taxonomies, statuses, roles, ACF loading, GraphQL extensions and the `wp blame` CLI.
+ * Description:       Post types, taxonomies, statuses, roles, SCF loading, GraphQL extensions and the `wp blame` CLI.
  * Version:           0.1.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
