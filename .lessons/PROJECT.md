@@ -16,7 +16,7 @@ production bugs and pin the blame on inanimate objects, tech stacks, or solar fl
 | **Incident detail** | `/[locale]/incidents/[slug]` | — | Blocks as data, ISR, tag-based revalidation |
 | **Scapegoats** | `/[locale]/scapegoats` | editors | Taxonomy modelling, term counts, the blame leaderboard |
 | **Blog** | `/[locale]/blog` | editors | Custom Gutenberg blocks, core block mapping |
-| **Tech reviews** | `/[locale]/reviews` | editors only | ACF repeaters, ratings, JSON-LD `Review` schema |
+| **Tech reviews** | `/[locale]/reviews` | editors only | SCF repeaters, ratings, JSON-LD `Review` schema |
 | **HOBT promo** | `/[locale]/hobt` | editors, block-composed | Lead capture, "Get Demo" dialog, "Start Now" CTA, SSG |
 | **Auth** | `/[locale]/login`, `/register`, `/account` | — | JWT in httpOnly cookies, proxy guards |
 
@@ -229,9 +229,9 @@ Next /api/revalidate  →  1. timestamp within ±300s   (replay guard)
 | Container runtime | Docker, Docker Compose | 02 |
 | Database | MySQL 8, Adminer, `EXPLAIN` | 02 |
 | CMS | WordPress 7.1, PHP 8.4 | 02 |
-| Content model | Custom post types, taxonomies, ACF (Local JSON) | 03–04 |
+| Content model | Custom post types, taxonomies, SCF (Local JSON) | 03–04 |
 | Tooling (PHP) | Composer, PSR-4, WP-CLI, PHPCS, PHPStan | 03, 07, 23 |
-| API | WPGraphQL + Content Blocks / ACF / Yoast / Polylang / JWT | 05–06 |
+| API | WPGraphQL + Content Blocks / SCF / Yoast / Polylang / JWT | 05–06 |
 | Language | TypeScript (strict) | 07 |
 | UI library | React 19 | 08 |
 | Framework | Next.js 16 App Router, RSC, Server Actions | 09 |

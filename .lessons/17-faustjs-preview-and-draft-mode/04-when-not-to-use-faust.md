@@ -153,11 +153,11 @@ Faust's favour and leaving it out would make the document dishonest.
 |---|---|---|
 | What it owns | the **stored content**: shortcodes, serialised layout, its own markup in `post_content` | the **front-end code**: routes, templates, data fetching |
 | Migrating off means | rewriting content that no longer says what it meant, per page, by hand | rewriting code, which is what developers do |
-| Your content afterwards | damaged, and there is no clean source to recover it from | **identical** — posts, ACF fields, taxonomies, revisions, untouched |
+| Your content afterwards | damaged, and there is no clean source to recover it from | **identical** — posts, SCF fields, taxonomies, revisions, untouched |
 | Who is blocked | editors, forever | developers, once |
 
 **Your content stays in WordPress in exactly the same shape either way.** The post types from
-Module 03, the ACF fields from Module 04, the block markup from Module 13 — Faust reads them and
+Module 03, the SCF fields from Module 04, the block markup from Module 13 — Faust reads them and
 does not reshape them. Point a different front end at `/graphql` next year and everything is still
 queryable.
 
@@ -447,7 +447,7 @@ and add any you found yourself.
 ### Neutral
 
 - **Content lock-in: none, either way.** A page builder locks in *content*; Faust locks in *code*.
-  Post types, ACF fields, taxonomies and block markup are identical whichever front end reads
+  Post types, SCF fields, taxonomies and block markup are identical whichever front end reads
   them, and stay queryable by whatever we point at `/graphql` next. This is why the verdict is
   "not for this application" rather than "never".
 - TODO: at least one more genuine change that is neither better nor worse.
@@ -561,7 +561,7 @@ docker compose run --rm wpcli wp plugin list --status=active --field=name
 
 - [ ] `wp plugin list --status=active --field=name` no longer lists `faustwp`, and **still** lists
       every plugin that was active before it: `wp-graphql`, `wp-graphql-jwt-authentication`,
-      `wpgraphql-acf`, `wp-graphql-content-blocks`, `advanced-custom-fields-pro` and
+      `wpgraphql-acf`, `wp-graphql-content-blocks`, `secure-custom-fields` and
       `blame-the-tech-core`. Lesson 17.1 Verify §4 recorded that list; compare against it.
 - [ ] `docker compose run --rm wpcli wp option get faustwp_settings` errors or returns nothing.
 - [ ] `docker compose logs --tail=40 wordpress` shows no fatal. Uninstalling a plugin that other

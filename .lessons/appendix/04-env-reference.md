@@ -86,7 +86,6 @@ Loaded by Docker Compose via `env_file:`, read in `wp-config.php` with `getenv()
 | `BTT_S3_REGION` | no | — | |
 | `BTT_S3_KEY` | **yes** | — | |
 | `BTT_S3_SECRET` | **yes** | — | |
-| `ACF_PRO_LICENSE` | **yes** | `__CHANGE_ME__` | ACF PRO licence key (repeaters and options pages are PRO-only) |
 | `DISALLOW_FILE_EDIT` | no | `false` local, `true` prod | No code execution from wp-admin |
 | `DISALLOW_FILE_MODS` | no | `false` local, `true` prod | No plugin installs in production |
 
@@ -312,7 +311,7 @@ NEXT_PUBLIC_DEFAULT_LOCALE=en
 | Module | Variables it introduces |
 |---|---|
 | 02 | All of §2 except the S3, app-token and `BTT_*_PASSWORD` rows — plus the whole of §1 |
-| 04 | `ACF_PRO_LICENSE`, and the three `BTT_*_PASSWORD` session variables the seeder reads |
+| 04 | The three `BTT_*_PASSWORD` session variables the seeder reads. **No field-plugin licence key** — SCF is GPL from wordpress.org, unlike ACF PRO, which would need one here |
 | 09 | `WP_GRAPHQL_ENDPOINT`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_DEFAULT_LOCALE`, the `NEXT_PUBLIC_` boundary lesson |
 | 10 | `WP_REST_BASE` |
 | 12 | `E2E_MODE`, `E2E_SECRET` |

@@ -48,7 +48,7 @@ There is no `tailwind.config.ts`, no `components.json` and no `src/components/ui
 - **`cva` and `cn`** — variant APIs and class merging without string concatenation
 - **The app shell** — `Header`, `Footer`, a mobile nav island, and where the `'use client'` boundary belongs in a layout
 - **Accessibility by construction** — semantic landmarks, heading order, focus management, keyboard navigation, `focus-visible`, reduced motion, and `aria-*` only where semantics run out
-- **Page composition** — the `/hobt` landing shell assembled from ACF `hobtPromo` fields, with every CTA deliberately inert
+- **Page composition** — the `/hobt` landing shell assembled from SCF `hobtPromo` fields, with every CTA deliberately inert
 
 ## What You'll Build
 
@@ -69,7 +69,7 @@ replaces the hard-coded HOBT sections with editor-composed blocks.
 | 02 | [shadcn/ui & the Component Library](02-shadcn-ui-and-the-component-library.md) | shadcn CLI, Radix, `cva`, `cn` | `components.json` with `"rsc": true`, and `src/components/ui/` |
 | 03 | [Building the App Shell](03-building-the-app-shell.md) | Layout composition, client islands | `Header`, `Footer`, `MobileNav` |
 | 04 | [Accessible Components by Construction](04-accessible-components-by-construction.md) | Landmarks, focus management, `focus-visible` | `SkipLink`, `VisuallyHidden`, audited `ui/` primitives |
-| 05 | [Page Composition & the HOBT Shell](05-page-composition-and-the-hobt-shell.md) | Composition patterns, ACF-driven sections | `/en/hobt` from `hobtPromo`, CTAs inert |
+| 05 | [Page Composition & the HOBT Shell](05-page-composition-and-the-hobt-shell.md) | Composition patterns, SCF-driven sections | `/en/hobt` from `hobtPromo`, CTAs inert |
 
 ## What lands in `src/components/ui/`
 

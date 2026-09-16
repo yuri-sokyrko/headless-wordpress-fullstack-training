@@ -221,7 +221,7 @@ now load-bearing, so the exact shapes matter:
 | `listTag('incident')` | `incidents` | every list of incidents |
 | `taxonomyListTag('scapegoat')` | `scapegoats` | every list of scapegoat terms |
 | `termTag('scapegoat', 'the-intern')` | `scapegoat:the-intern` | one term and its archives |
-| `siteTag()` | `site-settings` | the ACF options page |
+| `siteTag()` | `site-settings` | the SCF options page |
 | `menuTag('primary')` | `menu:primary` | one menu location |
 
 Lowercase, colon-separated, singular for a node and plural for a list. `listTag` takes the

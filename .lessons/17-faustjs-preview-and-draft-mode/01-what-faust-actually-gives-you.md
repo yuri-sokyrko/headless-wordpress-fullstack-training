@@ -131,7 +131,7 @@ evaluating a strawman.
 
 | Claim | True? | The actual situation |
 |---|---|---|
-| "Faust is a headless CMS" | ❌ | WordPress is the CMS. Faust is a front-end framework that reads it. Your content model, roles, ACF fields and moderation flow are unchanged by adopting or dropping it. |
+| "Faust is a headless CMS" | ❌ | WordPress is the CMS. Faust is a front-end framework that reads it. Your content model, roles, SCF fields and moderation flow are unchanged by adopting or dropping it. |
 | "Faust replaces WPGraphQL" | ❌ | It **requires** WPGraphQL, plus WP Engine's own `faustwp` plugin, and queries the same `/graphql` endpoint you built in Modules 05 and 06 |
 | "Faust is a data layer you can swap out" | ❌ | Apollo Client is not pluggable here. Layer 1 above. |
 | "Adopting Faust changes your WordPress" | ⚠️ partly | It installs a plugin that adds settings and **filters some link functions**, which matters in Lesson 17.2. Your content is untouched. |

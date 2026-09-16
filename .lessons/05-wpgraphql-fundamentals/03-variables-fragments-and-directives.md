@@ -349,7 +349,7 @@ Run it with a slug you can see in `docker compose run --rm wpcli wp post list --
 **Verify §2:**
 
 - [ ] `data.incident` is an object, not `null`.
-- [ ] `incidentDetails` is populated. If every field is `null`, the ACF group is missing
+- [ ] `incidentDetails` is populated. If every field is `null`, the SCF group is missing
       `show_in_graphql` — go back to Lesson 04.2.
 - [ ] There is **no** `featuredImage` field on `Incident`. That is correct: `supports` in
       [appendix 03 §1](../appendix/03-content-model-reference.md#supports) omits `thumbnail`, and
@@ -537,7 +537,7 @@ query ReviewBySlug($slug: ID!) {
 **Verify §5:**
 
 - [ ] All four run. `ReviewBySlug` returns `pros` and `cons` as **lists of objects with an `item`
-      key**, not lists of strings. That mismatch is the ACF repeater shape from
+      key**, not lists of strings. That mismatch is the SCF repeater shape from
       [appendix 03 §4.3](../appendix/03-content-model-reference.md#43-tech-review-fields), and it
       is worth seeing now rather than in Module 10 when a generated type surprises you.
 
@@ -653,7 +653,7 @@ done
 # Expected: withTrace=false lists only downtimeMinutes — stackTrace is ABSENT, not null.
 #           withTrace=true lists both.
 
-# 9. ACF repeaters are lists of objects, not lists of strings
+# 9. SCF repeaters are lists of objects, not lists of strings
 RSLUG=$(docker compose run --rm wpcli wp post list --post_type=tech_review --field=post_name --posts_per_page=1 | tr -d '\r')
 curl -s -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
   -d "$(jq -cn --arg s "$RSLUG" '{query:"query($s:ID!){ techReview(id:$s, idType:SLUG){ techReviewFields{ pros{ item } } } }", variables:{s:$s}}')" \

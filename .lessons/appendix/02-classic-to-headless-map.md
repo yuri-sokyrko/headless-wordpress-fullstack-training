@@ -66,7 +66,7 @@ is why the MySQL knowledge in Module 02 still pays.
 | `404.php` | `not-found.tsx` | Also callable imperatively with `notFound()` from inside a component, which the template hierarchy cannot do. |
 | `header.php` / `footer.php` | `layout.tsx` | Layouts **nest** and **persist across navigation** — the header does not re-render when you change page. `get_header()` re-runs on every request. |
 | `get_template_part('parts/card', 'incident')` | `<IncidentCard {...props} />` | Props are typed and checked at build time. `$args` was a loose array nobody validated. |
-| `page-templates/hobt.php` + template selector | ACF `page_template == templates/hobt.php` drives which fields appear; Next renders from blocks | The PHP template file still exists in the theme, but only so WordPress has something to name. It renders nothing. |
+| `page-templates/hobt.php` + template selector | SCF `page_template == templates/hobt.php` drives which fields appear; Next renders from blocks | The PHP template file still exists in the theme, but only so WordPress has something to name. It renders nothing. |
 | `while (have_posts()) { the_post(); }` | `incidents.map((incident) => <IncidentCard key={incident.id} … />)` | No global `$post`. Nothing is implicit. `the_title()` has no idea which post you mean; `incident.title` does. |
 | `url_to_postid()` | `nodeByUri(uri: "/incidents/dns/")` | — |
 | `wp_nav_menu()` | `menuItems(where: { location: PRIMARY })` + your own React markup | You get data, not markup. Every walker class and `nav_menu_css_class` filter you have written is gone — and so is the fight to get semantic markup out of it. |
@@ -84,9 +84,9 @@ is why the MySQL knowledge in Module 02 still pays.
 | `'tax_query' => [...]` | `incidents(where: { severityIn: [...] })`, or traverse: `severity(id: "s1-catastrophic", idType: SLUG) { incidents { ... } }` | **Not a generic builder.** `where: { taxQuery: ... }` comes from the third-party `wp-graphql-tax-query` extension, which is deliberately **not installed** — a taxonomy-join builder on a public endpoint is exactly the surface core WPGraphQL declines to ship. Lesson 05.2 §6 argues it. What exists instead is one narrow, allowlisted argument, `severityIn`, registered in Lesson 06.1 §9: one taxonomy, four slugs intersected server-side against the closed term set, one `IN` clause. Every other facet is a term traversal or client-side narrowing (Lesson 09.2). |
 | `'meta_query' => [...]` | **no equivalent** | Core WPGraphQL exposes neither `metaQuery` nor `taxQuery`, deliberately: a generic builder on a public endpoint lets any caller construct arbitrary unindexed scans. Lesson 05.2 §6 argues it. The underlying slowness is unchanged either way — `wp_postmeta.meta_value` has no index, and headless does not fix that, it hides it one layer further away. See Lesson 02.3. |
 | `get_post_meta($id, 'downtime_minutes', true)` | `incident { incidentDetails { downtimeMinutes } }` | Field names are camelCase in the schema and snake_case in the database. The mapping is in [appendix 03](03-content-model-reference.md). |
-| `get_field('severity', $id)` (ACF) | `incident { incidentDetails { … } }` | ACF repeaters become generated **object list types**, not `string[]`. This is the most common "why is my type `any`?" moment. |
+| `get_field('severity', $id)` (SCF) | `incident { incidentDetails { … } }` | SCF repeaters become generated **object list types**, not `string[]`. This is the most common "why is my type `any`?" moment. |
 | `get_the_terms($id, 'scapegoat')` | `incident { scapegoats { nodes { name slug } } }` | — |
-| `get_option('some_setting')` | `siteSettings { siteChrome { … } }` via an ACF options page | — |
+| `get_option('some_setting')` | `siteSettings { siteChrome { … } }` via an SCF options page | — |
 | `wp_get_attachment_image($id, 'large')` | `mediaItem { sourceUrl mediaDetails { … } }` → `<Image />` | `next/image` re-optimises and serves from the CDN. You must add the media host to `remotePatterns` or you get a runtime error, not a broken image. |
 | `$wpdb->get_results(...)` | still `$wpdb`, in a custom resolver | The one place this course writes raw SQL is the leads table. Always `$wpdb->prepare()`. |
 | `the_content()` | `editorBlocks { … }` → `<BlockRenderer />` | **The biggest shift in the whole course.** `the_content()` returns an HTML blob; `editorBlocks` returns a structured tree you map to React components. Module 14. |
@@ -100,7 +100,7 @@ is why the MySQL knowledge in Module 02 still pays.
 | `functions.php` | a versioned plugin (`blame-the-tech-core`) with Composer PSR-4 autoloading | `functions.php` is coupled to a theme, untestable, and dies when the theme changes. A plugin is deployable and unit-testable — which matters once Module 23 exists. |
 | `register_post_type()` | the same call, plus `show_in_graphql`, `graphql_single_name`, `graphql_plural_name` | Four new arguments. That's it. This is the most reassuring lesson in Module 03. |
 | `register_taxonomy()` | the same, plus the GraphQL args | — |
-| `add_meta_box()` + `save_post` | `register_post_meta()` with `show_in_graphql`, or an ACF field group | Registered meta has a **schema** — a type, a default, a sanitize callback. A hand-rolled meta box had none of that, which is why half of them silently store the wrong type. |
+| `add_meta_box()` + `save_post` | `register_post_meta()` with `show_in_graphql`, or an SCF field group | Registered meta has a **schema** — a type, a default, a sanitize callback. A hand-rolled meta box had none of that, which is why half of them silently store the wrong type. |
 | `add_shortcode()` | a Gutenberg block | A shortcode is a string parsed at render time. A block has typed attributes stored in `post_content` as structured comments — so the front end can read them without executing PHP. |
 | `add_filter('the_content', …)` | a resolver, or a component in the `BlockRenderer` registry | Filters are a global mutation chain in unknown order. The registry is an explicit dispatch table you can read top to bottom. |
 | `register_rest_route()` | `register_graphql_field()` / `register_graphql_mutation()`, or a Next `route.ts` | Decide by owner: content logic belongs in WordPress; app logic (webhooks, preview, session cookies) belongs in Next. Lesson 09.5. |
@@ -167,7 +167,7 @@ on something you know will slow you down.
 | template part | component |
 | `$args` | props |
 | hook / filter | (no direct equivalent — usually a component boundary or a resolver) |
-| post meta | ACF field, exposed as a GraphQL field |
+| post meta | SCF field, exposed as a GraphQL field |
 | CPT | post type with `show_in_graphql` |
 | `wp-admin` | the editor, and only the editor — it serves no public traffic |
 | the theme | `next-app/` — plus a near-empty WordPress theme that exists only for the editor |

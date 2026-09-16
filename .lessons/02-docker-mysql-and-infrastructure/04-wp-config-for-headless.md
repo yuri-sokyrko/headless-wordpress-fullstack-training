@@ -213,7 +213,7 @@ you fix the resolver.
 | `DISALLOW_FILE_MODS` | `false` local, `true` prod | No plugin or theme installs, updates or deletions through wp-admin. In production the image *is* the plugin set; anything installed at runtime vanishes on the next deploy anyway. |
 | `FS_METHOD` | `'direct'` | Without it, WordPress probes for a writable filesystem and — if the probe is ambiguous — shows an **FTP credentials form** when you install a plugin. Inside a container that form is both wrong and unanswerable. `direct` says "just use PHP's file functions". |
 | `WP_ENVIRONMENT_TYPE` | `local` \| `staging` \| `production` | Feeds `wp_get_environment_type()`. Module 24's hardening `mu-plugin` branches on it, and WordPress itself changes update behaviour and error display defaults. |
-| `WP_MEMORY_LIMIT` | `256M` | The block editor and ACF field groups are memory-hungry. Separate from `php.ini`'s `memory_limit` (Lesson 02.2), and applies to PHP running WordPress. |
+| `WP_MEMORY_LIMIT` | `256M` | The block editor and SCF field groups are memory-hungry. Separate from `php.ini`'s `memory_limit` (Lesson 02.2), and applies to PHP running WordPress. |
 | `WP_POST_REVISIONS` | `10` | Module 17's preview reads revision rows. Unbounded revisions are `wp_posts` bloat; zero breaks preview for published posts. Ten is a compromise, not a magic number. |
 | `WP_CACHE` | leave undefined | Only meaningful with a page-cache drop-in, and there is none here — Next.js owns caching (Module 18). Setting it only confuses the next reader. |
 

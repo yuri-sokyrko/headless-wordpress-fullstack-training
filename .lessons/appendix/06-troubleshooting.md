@@ -84,14 +84,14 @@ docker compose run --rm wpcli wp rewrite flush --hard
 The `admin_init` redirect is not registered, or the role has `edit_posts`. It must not — see
 [appendix 03 §6](03-content-model-reference.md#6-roles-and-capabilities).
 
-**ACF fields do not appear in wp-admin**
+**SCF fields do not appear in wp-admin**
 The location rule does not match. `HOBT Promo` requires **both** `page` **and**
 `page_template == templates/hobt.php`, and that template file must exist in the theme for
 WordPress to offer it in the Page Attributes box.
 
-**ACF field groups vanished after a fresh container**
+**SCF field groups vanished after a fresh container**
 They were saved to the database instead of Local JSON. Check that
-`includes/acf-json/` exists and is writable, then re-sync from the ACF UI. Field groups are
+`includes/acf-json/` exists and is writable, then re-sync from the SCF UI. Field groups are
 code in this project — [appendix 03 §4](03-content-model-reference.md#4-acf-field-groups).
 
 **`wp` command says "Error: This does not seem to be a WordPress installation"**
@@ -119,7 +119,7 @@ Four candidates, in order of likelihood:
 **`Cannot query field "x" on type "Y"`**
 The plugin providing it is inactive, or the field is not registered. `wp plugin list` first.
 
-**ACF repeater type is `any` in TypeScript**
+**SCF repeater type is `any` in TypeScript**
 Repeaters generate object list types (`TechReviewFieldsPros`), not `string[]`. Expected —
 [appendix 03 §4.3](03-content-model-reference.md#43-tech-review-fields).
 

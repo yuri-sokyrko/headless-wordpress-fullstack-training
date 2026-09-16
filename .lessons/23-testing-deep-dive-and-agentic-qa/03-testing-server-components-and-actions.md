@@ -1144,7 +1144,7 @@ export type SubmissionSettings = {
 /**
  * Is incident submission open?
  *
- * `!== false`, never `=== true`. An ACF options page nobody has saved returns
+ * `!== false`, never `=== true`. An SCF options page nobody has saved returns
  * `null`, and `null` means "nobody has decided" — so the pre-switch behaviour is
  * the honest default. Treating `null` as closed gives a fresh environment a dead
  * submission form for a reason no error message mentions.

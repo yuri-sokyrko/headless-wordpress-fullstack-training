@@ -435,10 +435,10 @@ switch: flip it in wp-admin and public submission stops.
 It is checked in the **Server Action**, not in the mutation, and Lesson 06.2 argued why in a comment
 you can still read in `mutation-create-incident.php`:
 
-> a mutation that fails closed when an ACF options page has never been saved takes the submission
+> a mutation that fails closed when an SCF options page has never been saved takes the submission
 > form down for a reason nobody can see
 
-An unsaved ACF options page returns `null`, `null` is falsy, and a mutation treating that as
+An unsaved SCF options page returns `null`, `null` is falsy, and a mutation treating that as
 "closed" is a site-wide outage caused by an editor never having clicked Update. In the action the
 same `null` is a rendering decision with a visible cause.
 
@@ -741,8 +741,8 @@ export type IncidentFormState =
   | { readonly status: 'success'; readonly slug: string; readonly title: string };
 
 /**
- * The stored kebab-case ACF value → the GraphQL enum NAME on the wire.
- * Appendix 03 §3: enum values are SCREAMING_SNAKE, the ACF select values are
+ * The stored kebab-case SCF value → the GraphQL enum NAME on the wire.
+ * Appendix 03 §3: enum values are SCREAMING_SNAKE, the SCF select values are
  * kebab, and the resolver maps between them. So the wire format is the enum.
  *
  * If your codegen emits TypeScript `enum`s rather than string unions, these

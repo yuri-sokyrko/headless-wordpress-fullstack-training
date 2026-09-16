@@ -164,18 +164,18 @@ Three hooks, three payload shapes, one signing function.
 |---|---|---|
 | `transition_post_status` | a post's status changing, or a save on a published post | `{"type":"post","postType":"incident","slug":"incident-01","locale":"en"}` |
 | `saved_term` | a term created, renamed or re-slugged | `{"type":"term","taxonomy":"scapegoat","slug":"the-intern","termId":4,"locale":"en"}` |
-| `acf/save_post` | an ACF field group saved — including the **options page** and a **term** field group | `{"type":"options","locale":"en"}`, or the post/term shape above |
+| `acf/save_post` | an SCF field group saved — including the **options page** and a **term** field group | `{"type":"options","locale":"en"}`, or the post/term shape above |
 
-`acf/save_post` is the one that is easy to leave out and expensive to leave out. An ACF-only edit
+`acf/save_post` is the one that is easy to leave out and expensive to leave out. An SCF-only edit
 to a *published* post — changing `downtimeMinutes`, or the HOBT page's `seatsLeft` — **does not
 change the post status**, so `transition_post_status` fires with `$new === $old` and most guard
-sets drop it. The ACF hook is what catches it, and after Lesson 18.1 made `/hobt`
+sets drop it. The SCF hook is what catches it, and after Lesson 18.1 made `/hobt`
 `revalidate: false` it is the only thing that catches it.
 
 It also has two argument shapes that are not documented next to each other: `'options'` for an
 options page, and `term_<id>` for a term field group. The `Scapegoat Profile` group from appendix
 03 §4.2 arrives as the second one, which is how an editor filling in a tagline invalidates that
-scapegoat's page. Register it at priority **20**, after ACF has written the fields — at priority 10
+scapegoat's page. Register it at priority **20**, after SCF has written the fields — at priority 10
 you can win the race and send a webhook describing the previous values.
 
 > **`menu:primary` is not in this webhook, and that is a named gap.** A menu change arrives on
@@ -545,7 +545,7 @@ const REVALIDATE_TAXONOMIES = array( 'scapegoat', 'severity', 'tech_stack' );
 
 add_action( 'transition_post_status', __NAMESPACE__ . '\\revalidate_on_transition', 10, 3 );
 add_action( 'saved_term', __NAMESPACE__ . '\\revalidate_on_saved_term', 10, 3 );
-// Priority 20, AFTER ACF has written the fields. At 10 you can win the race and
+// Priority 20, AFTER SCF has written the fields. At 10 you can win the race and
 // send a webhook describing the previous values.
 add_action( 'acf/save_post', __NAMESPACE__ . '\\revalidate_on_acf_save', 20 );
 
@@ -606,24 +606,24 @@ function revalidate_on_saved_term( int $term_id, int $tt_id, string $taxonomy ):
 }
 
 /**
- * An ACF field group was saved.
+ * An SCF field group was saved.
  *
  * This is the trigger that is easy to leave out and expensive to leave out. An
- * ACF-only edit to a PUBLISHED post changes no status, so the transition hook
+ * SCF-only edit to a PUBLISHED post changes no status, so the transition hook
  * above sees `publish -> publish` and this hook is what carries the detail
  * about which fields moved. After Lesson 18.1 made /hobt `revalidate: false`,
  * it is the only thing that keeps `seatsLeft` current.
  *
- * ACF's $post_id has three shapes and they are not documented next to each
+ * SCF's $post_id has three shapes and they are not documented next to each
  * other: an integer post ID, the string `options` for an options page, and
  * `term_<id>` for a term field group.
  *
- * @param int|string $post_id ACF's polymorphic identifier.
+ * @param int|string $post_id SCF's polymorphic identifier.
  */
 function revalidate_on_acf_save( $post_id ): void {
 	$id = (string) $post_id;
 
-	// The ACF options page from appendix 03 §4.5 — site settings, one tag.
+	// The SCF options page from appendix 03 §4.5 — site settings, one tag.
 	if ( 'options' === $id || 'option' === $id ) {
 		revalidate_send( array( 'type' => 'options', 'locale' => 'en' ) );
 		return;
@@ -1451,7 +1451,7 @@ says is the oracle you just built. Delete the message and reread Key Concept 7 b
   return is the part Key Concept 4 is about
 - [WordPress — `saved_term`](https://developer.wordpress.org/reference/hooks/saved_term/) — fires
   for every taxonomy including `nav_menu`, which is why the allowlist exists
-- [ACF — `acf/save_post`](https://www.advancedcustomfields.com/resources/acf-save_post/) — the
+- [SCF — `acf/save_post`](https://www.advancedcustomfields.com/resources/acf-save_post/) — the
   priority argument and the three shapes of `$post_id`, including `options` and `term_<id>`
 - [PHP — `hash_hmac()`](https://www.php.net/manual/en/function.hash-hmac.php) and
   [`hash_equals()`](https://www.php.net/manual/en/function.hash-equals.php) — the pair you already

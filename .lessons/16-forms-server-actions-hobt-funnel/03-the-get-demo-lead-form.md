@@ -680,7 +680,7 @@ mutation SubmitHobtLead($input: SubmitHobtLeadInput!) {
 ```ts
 // next-app/src/lib/validation/schemas.ts — append
 /**
- * Lead sources, stored KEBAB-case, matching wp_btt_leads.source and the ACF
+ * Lead sources, stored KEBAB-case, matching wp_btt_leads.source and the SCF
  * select convention. The block attribute `leadSource` on btt/hobt-cta uses the
  * same values. The GraphQL enum is LeadSource (appendix 03 §3) in
  * SCREAMING_SNAKE, and src/actions/leads.ts maps between them.

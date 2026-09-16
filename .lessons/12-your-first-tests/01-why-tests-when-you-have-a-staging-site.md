@@ -199,7 +199,7 @@ oversight somebody feels obliged to fix.
 | Tailwind class strings | `flex gap-4` is not behaviour. A test asserting `className` fails on every design change and catches no bug a human would care about | Lesson 21.2's visual and layout work, and your eyes |
 | `src/gql/` | generated from `wordpress-headless/schema.graphql`. You cannot fix a failure in it, and regenerating would undo your fix | `npm run codegen:check` — the assertion is "not stale", not "correct" |
 | The exact rendered markup of a page | see below. No snapshot tests of markup anywhere in this codebase | Playwright asserting roles and accessible names, which is what a user gets |
-| Third-party plugin behaviour | ACF and WPGraphQL have their own suites, and you cannot fix their bugs from here | pinned versions, plus the schema snapshot that tells you when their output changed |
+| Third-party plugin behaviour | SCF and WPGraphQL have their own suites, and you cannot fix their bugs from here | pinned versions, plus the schema snapshot that tells you when their output changed |
 | WordPress core | `wp_insert_post()` works | the core team, and 20 years |
 | `getters` and one-line re-exports | a test that only restates the implementation fails when you rename something and never when you break something | the compiler |
 
@@ -273,7 +273,7 @@ severity badges are shouting, or that the CTA is below the fold on a laptop. Sta
 that in four seconds, and it remains the right tool for it.
 
 **What real editorial content does to your layout.** Your fixtures are polite: every headline is
-short, every image is the right aspect ratio, every ACF repeater has three rows. An editor will
+short, every image is the right aspect ratio, every SCF repeater has three rows. An editor will
 paste a 140-character title and one testimonial with no author. Lesson 12.4's seeder deliberately
 includes some of that shape — a null field group, an empty term connection — but it cannot
 anticipate a real newsroom, and no test suite ever has.
@@ -399,7 +399,7 @@ currency: how many people are involved before it is fixed.
 ```
 
 Candidates worth considering, from the app as it stands at the end of Module 11: the GraphQL
-schema drifting from the committed `schema.graphql`; a route that 500s because an ACF field group
+schema drifting from the committed `schema.graphql`; a route that 500s because an SCF field group
 returned `null`; a session cookie that stops being `httpOnly` (Module 15); the incident
 submission kill switch being ignored (Module 16); `wp core update-db` running against a database
 nobody backed up (Module 24).
@@ -423,7 +423,7 @@ do-not-test list without reasons gets overruled by the first person who reads it
 - Tailwind class strings — `flex gap-4` is not behaviour, and the test fails on every design change
 - `src/gql/` — generated; a failure there is not fixable here, and `npm run codegen:check` already proves it is not stale
 - The exact rendered markup of any page — TODO
-- Third-party plugin behaviour (ACF, WPGraphQL) — TODO
+- Third-party plugin behaviour (SCF, WPGraphQL) — TODO
 - WordPress core — TODO
 
 **No snapshot tests of markup, anywhere in this codebase.** A 400-line diff of Tailwind

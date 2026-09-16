@@ -59,7 +59,7 @@ front-end hit to Next. The WP-rendered archive is never user-visible.
 | `severity` | `incident` | no | `Severity` | `Severities` | `severity` |
 | `tech_stack` | `incident`, `tech_review`, `post` | no | `TechStack` | `TechStacks` | `stack` |
 
-### Why these are taxonomies and not ACF fields
+### Why these are taxonomies and not SCF fields
 
 Two modelling decisions carry real weight, and both are lessons rather than conveniences.
 
@@ -69,11 +69,11 @@ you, so the blame leaderboard is **one indexed read** instead of a `COUNT(*)` gr
 `wp_postmeta`. Term archives, term URLs and `tax_query` joins come free.
 
 > **The cost, stated plainly:** terms have no revisions and no rich editorial body. The
-> `Scapegoat Profile` ACF term field group in §4 covers everything this app actually needs, but
+> `Scapegoat Profile` SCF term field group in §4 covers everything this app actually needs, but
 > if scapegoats ever needed long-form editorial content with revision history, this decision
 > would have to be revisited. Model the relationship you have, not the one you might want.
 
-**`severity` is a taxonomy with a locked term list, not an ACF select.** Filtering
+**`severity` is a taxonomy with a locked term list, not an SCF select.** Filtering
 `/incidents?severity=s1-catastrophic` becomes an indexed `tax_query` join rather than a
 `meta_query` string comparison against an unindexed `meta_value` column. The term UI is locked
 to radio buttons via `meta_box_cb` so editors cannot invent "S5 kinda bad".
@@ -129,15 +129,15 @@ union types in TypeScript instead of `string`.
 | `TechReviewVerdict` | `ADOPT`, `TRIAL`, `ASSESS`, `HOLD` |
 | `LeadSource` | `HOBT_HERO`, `HOBT_CTA_BLOCK`, `HOBT_FOOTER`, `INCIDENT_SIDEBAR` |
 
-GraphQL enum values are `SCREAMING_SNAKE_CASE` by convention; the underlying ACF select values
+GraphQL enum values are `SCREAMING_SNAKE_CASE` by convention; the underlying SCF select values
 are `kebab-case`. The resolver maps between them. Lesson 06.1 covers why you do not just
 expose the raw string.
 
 ---
 
-## 4. ACF field groups
+## 4. SCF field groups
 
-All field groups are registered with **ACF Local JSON** (`includes/acf-json/`), which means
+All field groups are registered with **SCF Local JSON** (`includes/acf-json/`), which means
 the content model is **code, in git, and diffable** — not database rows.
 
 > **This is the single highest-leverage decision in the whole pipeline.** Field groups as code
@@ -151,7 +151,7 @@ the content model is **code, in git, and diffable** — not database rows.
 Location: `post_type == incident`. `show_in_graphql: true`,
 `graphql_field_name: incidentDetails`.
 
-| ACF field name | Label | Type | GraphQL field | GraphQL type | Rules |
+| SCF field name | Label | Type | GraphQL field | GraphQL type | Rules |
 |---|---|---|---|---|---|
 | `occurred_at` | Occurred at | Date Time Picker | `occurredAt` | `String` (ISO 8601) | required, ≤ now |
 | `downtime_minutes` | Downtime (min) | Number | `downtimeMinutes` | `Float` | 0–100000 |
@@ -170,9 +170,9 @@ Location: `post_type == incident`. `show_in_graphql: true`,
 ### 4.2 `Scapegoat Profile`
 
 Location: `taxonomy == scapegoat`. `graphql_field_name: scapegoatProfile`. This is the group
-that teaches ACF **term** field groups through WPGraphQL for ACF.
+that teaches SCF **term** field groups through WPGraphQL for SCF.
 
-| ACF field name | Type | GraphQL field | GraphQL type |
+| SCF field name | Type | GraphQL field | GraphQL type |
 |---|---|---|---|
 | `avatar` | Image (ID return format) | `avatar` | `AcfMediaItemConnectionEdge` |
 | `tagline` | Text | `tagline` | `String` |
@@ -185,7 +185,7 @@ that teaches ACF **term** field groups through WPGraphQL for ACF.
 
 Location: `post_type == tech_review`. `graphql_field_name: techReviewFields`.
 
-| ACF field name | Type | GraphQL field | GraphQL type |
+| SCF field name | Type | GraphQL field | GraphQL type |
 |---|---|---|---|
 | `company_name` | Text | `companyName` | `String` |
 | `logo` | Image | `logo` | `AcfMediaItemConnectionEdge` |
@@ -198,7 +198,7 @@ Location: `post_type == tech_review`. `graphql_field_name: techReviewFields`.
 | `cons` | **Repeater** → `item` (Text) | `cons` | `[TechReviewFieldsCons]` |
 | `reviewed_at` | Date Picker | `reviewedAt` | `String` |
 
-> **The repeaters are here on purpose.** ACF repeaters surface as generated object list types
+> **The repeaters are here on purpose.** SCF repeaters surface as generated object list types
 > — `TechReviewFieldsPros`, not `string[]` — and that mismatch is the single most common "why
 > is my generated type `any`?" moment in a headless WordPress build. Lesson 04.2 walks it.
 
@@ -207,7 +207,7 @@ Location: `post_type == tech_review`. `graphql_field_name: techReviewFields`.
 Location: `page` **and** `page_template == templates/hobt.php`.
 `graphql_field_name: hobtPromo`.
 
-| ACF field name | Type | GraphQL field | Notes |
+| SCF field name | Type | GraphQL field | Notes |
 |---|---|---|---|
 | `headline` | Text | `headline` | |
 | `subheadline` | Textarea | `subheadline` | |
@@ -227,7 +227,7 @@ group `graphql_field_name: siteChrome` — **they must differ**, or both resolve
 `SiteSettings_Fields` interface nothing implements. Reached as `siteSettings { siteChrome { … } }`
 on the **root query**, so it can be fetched once in the root layout.
 
-| ACF field name | Type | GraphQL field | Notes |
+| SCF field name | Type | GraphQL field | Notes |
 |---|---|---|---|
 | `site_tagline` | Text | `siteTagline` | |
 | `primary_cta_label` | Text | `primaryCtaLabel` | |
@@ -346,11 +346,11 @@ exists to gate.
 |---|---|---|
 | WPGraphQL | no | The schema |
 | WPGraphQL JWT Authentication | no | `login`, `refreshJwtAuthToken`, `Authorization: Bearer` |
-| WPGraphQL for ACF | no | ACF fields in the schema |
+| WPGraphQL for SCF | no | SCF fields in the schema |
 | WPGraphQL Content Blocks | no | Blocks as structured data |
 | WPGraphQL Yoast SEO | no | `seo { ... }` on content nodes |
 | WPGraphQL Polylang | no | `language`, `translations`, locale filtering |
-| Advanced Custom Fields | no | The field groups in §4 |
+| Secure Custom Fields | no | The field groups in §4 |
 | Yoast SEO | no | Editor-controlled metadata |
 | Polylang | no | Multilingual content. **Free edition** — it translates post slugs but *not* CPT rewrite slugs, which is what decides Lesson 20.3's routing model |
 | **`blame-the-tech-core`** | **yes** | §1–§7 — everything above |
@@ -403,7 +403,7 @@ leaderboard counts a translation as its own incident.
 | Module | Section it implements |
 |---|---|
 | 03 | §1, §2, §6 — post types, taxonomies, roles and capabilities |
-| 04 | §4, §9 — ACF field groups as Local JSON, the seeder |
+| 04 | §4, §9 — SCF field groups as Local JSON, the seeder |
 | 05 | §1–§4 as *queries* — reading everything above out of WPGraphQL |
 | 06 | §3, §7 — enums, `blameScore`, the guarded mutations |
 | 07 | §1–§4 as *TypeScript types* — hand-modelled before codegen exists |

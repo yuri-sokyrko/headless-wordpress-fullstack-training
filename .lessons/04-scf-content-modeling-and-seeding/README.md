@@ -1,4 +1,4 @@
-# Module 04 — ACF, Content Modeling & WP-CLI Seeding
+# Module 04 — SCF, Content Modeling & WP-CLI Seeding
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ Before starting this module you should have completed:
 [Appendix 03 §4 and §9](../appendix/03-content-model-reference.md#4-acf-field-groups) are what
 this module implements. Every field name, GraphQL name and count comes from there.
 
-> ⚠️ **Do not build field groups by clicking in the ACF UI and leaving them there.** ACF's
+> ⚠️ **Do not build field groups by clicking in the SCF UI and leaving them there.** SCF's
 > default storage is database rows, which are invisible to git, undiffable in review, and would
 > force an export/import step into every deploy. You will use the UI — it is the fastest field
 > builder there is — but Lesson 04.1 turns on **Local JSON** first, so every click lands as a
@@ -18,7 +18,7 @@ this module implements. Every field name, GraphQL name and count comes from ther
 
 ## Starting State
 
-Module 03 verified clean. The plugin is active and owns the content model's structure; ACF is
+Module 03 verified clean. The plugin is active and owns the content model's structure; SCF is
 not installed yet.
 
 ```bash
@@ -43,11 +43,11 @@ docker compose run --rm wpcli wp cap list incident_reporter | grep -c publish_in
 
 ## What You'll Learn
 
-- **ACF Local JSON** — field groups as version-controlled files, `acf/settings/save_json` and
+- **SCF Local JSON** — field groups as version-controlled files, `acf/settings/save_json` and
   `load_json`, and why this is the highest-leverage decision in the pipeline
-- **The ACF field types this app needs** — date-time, number, select, range, textarea, image,
+- **The SCF field types this app needs** — date-time, number, select, range, textarea, image,
   true/false, and **repeaters**
-- **ACF through WPGraphQL** — `show_in_graphql`, `graphql_field_name`, and how a repeater
+- **SCF through WPGraphQL** — `show_in_graphql`, `graphql_field_name`, and how a repeater
   becomes a generated object list type rather than `string[]`
 - **Term field groups and options pages** — `acf_add_options_page()` exposed on the root query,
   so global settings are one fetch in the root layout
@@ -59,7 +59,7 @@ docker compose run --rm wpcli wp cap list incident_reporter | grep -c publish_in
 
 ## What You'll Build
 
-- ACF installed, with Local JSON writing to
+- SCF installed, with Local JSON writing to
   `blame-the-tech-core/includes/acf-json/` and the loader registered in the plugin bootstrap
 - Five field groups as tracked JSON — `Incident Details`, `Tech Review Fields`,
   `Scapegoat Profile`, `HOBT Promo`, `Site Settings`
@@ -77,8 +77,8 @@ reproducible from an empty database in under a minute.
 
 | # | Lesson | New Technology | What You Build |
 |---|---|---|---|
-| 1 | [ACF Field Groups as Code](01-acf-field-groups-as-code.md) | ACF, Local JSON, `acf/settings/save_json` | The loader plus `Incident Details` as tracked JSON |
-| 2 | [ACF & WPGraphQL](02-acf-and-wpgraphql.md) | WPGraphQL for ACF, repeater types | `Tech Review Fields`, including both repeaters |
+| 1 | [SCF Field Groups as Code](01-scf-field-groups-as-code.md) | SCF, Local JSON, `acf/settings/save_json` | The loader plus `Incident Details` as tracked JSON |
+| 2 | [SCF & WPGraphQL](02-scf-and-wpgraphql.md) | WPGraphQL for SCF, repeater types | `Tech Review Fields`, including both repeaters |
 | 3 | [Relationships & Options Pages](03-relationships-and-options-pages.md) | Term field groups, `acf_add_options_page()` | `Scapegoat Profile`, `HOBT Promo`, `Site Settings`, `templates/hobt.php` |
 | 4 | [WP-CLI for Headless Workflows](04-wp-cli-for-headless-workflows.md) | `WP_CLI::add_command`, `--porcelain` | `includes/cli/blame-command.php` |
 | 5 | [Seed Data & Migrations](05-seed-data-and-migrations.md) | `wp_insert_post`, `wp media import`, option-versioned migrations | `wp blame seed --fresh`, `includes/cli/migrations.php` |

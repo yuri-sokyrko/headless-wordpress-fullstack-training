@@ -44,7 +44,7 @@ docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli wp 
   Actions and route handlers, including the negative cases that matter most
 - **PHP unit tests** — **Pest** with **Brain Monkey**, testing plugin logic with WordPress mocked out
 - **PHP integration tests** — **`wp-phpunit`** against a real MySQL, inside the existing Compose
-  container, asserting registration, ACF field-group keys and resolver behaviour
+  container, asserting registration, SCF field-group keys and resolver behaviour
 - **The GraphQL contract** — a committed `schema.graphql`, codegen drift as a CI failure, and
   `@graphql-eslint` on every document
 - **E2E depth** — `storageState` auth, read/mutation project separation, and the ISR
@@ -77,7 +77,7 @@ docker compose -f ../wordpress-headless/docker-compose.yml run --rm -T wpcli wp 
 | 2 | [Component Testing with RTL & MSW](02-component-testing-with-rtl-and-msw.md) | RTL, `user-event`, MSW v2 | A typed fake WPGraphQL and the island tests |
 | 3 | [Testing Server Components & Actions](03-testing-server-components-and-actions.md) | `vi.mock` of `next/cache`, `next/headers` | Server Action and route-handler tests, negatives first |
 | 4 | [Testing WordPress PHP with Pest](04-testing-wordpress-php-with-pest.md) | Pest, Brain Monkey | Pure PHP unit tests with WordPress mocked |
-| 5 | [WP Integration & GraphQL Contract Tests](05-wp-integration-and-graphql-contract-tests.md) | `wp-phpunit`, `graphql()`, `@graphql-eslint` | Registration, ACF-key and resolver tests; the schema gate |
+| 5 | [WP Integration & GraphQL Contract Tests](05-wp-integration-and-graphql-contract-tests.md) | `wp-phpunit`, `graphql()`, `@graphql-eslint` | Registration, SCF-key and resolver tests; the schema gate |
 | 6 | [E2E Depth: Auth, Preview & i18n](06-e2e-depth-auth-preview-and-i18n.md) | `storageState`, Playwright projects | The real E2E suite, and the ISR coherency fix |
 | 7 | [Agentic QA: Guardrails & Setup](07-agentic-qa-guardrails-and-setup.md) | Playwright MCP, `.mcp.json` | An isolated agent, `e2e_agent`, the selector contract |
 | 8 | [Agent-Driven Exploratory Testing](08-agent-driven-exploratory-testing.md) | Charters, traces | Real findings from a real exploration run |

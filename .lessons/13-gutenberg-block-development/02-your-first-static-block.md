@@ -547,7 +547,7 @@ export default function Edit( { attributes, setAttributes } ) {
 ### Step 5: Write `save.js` and `style.scss`
 
 This is the file the validator compares against `post_content`. Match
-[the seeded fixture](../04-acf-content-modeling-and-seeding/05-seed-data-and-migrations.md)
+[the seeded fixture](../04-scf-content-modeling-and-seeding/05-seed-data-and-migrations.md)
 exactly: a `<div>` with only the generated class, an `<h3>`, then a `<p>`.
 
 ```js

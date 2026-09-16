@@ -156,7 +156,7 @@ WordPress down          → the fetch itself rejects
 ```
 
 So `if (!res.ok) throw` catches almost nothing that will actually go wrong. It catches a wrong
-URL and a crashed PHP process; it does not catch a typo in your query, a renamed ACF field, or a
+URL and a crashed PHP process; it does not catch a typo in your query, a renamed SCF field, or a
 capability check that fired. Every failure check in this course reads `.errors`, never the status
 code — that is a house rule and it comes from this row of the table.
 
@@ -400,7 +400,7 @@ interface TermNode {
 }
 
 /**
- * The `incidentDetails` ACF group.
+ * The `incidentDetails` SCF group.
  *
  * Every field here is declared non-null because every field had a value in the response
  * that was on screen when this was written. The schema disagrees about all nine of them —

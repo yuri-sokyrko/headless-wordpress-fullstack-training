@@ -5,7 +5,7 @@
 Before starting this module you should have completed:
 
 - **Module 03** — Plugin, CPTs, Taxonomies & Roles
-- **Module 04** — ACF, Content Modeling & WP-CLI Seeding
+- **Module 04** — SCF, Content Modeling & WP-CLI Seeding
 - **Module 05** — WPGraphQL Fundamentals, all five lessons
 
 Keep [appendix 03 §3 and §7](../appendix/03-content-model-reference.md#3-registered-graphql-enums)
@@ -28,7 +28,7 @@ curl -s -X POST http://localhost:8080/graphql \
   -d '{"query":"{ generalSettings { title } incidents(first:1){ nodes{ slug } } }"}'
 # Expected: a "data" object with a title and one incident slug — no "errors" key
 
-# 2. ACF is in the schema
+# 2. SCF is in the schema
 curl -s -X POST http://localhost:8080/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ incidents(first:1){ nodes{ incidentDetails{ downtimeMinutes environment } } } }"}'
@@ -62,7 +62,7 @@ curl -s -X POST http://localhost:8080/graphql \
 
 - `includes/graphql/enums.php` — the four enums from
   [§3](../appendix/03-content-model-reference.md#3-registered-graphql-enums), with resolvers
-  mapping `kebab-case` ACF values to `SCREAMING_SNAKE_CASE`
+  mapping `kebab-case` SCF values to `SCREAMING_SNAKE_CASE`
 - `includes/graphql/fields.php` — `blameScore` on `Incident`, computed and cached
 - `includes/graphql/mutation-create-incident.php` — `createIncident`, forcing `post_status` and
   `post_author`, ignoring `is_verified`

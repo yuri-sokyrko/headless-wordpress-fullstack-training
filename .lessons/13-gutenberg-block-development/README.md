@@ -6,7 +6,7 @@ Before starting this module you should have completed:
 
 - **Module 12** — `npm test` and `npx playwright test` are green against deterministic seed data
 - **Modules 08 and 09** — `edit.js` **is** a React component, using hooks and JSX. This module is deliberately placed after React, not next to Module 03
-- **Module 04** — the ACF field groups exist, because Lesson 13.5's stretch block reads one through Block Bindings
+- **Module 04** — the SCF field groups exist, because Lesson 13.5's stretch block reads one through Block Bindings
 - **Module 03** — `blame-the-tech-core` registers the post types these blocks are allowed in
 
 > ⚠️ **You are writing React inside WordPress, with WordPress's own build tooling.** The
@@ -24,9 +24,9 @@ cd next-app && npm test -- --run && npx playwright test
 # 2. WordPress is up, seeded, and the editor works
 cd ../wordpress-headless
 docker compose run --rm wpcli wp plugin list --status=active --format=csv
-# Expected: includes blame-the-tech-core, wp-graphql, advanced-custom-fields-pro
-#           (PRO, not free ACF — Lesson 04.2 swapped them, and the free plugin's
-#            slug is gone from the active list)
+# Expected: includes blame-the-tech-core, wp-graphql, secure-custom-fields
+#           (installed in Lesson 04.2 straight from wordpress.org — no
+#            licence key, and no ACF plugin alongside it)
 open http://localhost:8080/wp-admin/post-new.php?post_type=incident
 # Expected: the block editor loads with core blocks only
 ```
@@ -84,7 +84,7 @@ Each one exists because it teaches a mechanism the others do not. None of them i
 | `btt/scapegoat-picker` | 13.3 | `InspectorControls` + `useSelect` on `@wordpress/core-data`, storing a **term ID, not a copy** | Static — one numeric attribute |
 | `btt/incident-ticker` | 13.4 | Dynamic rendering: `render: file:./render.php`, `save: () => null` | Nothing in `post_content` but the comment |
 | `btt/hobt-cta` | 13.4 | Attribute design for a typed consumer — becomes a client island in Lesson 14.4 | Static — attributes only |
-| `btt/tech-verdict-card` | 13.5 | `usesContext` and Block Bindings reading ACF — **optional / stretch** | Static — bindings resolve at render |
+| `btt/tech-verdict-card` | 13.5 | `usesContext` and Block Bindings reading SCF — **optional / stretch** | Static — bindings resolve at render |
 
 > **The sixth block is optional, and the seed data does not know that.** `wp blame seed`
 > writes `btt/tech-verdict-card` into `blog-01`, `blog-02` and the HOBT page, so a learner who

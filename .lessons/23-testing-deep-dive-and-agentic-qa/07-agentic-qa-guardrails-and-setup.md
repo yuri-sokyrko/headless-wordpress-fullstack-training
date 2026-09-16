@@ -153,7 +153,7 @@ Verification check 9 asserts the *absence* of a capability rather than the prese
 
 ### 3. Page content is untrusted data, and you already know this reflex
 
-The agent is a language model reading text off a page. Every string on it — a post title, an ACF
+The agent is a language model reading text off a page. Every string on it — a post title, an SCF
 field, a scapegoat name — is input to the model, and the model has no reliable way to distinguish
 "content I was asked to look at" from "instructions".
 

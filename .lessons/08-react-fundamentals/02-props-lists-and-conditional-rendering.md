@@ -19,7 +19,7 @@ rendering something that might be `null`.
 
 The data comes from `fixtures.ts`, a typed array shaped exactly like the `incidents` GraphQL
 connection you saved in Module 05 — nested `node` objects, connection edges for taxonomy
-terms, nullable ACF numbers and all. Using the real shape now rather than a flattened
+terms, nullable SCF numbers and all. Using the real shape now rather than a flattened
 convenience shape is the point: when Lesson 09.3 replaces the fixture import with a live
 query, the components do not change. Fixtures that lie about the shape of your data are a debt
 you pay twice.
@@ -322,7 +322,7 @@ a compiler warning into a run-time `TypeError` in a component, which is strictly
 and every component in this module would be shorter.
 
 It is the wrong choice, and here is the concrete cost. WPGraphQL returns taxonomy terms as Relay
-connections, ACF groups as nullable objects and numbers as nullable floats:
+connections, SCF groups as nullable objects and numbers as nullable floats:
 
 ```
 what WPGraphQL actually returns            the convenient lie
@@ -338,7 +338,7 @@ scapegoats: { nodes: [] }                  scapegoat: ''
 Write components against the right-hand column and Lesson 09.3 — which replaces the fixture
 import with a live query — becomes a rewrite of every component instead of a one-line import
 change. You would also never have met `noUncheckedIndexedAccess` on a connection, never handled
-a `null` ACF group, and never seen the `{0}` bug, because the convenient shape has no zeros in
+a `null` SCF group, and never seen the `{0}` bug, because the convenient shape has no zeros in
 it. The bugs do not go away; they move to the lesson where you are also learning Server
 Components.
 
@@ -457,7 +457,7 @@ const SEED_HEADLINES: readonly string[] = [
 /* ── The six hand-written incidents ──────────────────────────────────────
    Three fields deviate from `wp blame seed` ON PURPOSE, and the deviation is
    the point. The seeder fills every field of all forty rows, so it can never
-   produce a null or a zero. The Module 16 submission form will, because ACF
+   produce a null or a zero. The Module 16 submission form will, because SCF
    cannot promise a sub-field was filled. A fixture set that only covers the
    happy path is a fixture set that hides your nullability bugs until Module 16.
 
@@ -593,8 +593,8 @@ export const SEED_INCIDENTS: readonly Incident[] = [
     title: 'The cache never invalidated (#6)',
     date: '2024-09-07T11:00:00',
     blameScore: null,
-    // THE WHOLE ACF GROUP IS NULL. This is what an incident created before the
-    // field group existed looks like, and what WPGraphQL for ACF returns when
+    // THE WHOLE SCF GROUP IS NULL. This is what an incident created before the
+    // field group existed looks like, and what WPGraphQL for SCF returns when
     // no field in the group has ever been saved. Every `incidentDetails.x`
     // access in every component has to survive it.
     incidentDetails: null,
@@ -960,7 +960,7 @@ grep -c 'incidentDetails: null' src/components/incidents/fixtures.ts
 
 # 6. The fixture is in RESPONSE shape, not a convenient flattening
 grep -cE '^\s+(severity|scapegoat|downtime|cost):' src/components/incidents/fixtures.ts
-# Expected: 0 — every taxonomy is a connection and every ACF value is nested
+# Expected: 0 — every taxonomy is a connection and every SCF value is nested
 
 # 7. NEGATIVE — reproduce the `{0}` bug in one command, then the fix
 cat > src/components/incidents/_zero.tsx <<'TSX'

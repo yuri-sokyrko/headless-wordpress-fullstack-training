@@ -403,7 +403,7 @@ Apache, the entrypoint skips its WordPress setup, and the container is deleted w
 exits. It is the cheapest way to interrogate an image.
 
 ```bash
-# PHP's version and the extensions WordPress, ACF and WPGraphQL rely on
+# PHP's version and the extensions WordPress, SCF and WPGraphQL rely on
 docker run --rm wordpress:7.1-php8.4-apache php -v | head -1
 # Expected: a line beginning "PHP 8.4."
 docker run --rm wordpress:7.1-php8.4-apache php -m | grep -E '^(mysqli|gd|exif|imagick)$'

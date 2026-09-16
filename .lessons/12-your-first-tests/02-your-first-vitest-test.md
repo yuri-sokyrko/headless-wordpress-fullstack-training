@@ -595,7 +595,7 @@ describe('term, site and menu tags', () => {
     expect(termTag('scapegoat', 'the-intern')).toBe('scapegoat:the-intern');
   });
 
-  it('has one tag for the whole ACF options page and one per menu location', () => {
+  it('has one tag for the whole SCF options page and one per menu location', () => {
     expect(siteTag()).toBe('site-settings');
     expect(menuTag('primary')).toBe('menu:primary');
   });

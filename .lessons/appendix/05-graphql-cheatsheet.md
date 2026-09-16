@@ -235,7 +235,7 @@ query GetPrimaryMenu {
   }
 }
 
-# Site-wide settings from the ACF options page — fetched once in the root layout
+# Site-wide settings from the SCF options page — fetched once in the root layout
 query GetSiteSettings {
   siteSettings {
     siteChrome {
@@ -337,8 +337,8 @@ Introspection is how GraphiQL autocompletes and how codegen works.
 |---|---|
 | `null` for content you can see in wp-admin | Missing `idType`, or the post type lacks `show_in_graphql`, or the post is not published and you did not pass `asPreview: true` |
 | `Cannot query field "x" on type "Y"` | The field is not registered, or a plugin providing it is inactive. Re-check in GraphiQL. |
-| ACF fields missing entirely | The field group has `show_in_graphql` off, or `graphql_field_name` is unset |
-| A generated type is `any` | You forgot `__typename` on a polymorphic field, or you are looking at an ACF repeater and expecting `string[]` |
+| SCF fields missing entirely | The field group has `show_in_graphql` off, or `graphql_field_name` is unset |
+| A generated type is `any` | You forgot `__typename` on a polymorphic field, or you are looking at an SCF repeater and expecting `string[]` |
 | Works in GraphiQL, fails from Next | GraphiQL is authenticated as your wp-admin session. Anonymous requests have fewer permissions — that is usually correct behaviour, not a bug. |
 | The query is enormous and slow | An unbounded connection or an N+1 in a resolver. Turn on `SAVEQUERIES` and count. Lesson 06.4. |
 | Empty `data` and a 200 | Read `errors`. `fetch` did not throw and never will. |

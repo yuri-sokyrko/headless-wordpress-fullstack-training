@@ -115,7 +115,7 @@ scapegoats(where: { orderby: COUNT, order: DESC })  becomes
      WHERE tt.taxonomy = 'scapegoat' ORDER BY tt.count DESC LIMIT 20
     ── two small tables, an index on taxonomy, no scan
 
-the same leaderboard if `scapegoat` were an ACF field would be
+the same leaderboard if `scapegoat` were an SCF field would be
     SELECT m.meta_value, COUNT(*) c FROM wp_postmeta m
       INNER JOIN wp_posts p ON p.ID = m.post_id
      WHERE m.meta_key = 'scapegoat' AND p.post_status = 'publish'
@@ -139,10 +139,10 @@ For a public leaderboard that is exactly right: blame is only real once it is pu
 need a custom field running its own counting query. Knowing which of those two you are building
 before you pick the field is the entire skill.
 
-### 3. Term field groups: ACF on something that is not a post
+### 3. Term field groups: SCF on something that is not a post
 
 `Scapegoat Profile` from [appendix 03 §4.2](../appendix/03-content-model-reference.md#42-scapegoat-profile)
-is an ACF field group whose location rule is `taxonomy == scapegoat`. WPGraphQL for ACF exposes it
+is an SCF field group whose location rule is `taxonomy == scapegoat`. WPGraphQL for SCF exposes it
 as a field on the term type:
 
 ```graphql
@@ -164,7 +164,7 @@ Two details will trip you:
 
 | Detail | Why |
 |---|---|
-| `avatar { node { … } }` | An ACF image field is a **connection**, typed `AcfMediaItemConnectionEdge`. The extra `node` hop is the edge, and Lesson 05.2 §2 explains why it exists. |
+| `avatar { node { … } }` | An SCF image field is a **connection**, typed `AcfMediaItemConnectionEdge`. The extra `node` hop is the edge, and Lesson 05.2 §2 explains why it exists. |
 | Values live in `wp_termmeta`, not `wp_postmeta` | Same EAV shape, same absence of a value index. A leaderboard sorted by `defensiveness` would be the slow query again — which is why the leaderboard sorts by `count`. |
 
 ### 4. One taxonomy, three post types: the `ContentNode` interface
@@ -395,7 +395,7 @@ docker compose run --rm wpcli wp db query "EXPLAIN SELECT t.name, t.slug, tt.cou
   ORDER BY tt.count DESC
   LIMIT 20;"
 
-# 2b. What you would have to run if scapegoat were an ACF select instead of a taxonomy
+# 2b. What you would have to run if scapegoat were an SCF select instead of a taxonomy
 docker compose run --rm wpcli wp db query "EXPLAIN SELECT m.meta_value, COUNT(*) AS c
   FROM wp_postmeta m
   INNER JOIN wp_posts p ON p.ID = m.post_id
@@ -451,7 +451,7 @@ query ScapegoatBySlug($slug: ID!, $first: Int!, $after: String) {
 
 **Verify §3:**
 
-- [ ] `scapegoatProfile` is present and not entirely `null`. All-`null` means the ACF group is
+- [ ] `scapegoatProfile` is present and not entirely `null`. All-`null` means the SCF group is
       missing `show_in_graphql` — Lesson 04.3.
 - [ ] `avatar` needs the `node` hop. Try it without and read the validation error once.
 
@@ -560,7 +560,7 @@ query SiteChrome {
 **Verify §6:**
 
 - [ ] `menuItems.nodes` has five entries, one with a non-null `parentId`.
-- [ ] `siteSettings` is populated from the ACF options page in Lesson 04.3. If it is `null`, the
+- [ ] `siteSettings` is populated from the SCF options page in Lesson 04.3. If it is `null`, the
       options page is missing `show_in_graphql`.
 - [ ] Run it with `curl` as well as in GraphiQL. An **anonymous** caller must see the menu — if
       GraphiQL shows items and `curl` shows an empty list, the menu is not assigned to a location.

@@ -2,7 +2,7 @@
 title: 'Page Composition & the HOBT Shell'
 module: 11
 lesson: 5
-teaches: [component-composition, children-prop, acf-driven-sections, inert-cta, landing-page-layout]
+teaches: [component-composition, children-prop, scf-driven-sections, inert-cta, landing-page-layout]
 produces: ['next-app/src/app/[locale]/hobt/page.tsx', 'next-app/src/components/hobt/HobtHero.tsx', 'next-app/src/components/hobt/HobtModules.tsx', 'next-app/src/components/hobt/HobtTestimonials.tsx', 'next-app/src/components/hobt/HobtCtaBand.tsx', 'next-app/src/graphql/hobt.graphql']
 requires: [11.4, 10.5]
 ---
@@ -14,7 +14,7 @@ requires: [11.4, 10.5]
 HOBT — *How To Omit Blaming Tech* — is the fictional course Blame The Tech upsells, and its
 landing page is the most commercially important route in the app. This lesson builds it: a hero
 with a headline, subheadline and urgency badge, a module grid, a testimonial section, and two
-calls to action. Every value comes from the `hobtPromo` ACF field group, so the copy is the
+calls to action. Every value comes from the `hobtPromo` SCF field group, so the copy is the
 editor's, and the section components are thin.
 
 Two deliberate incompletenesses. First, **every CTA is inert.** "Get Demo" opens nothing and
@@ -30,13 +30,13 @@ By the end of this lesson you will have:
 
 - `next-app/src/app/[locale]/hobt/page.tsx` — the landing route, querying `hobtPromo` with a short `revalidate`
 - `next-app/src/components/hobt/HobtHero.tsx` with the `seatsLeft` urgency badge
-- `next-app/src/components/hobt/HobtModules.tsx` and `HobtTestimonials.tsx`, both rendering ACF repeaters
+- `next-app/src/components/hobt/HobtModules.tsx` and `HobtTestimonials.tsx`, both rendering SCF repeaters
 - `next-app/src/components/hobt/HobtCtaBand.tsx` — a reusable CTA band whose buttons are visibly present and deliberately inert
 - A composition pattern using `children` and slot props, applied so no section component knows where it sits on the page
 
 ## Classic WP Analogy
 
-This is a page template with ACF fields, which is a thing you have built many times:
+This is a page template with SCF fields, which is a thing you have built many times:
 
 | Classic WordPress | Here |
 |---|---|
@@ -47,11 +47,11 @@ This is a page template with ACF fields, which is a thing you have built many ti
 | `if (get_field('seats_left') < 20)` for the badge | the same condition, in JSX |
 | A flexible-content field for reorderable sections | Gutenberg blocks — Lesson 14.4 |
 
-The ACF repeater comparison is worth dwelling on because it is where the generated types bite.
+The SCF repeater comparison is worth dwelling on because it is where the generated types bite.
 `have_rows()` / `get_sub_field()` returns whatever is there and PHP shrugs at a missing key. The
 `modules` and `testimonials` repeaters arrive from WPGraphQL as **lists of generated object
 types**, not lists of strings — `HobtPromoModules`, with `title`, `summary` and
-`durationMinutes` each independently nullable, because ACF cannot promise a sub-field was
+`durationMinutes` each independently nullable, because SCF cannot promise a sub-field was
 filled. Every field is fixed by
 [the content model contract](../appendix/03-content-model-reference.md#44-hobt-promo), and the
 nullability is not codegen being pedantic: an editor who adds a row and saves before typing
@@ -59,7 +59,7 @@ produces exactly that shape.
 
 The analogy breaks on **who controls the layout**, and this is the point of the whole lesson.
 A page template plus a flexible-content field genuinely does let an editor reorder sections —
-ACF flexible content is a real answer to that problem, and if this were a Classic build it
+SCF flexible content is a real answer to that problem, and if this were a Classic build it
 would be a reasonable one. What you have built here is worse than that: the field group
 supplies the content and `page.tsx` dictates the order, so moving the testimonials above the
 module grid is a code change and a deploy. Naming that gap now, while it is fresh, is what
@@ -125,7 +125,7 @@ renders an `id` for `aria-describedby`, two instances would collide, and a Serve
 cannot call `useId()`. The page supplies `"hero"` and `"closing"` — but the component's
 *rendering* does not vary with the value, which is the line that matters.
 
-### 3. ACF repeaters, now with consequences
+### 3. SCF repeaters, now with consequences
 
 Lesson 07.4 modelled the `pros`/`cons` repeaters as object lists rather than string arrays.
 `/hobt` is where the same shape starts costing you branches. `modules` and `testimonials` are
@@ -150,7 +150,7 @@ Three levels of nullability, and none of them is codegen being pedantic:
 | Null | Produced by |
 |---|---|
 | the whole list | the field group has never been saved on this page |
-| a row | ACF's own row bookkeeping, and a row deleted concurrently |
+| a row | SCF's own row bookkeeping, and a row deleted concurrently |
 | a sub-field | **an editor who added a row and hit Save before typing** |
 
 That last one is the common case, not an edge case. It happens every single time someone builds
@@ -279,11 +279,11 @@ client-side navigation has nothing to do.
 Everything above is craft. This is the architecture, and it is the one place in Module 11 where
 the headless version is **worse** than the Classic one.
 
-An ACF flexible-content field genuinely solves the reordering problem. An editor drags a
+An SCF flexible-content field genuinely solves the reordering problem. An editor drags a
 "testimonials" layout above a "modules" layout, saves, and the page changes. If Blame The Tech
 were a Classic build, that would be a reasonable and complete answer.
 
-| | ACF flexible content (Classic) | This route, today | Module 14 |
+| | SCF flexible content (Classic) | This route, today | Module 14 |
 |---|---|---|---|
 | Editor changes the copy | ✅ save | ✅ save | ✅ save |
 | Editor adds a testimonial | ✅ save | ✅ save | ✅ save |
@@ -302,9 +302,9 @@ exhaustiveness. Arriving at it having felt this constraint makes it land as a re
 at it cold makes it feel like a refactor of code that already worked.
 
 It is also worth being precise about what Module 14 does and does not give back, because
-"editors can reorder the page" is not the same promise as ACF flexible content. Blocks move the
+"editors can reorder the page" is not the same promise as SCF flexible content. Blocks move the
 order into `post_content`, which means it is versioned by WordPress's own revisions and
-previewable through Lesson 17.2's draft mode — both better than ACF rows. It also means the
+previewable through Lesson 17.2's draft mode — both better than SCF rows. It also means the
 order is no longer reviewable in a pull request, because it is no longer code. That is the
 trade, and it is the right one for a marketing page and the wrong one for, say, a checkout
 flow. The question to ask about any piece of layout is who should be allowed to change it
@@ -390,7 +390,7 @@ npm run codegen
 
 - [ ] `grep -c 'HobtPromoDocument' src/gql/graphql.ts` returns `1` or more.
 - [ ] The generated `modules` type has `Array<… | null> | null`. If any level is non-nullable,
-      the ACF field group is not registered the way appendix 03 §4.4 describes.
+      the SCF field group is not registered the way appendix 03 §4.4 describes.
 
 ### Step 2: Write the hero
 
@@ -500,7 +500,7 @@ export function HobtModules({
       ) : (
         <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((module, i) => (
-            // No stable id on an ACF repeater row, so the index is the honest
+            // No stable id on an SCF repeater row, so the index is the honest
             // key here. It is safe because this list is never reordered
             // client-side — see Lesson 08.2 on when an index key is a bug.
             <li key={`${module.title ?? 'module'}-${i}`}>
@@ -814,7 +814,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/en/hobt
 
 # 2. The content is the editor's, from the hobtPromo field group
 curl -s http://localhost:3000/en/hobt | grep -o '<h1[^>]*>[^<]*' | head -1
-# Expected: the `headline` value from ACF, not "How To Omit Blaming Tech"
+# Expected: the `headline` value from SCF, not "How To Omit Blaming Tech"
 #           (which is the fallback for a null headline)
 
 # 3. Exactly one <h1>
@@ -863,7 +863,7 @@ npm run build | grep -E 'Route \(app\)|Revalidate|hobt'
 # Expected: a row for /[locale]/hobt with a revalidate of 1m (60 seconds)
 
 # 11. NEGATIVE — zero seats renders "0 seats left", not a bare 0 and not nothing.
-#     `seats_left` is the ACF field name from appendix 03 §4.4, and ACF stores it
+#     `seats_left` is the SCF field name from appendix 03 §4.4, and SCF stores it
 #     under exactly that meta key.
 cd ../wordpress-headless
 HOBT_ID=$(docker compose run --rm wpcli wp post list --post_type=page \
@@ -882,7 +882,7 @@ curl -s http://localhost:3000/en/hobt | grep -o '>0<' | wc -l
 # Expected: 0 — a bare zero rendered on its own means `&&` crept back in
 
 # 12. NEGATIVE — an empty repeater renders the empty state, not a broken grid.
-#     An ACF repeater stores its ROW COUNT in the parent meta key, so setting it
+#     An SCF repeater stores its ROW COUNT in the parent meta key, so setting it
 #     to 0 is how you empty one from the command line.
 cd ../wordpress-headless
 docker compose run --rm wpcli wp post meta get "$HOBT_ID" testimonials
@@ -926,7 +926,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/en/hobt
 4. `page.tsx` sets `export const revalidate = 60` **and** passes `revalidate: 60` to
    `fetchGraphQL`. Explain what each one caches, and predict the symptom if the fetch value were
    `3600` and the segment value stayed `60`.
-5. `/hobt` is described as less editable than an ACF flexible-content page template would have
+5. `/hobt` is described as less editable than an SCF flexible-content page template would have
    been. Name the one editorial operation that is worse, say which lesson restores it, and
    explain why building the hard-coded version first is a pedagogical choice rather than a
    shortcut.
@@ -943,7 +943,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/en/hobt
   throws, and which boundary catches it
 - [WPGraphQL: `nodeByUri` and URI lookups](https://www.wpgraphql.com/docs/wpgraphql-vs-wp-rest-api)
   — why `idType: URI` is fussy about trailing slashes
-- [ACF: repeater field](https://www.advancedcustomfields.com/resources/repeater/) — the row-count
+- [SCF: repeater field](https://www.advancedcustomfields.com/resources/repeater/) — the row-count
   meta key that check 12 sets to zero, and why sub-fields are independently empty
 - [MDN: `<figure>` and `<figcaption>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/figure)
   — the semantic pairing `HobtTestimonials` uses instead of ARIA

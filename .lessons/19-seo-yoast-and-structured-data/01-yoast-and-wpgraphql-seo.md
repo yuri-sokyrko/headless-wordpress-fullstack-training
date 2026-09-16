@@ -87,7 +87,7 @@ installed it.
 Seven rows survive and four do not, and the four that do not are all *rendering*. That is the
 shape of the whole module: **Yoast keeps the authoring surface, you take over the output.**
 
-The alternative — an ACF field group with `seo_title`, `seo_description` and `seo_noindex` — is
+The alternative — an SCF field group with `seo_title`, `seo_description` and `seo_noindex` — is
 genuinely cheaper to install and it is the wrong choice. You would be rebuilding the snippet
 preview, the character counters, the bulk editor and the readability analysis, and you would be
 asking a content team to abandon the one SEO tool they have muscle memory for. **The verdict:
@@ -345,7 +345,7 @@ severity term. Yoast does not.
 
 Yoast SEO and `wp-graphql-yoast-seo` are both **GPL**. That is correct and required: WordPress
 plugins are GPL by derivation, the whole `wordpress-headless/` tree is GPL, and the plugins you
-install in Task §1 are no different from WPGraphQL or ACF in that respect.
+install in Task §1 are no different from WPGraphQL or SCF in that respect.
 
 The rule from Lesson 07.1 §9 — **`next-app` takes no GPL or AGPL dependency** — is about the
 Next application, which is MIT, and this lesson adds **zero** npm packages. The bridge crosses

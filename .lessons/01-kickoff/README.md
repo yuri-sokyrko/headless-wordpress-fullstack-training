@@ -81,7 +81,7 @@ them, which is the only way two copies of a field name stay in agreement.
 
 | Contract | Fixes | First enforced |
 |---|---|---|
-| [appendix 03 — content model](../appendix/03-content-model-reference.md) | Post types, taxonomies, term slugs, ACF field names, GraphQL names, capabilities | Module 03 |
+| [appendix 03 — content model](../appendix/03-content-model-reference.md) | Post types, taxonomies, term slugs, SCF field names, GraphQL names, capabilities | Module 03 |
 | [appendix 04 — env & secrets](../appendix/04-env-reference.md) | Every environment variable, which side holds it, which are secret, the `NEXT_PUBLIC_` boundary | Module 02 |
 | [PROJECT.md](../PROJECT.md) | The end-state architecture and the local/production topology | Module 02 |
 | `.gitignore` | What may never enter git — third-party code, uploads, and any real env file | Module 02 |

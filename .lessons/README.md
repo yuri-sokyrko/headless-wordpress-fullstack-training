@@ -17,7 +17,7 @@ and licences table, which is worth five minutes now rather than a surprise in Mo
 ## 📚 What you'll learn
 
 - **WordPress as a typed content API** — WPGraphQL, custom post types and taxonomies designed
-  for a front end that isn't PHP, ACF field groups as version-controlled code
+  for a front end that isn't PHP, SCF field groups as version-controlled code
 - **A modern JavaScript front end** — TypeScript, React 19, Next.js 16 App Router, React
   Server Components, Tailwind and shadcn/ui
 - **Gutenberg blocks that survive the trip** — six custom blocks queried as structured data
@@ -43,7 +43,7 @@ are fetching is data you modelled yourself.
 | 01 | [Kickoff & the Headless Contract](01-kickoff/) | 3 | — | Repo skeleton, content-model doc, the ADR habit |
 | 02 | [Docker, MySQL & Local Infrastructure](02-docker-mysql-and-infrastructure/) | 6 | Docker, Compose, MySQL 8, Adminer, Mailpit | WordPress stack on `:8080`, env-driven config |
 | 03 | [Plugin, CPTs, Taxonomies & Roles](03-plugin-cpts-taxonomies-roles/) | 5 | Composer/PSR-4, `show_in_graphql`, `map_meta_cap` | `blame-the-tech-core`, the moderation queue |
-| 04 | [ACF, Content Modeling & WP-CLI Seeding](04-acf-content-modeling-and-seeding/) | 5 | ACF + Local JSON, `WP_CLI::add_command` | Field groups as code, `wp blame seed` |
+| 04 | [SCF, Content Modeling & WP-CLI Seeding](04-scf-content-modeling-and-seeding/) | 5 | SCF + Local JSON, `WP_CLI::add_command` | Field groups as code, `wp blame seed` |
 | 05 | [WPGraphQL Fundamentals](05-wpgraphql-fundamentals/) | 5 | WPGraphQL, GraphiQL, Relay connections | Every read query the front end will need |
 | 06 | [GraphQL API Design & Schema Extensions](06-graphql-api-design/) | 4 | `register_graphql_field`/`_mutation`, DataLoader | `blameScore`, guarded mutations, `schema.graphql` |
 | 07 | [The JavaScript Toolchain & TypeScript](07-javascript-toolchain-and-typescript/) | 5 | Node 22, ESM, TypeScript, ESLint, PHPCS | Typed content model, a script that queries WP |

@@ -38,18 +38,18 @@ By the end of this lesson you will have:
 ## Classic WP Analogy
 
 You already run a generated-artifact-in-git workflow, and you already know why it is worth it:
-**ACF Local JSON**. The field group is defined once, saved to `includes/acf-json/`, and every
+**SCF Local JSON**. The field group is defined once, saved to `includes/acf-json/`, and every
 environment derives from that file instead of from a database table someone edited in
 production at 2am. The content model becomes code — diffable, reviewable, deployable — and the
 class of bug where staging and production disagree about a field name simply stops existing.
 
-| ACF Local JSON | GraphQL Codegen |
+| SCF Local JSON | GraphQL Codegen |
 |---|---|
 | Field groups defined once, stored as JSON in git | Schema defined once, `schema.graphql` in git |
 | Every environment reads the same file | Every build reads the same file |
 | No DB export/import step on deploy | No live WordPress needed in CI |
 | A field rename shows up as a reviewable diff | A schema change shows up as a reviewable diff |
-| `acf-json/` is committed even though ACF wrote it | `src/gql/` is committed even though codegen wrote it |
+| `acf-json/` is committed even though SCF wrote it | `src/gql/` is committed even though codegen wrote it |
 
 The parallel is close enough that the objection is the same one too. "Why would I commit a file
 a tool generates?" Because the alternative is a build step that depends on a running service,
@@ -57,10 +57,10 @@ and because the diff is the review surface: when `src/gql/` changes by nine hund
 somebody should look at why.
 
 The analogy breaks on direction of authorship, and the break matters day to day. `acf-json/`
-files are written by ACF but read and sometimes hand-edited by you — they are a source of
+files are written by SCF but read and sometimes hand-edited by you — they are a source of
 truth. `src/gql/` is the opposite: it is a **derived artifact**, it is never edited by hand, and
 your editor should treat it as read-only. Edit it and the next `npm run codegen` silently
-reverts you. The second break: ACF Local JSON is the model itself, whereas codegen output is a
+reverts you. The second break: SCF Local JSON is the model itself, whereas codegen output is a
 *projection* of a model that lives in WordPress. If someone activates a plugin that changes the
 schema and nobody runs `npm run schema:pull`, your types are confidently, silently stale — the
 Lesson 09.3 failure mode returning through a different door. `npm run codegen:check` in CI is
@@ -99,7 +99,7 @@ running it with the container stopped works fine.
 It also does not validate your data. It validates your **documents against the schema**, which
 is a different and cheaper guarantee: it proves the field exists and has the type you are
 reading it as. Whether the editor filled it in is a nullability question, and the answer is
-usually "no", which is why generated ACF types are nullable everywhere.
+usually "no", which is why generated SCF types are nullable everywhere.
 
 ### 2. The `client-preset`, and the files it emits
 
@@ -163,7 +163,7 @@ gate that closes it and Key Concept 7 is the deliberate human action that refres
 
 ### 4. `src/gql/` is committed, and that is not a mistake
 
-The Quick Overview set up the parallel: ACF Local JSON is a generated artifact you commit, and
+The Quick Overview set up the parallel: SCF Local JSON is a generated artifact you commit, and
 you already believe in it. Same argument, same shape.
 
 | Reason | Detail |
@@ -253,7 +253,7 @@ WordPress owns the schema, so the snapshot lives at `wordpress-headless/schema.g
 `schema.graphql` under `next-app/` and there never will be — Verification check 7 asserts it.
 
 Then you read the diff. `git diff wordpress-headless/schema.graphql` is where you find out that
-someone activated a plugin, that a field you use was deprecated, or that an ACF group changed
+someone activated a plugin, that a field you use was deprecated, or that an SCF group changed
 shape. That is a review, not a surprise.
 
 ### 8. Documents in `.graphql` files versus `graphql()` in TypeScript
@@ -331,7 +331,7 @@ new `SEVERITY_ORDER` survive for exactly that reason, and Module 12 unit-tests t
 because a hand-asserted invariant is precisely the kind of thing a test should hold down.
 
 > **This is also the argument for registering real GraphQL enums in PHP.** Lesson 06.1 made
-> `environment` an enum rather than letting the ACF select value through as a bare string, and
+> `environment` an enum rather than letting the SCF select value through as a bare string, and
 > the payoff arrives here: one of those two modelling choices produces a TypeScript union for
 > free and the other leaves you maintaining a union by hand. When you design a schema, you are
 > choosing how much your front end will have to assert.
@@ -791,5 +791,5 @@ about CI is void.
   `wp graphql generate-static-schema` and the `--output` flag `schema:pull` depends on
 - [`git diff --exit-code`](https://git-scm.com/docs/git-diff) — the exit-status behaviour the
   `codegen:check` script is built on
-- [ACF Local JSON](https://www.advancedcustomfields.com/resources/local-json/) — the
+- [SCF Local JSON](https://www.advancedcustomfields.com/resources/local-json/) — the
   generated-artifact-in-git workflow this lesson borrowed its argument from
