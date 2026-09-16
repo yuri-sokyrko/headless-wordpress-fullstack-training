@@ -782,7 +782,7 @@ type HobtTestimonial = {
   readonly quote: string | null;
   readonly author: string | null;
   readonly role: string | null;
-  // The ACF image field is a CONNECTION, so the node is one level down. HobtHero
+  // The SCF image field is a CONNECTION, so the node is one level down. HobtHero
   // receives an already-unwrapped node because page.tsx can write
   // `promo.heroImage?.node`; an avatar is nested inside a repeater ROW, so there
   // is nowhere for the page to unwrap it and this component does it instead.
@@ -871,7 +871,7 @@ move to an S3/R2 media subdomain a one-array change.
 
 | Route | Image | `sizes` | `priority` |
 |---|---|---|---|
-| `/[locale]/hobt` | ACF `heroImage` | `(min-width: 1024px) 1024px, 100vw` | **yes** — the LCP element |
+| `/[locale]/hobt` | SCF `heroImage` | `(min-width: 1024px) 1024px, 100vw` | **yes** — the LCP element |
 | `/[locale]/hobt` | testimonial `avatar` × N | `40px` | no |
 | `/[locale]/blog/[slug]`, `/[locale]/[...slug]` | `core/image` blocks | `(min-width: 1024px) 720px, calc(100vw - 2rem)` | **no** — a block cannot know it is the LCP element |
 

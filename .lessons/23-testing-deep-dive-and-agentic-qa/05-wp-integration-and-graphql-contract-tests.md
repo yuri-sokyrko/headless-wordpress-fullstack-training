@@ -2,7 +2,7 @@
 title: 'WP Integration & GraphQL Contract Tests'
 module: 23
 lesson: 5
-teaches: [wp-phpunit, integration-testing, acf-key-contract, block-json-registration, graphql-execution-tests, schema-drift, graphql-eslint]
+teaches: [wp-phpunit, integration-testing, scf-key-contract, block-json-registration, graphql-execution-tests, schema-drift, graphql-eslint]
 produces: ['wordpress-headless/wp-content/plugins/blame-the-tech-core/tests/bootstrap.php', 'wordpress-headless/wp-content/plugins/blame-the-tech-core/tests/wp-tests-config.php', 'wordpress-headless/wp-content/plugins/blame-the-tech-core/tests/Integration/PostTypesTest.php', 'wordpress-headless/wp-content/plugins/blame-the-tech-core/tests/Integration/AcfKeysTest.php', 'wordpress-headless/wp-content/plugins/blame-the-tech-core/tests/Integration/GraphQLSchemaTest.php', 'wordpress-headless/schema.graphql', 'next-app/eslint.config.mjs']
 requires: [23.4, 06.4, 13.2]
 ---
@@ -20,7 +20,7 @@ real MySQL, with `WP_UnitTestCase` factories and a transaction per test. This is
 catches "the plugin activated but the schema is wrong", which is the single most expensive class
 of bug in a headless WordPress build, because it surfaces in TypeScript at runtime.
 
-Two contracts get pinned here and both are worth naming explicitly. **ACF field-group keys are a
+Two contracts get pinned here and both are worth naming explicitly. **SCF field-group keys are a
 public contract.** `field_incident_occurred_at` is not an implementation detail — it is the join
 between the JSON in `includes/acf-json/`, the GraphQL field name, and the codegen'd TypeScript
 type. Rename it and the front end gets `null` with no error anywhere, so a test asserts the keys
@@ -43,7 +43,7 @@ By the end of this lesson you will have:
   GraphQL names and `supports`
 - Capability tests per role from appendix 03 §6, including the negative: `incident_reporter`
   cannot `publish_incidents`
-- An ACF field-group key test that fails on a rename, and a `register_block_type` test that fails
+- An SCF field-group key test that fails on a rename, and a `register_block_type` test that fails
   on a missing or malformed `block.json`
 - `tests/Integration/GraphQLSchemaTest.php` — in-process `graphql()` execution for `blameScore`,
   the guarded mutations, and an anonymous caller getting no pending incidents
@@ -72,7 +72,7 @@ The environment choice is where the interesting comparison lives, and it deserve
 > the upstream documentation stays usable without adding a second container stack to this project.
 
 Where the analogy genuinely breaks is the **contract** half of the lesson, and it has no Classic
-counterpart whatsoever. In a Classic theme, a renamed ACF field key produced a blank space on a
+counterpart whatsoever. In a Classic theme, a renamed SCF field key produced a blank space on a
 page — annoying, visible, found in minutes by anyone looking at the site. Here it produces
 `null` in a typed TypeScript field that codegen still says is a `String`, on a page that renders
 perfectly with a missing section, in a language whose type checker was satisfied because the
@@ -87,7 +87,7 @@ application in a different language deployed on a different host.
 ### 1. What is only true when WordPress is really running
 
 Lesson 23.4's suite proved arithmetic. This one proves the things that are not statements about
-your code at all — they are statements about what WordPress, WPGraphQL and ACF *did with* your
+your code at all — they are statements about what WordPress, WPGraphQL and SCF *did with* your
 code.
 
 | Claim | What actually has to have happened |
@@ -97,7 +97,7 @@ code.
 | `incident_reporter` does **not** hold it | the role's capability array was written to `wp_options` → `wp_user_roles` |
 | `register_block_type` found `block.json` | the file exists on disk, at `build/incident-callout/block.json`, and parsed |
 | an anonymous caller sees no `pending` incident | WPGraphQL's Model layer decided, against a real user context |
-| `field_incident_occurred_at` is loaded | ACF is active and read `includes/acf-json/` at `acf/init` |
+| `field_incident_occurred_at` is loaded | SCF is active and read `includes/acf-json/` at `acf/init` |
 
 Every row shares a shape: **your code is one input among several, and the output belongs to
 somebody else.** That is the definition of an integration test, and it is why mocking
@@ -180,7 +180,7 @@ Two configuration details follow, and both go in `wp-tests-config.php`: **`ABSPA
 `vendor/roots/wordpress-no-content/` — the Composer copy, in both environments, for parity — and
 **`WP_CONTENT_DIR`** points at the real `wp-content`, computed as `dirname( __DIR__, 3 )`. Without
 the second, `WP_CONTENT_DIR` defaults inside the Composer copy where there are no plugins at all,
-so WPGraphQL and ACF are invisible and every schema test skips.
+so WPGraphQL and SCF are invisible and every schema test skips.
 
 **Now the constraint, and it is the one that decides the Pest major.** It does not announce itself
 the way you would expect. Composer resolves Pest 3, PHPUnit 11 and `wp-phpunit` **cleanly, with no
@@ -224,7 +224,7 @@ documents a command; it does not guarantee every host can run it** — as true o
 `_php.yml` a three-line job instead of a copied incantation, and it is why that workflow pins
 `php-version: '8.3'`.
 
-### 6. ACF field-group keys are a public contract
+### 6. SCF field-group keys are a public contract
 
 `field_incident_occurred_at` looks like an implementation detail. It is a join, across three
 languages and two deployables:
@@ -233,7 +233,7 @@ languages and two deployables:
    includes/acf-json/group_incident_details.json
         "key": "field_incident_occurred_at",  "name": "occurred_at"
              │
-             ▼  ACF registers the field; WPGraphQL for ACF exposes it
+             ▼  SCF registers the field; WPGraphQL for SCF exposes it
    GraphQL:  incidentDetails { occurredAt }
              │
              ▼  graphql-codegen reads wordpress-headless/schema.graphql
@@ -243,21 +243,27 @@ languages and two deployables:
    src/components/incidents/IncidentCard.tsx renders it
 ```
 
-Rename the **key** in wp-admin and ACF treats it as a *different field*: the old meta rows stay
+Rename the **key** in wp-admin and SCF treats it as a *different field*: the old meta rows stay
 put, the new field reads nothing, and the front end gets `null` on a field whose generated
 TypeScript type still says `String`, on a page that renders perfectly with a section missing.
 **Nothing fails** — no error, no log line, no failing type check, no HTTP status.
 
 Two tests, answering different questions. `json_decode` the file and assert every expected key is
-present: needs **no ACF, no licence, no database**, and catches a rename, a deletion or a merge
+present: needs **no SCF, no licence, no database**, and catches a rename, a deletion or a merge
 that dropped a field. Then `acf_get_fields( 'group_incident_details' )` and assert the same set:
-needs ACF, and catches a group ACF *refused to load* — bad JSON, a location rule that excludes
-everything, a PRO-only field type on ACF free.
+needs SCF, and catches a group SCF *refused to load* — bad JSON, a location rule that excludes
+everything, or a field type this install does not have.
 
-The first is the primary assertion **precisely because it needs nothing**. ACF PRO requires a
-licence key (`ACF_PRO_LICENSE`, appendix 04 §2), so a CI runner may not have ACF at all — and a
-contract test that only runs where ACF is installed gets skipped in the one place it matters. The
-runtime assertion is second, guarded by `function_exists()`, and it **skips loudly**.
+The first is the primary assertion **precisely because it needs nothing** — no plugin, no
+database, just a JSON file on disk. The runtime assertion is second, guarded by
+`function_exists()`, and it **skips loudly**.
+
+> **This guard used to be load-bearing, and is not any more.** When this course used ACF PRO the
+> plugin came from a paid zip behind a licence key, so a CI runner genuinely might not have it and
+> the runtime half of this contract was skipped in the one place it mattered. SCF installs from
+> wordpress.org with `wp plugin install secure-custom-fields`, so CI can now run **both** halves.
+> The guard stays because a test that needs a missing plugin must skip rather than fatal — but it
+> should no longer be firing, and a skip here now means your workflow forgot to install SCF.
 
 > **A skipped test is not a passing test.** PHPUnit reports skips separately and CI is happy to be
 > green with forty of them. Read the skip count on every run; Lesson 24.4 owns closing it.
@@ -583,7 +589,7 @@ define( 'ABSPATH', dirname( __DIR__ ) . '/vendor/roots/wordpress-no-content/' );
 
 // THE LINE PEOPLE MISS. `roots/wordpress-no-content` has no wp-content, so without
 // this WP_CONTENT_DIR defaults inside the Composer copy — where there are no
-// plugins, so WPGraphQL and ACF are invisible and every schema test skips.
+// plugins, so WPGraphQL and SCF are invisible and every schema test skips.
 // Three levels up from tests/ is wp-content, in the container and on a CI runner.
 define( 'WP_CONTENT_DIR', dirname( __DIR__, 3 ) );
 
@@ -636,10 +642,12 @@ tests_add_filter(
 		$plugins = dirname( $btt_plugin_dir );
 
 		// Third-party first — WPGraphQL registers the types our plugin extends, and
-		// ACF has to exist before includes/acf.php filters its settings. Each one is
-		// GUARDED: a CI runner may not have ACF PRO at all (it needs a licence key),
-		// and a test that needs a missing plugin must SKIP loudly rather than fatal.
-		foreach ( array( 'wp-graphql/wp-graphql.php', 'advanced-custom-fields-pro/acf.php', 'wp-graphql-acf/wp-graphql-acf.php' ) as $optional ) {
+		// SCF has to exist before includes/acf.php filters its settings. Each one is
+		// still GUARDED so a missing plugin SKIPS loudly rather than fatals, but none
+		// of these should be missing any more: all three install from wordpress.org,
+		// with no licence key. Note the entry point is secure-custom-fields.php —
+		// acf.php in that directory is a back-compat shim for pre-6.4 installs.
+		foreach ( array( 'wp-graphql/wp-graphql.php', 'secure-custom-fields/secure-custom-fields.php', 'wp-graphql-acf/wp-graphql-acf.php' ) as $optional ) {
 			if ( file_exists( $plugins . '/' . $optional ) ) {
 				require_once $plugins . '/' . $optional;
 			}
@@ -722,7 +730,7 @@ it( 'registers `incident` with the GraphQL names appendix 03 §1 promises', func
 
 	// `graphql_single_name` is the join between PHP and every generated TypeScript
 	// type. Rename it and codegen produces a different type name, every query
-	// stops compiling, and the failure is at least LOUD — unlike the ACF case.
+	// stops compiling, and the failure is at least LOUD — unlike the SCF case.
 	expect( $type )->not->toBeNull();
 	expect( $type->show_in_graphql )->toBeTrue();
 	expect( $type->graphql_single_name )->toBe( 'Incident' );
@@ -733,7 +741,7 @@ it( 'registers `incident` with the GraphQL names appendix 03 §1 promises', func
 
 it( 'supports exactly the five features the seeder and the mutation rely on', function (): void {
 	// `custom-fields` is the one to watch: without it `register_post_meta` still
-	// works but the REST and block-editor meta surfaces disappear, and ACF's
+	// works but the REST and block-editor meta surfaces disappear, and SCF's
 	// field-group location rules behave oddly. `author` is what makes
 	// `post_author` meaningful for a reporter's own-incidents query.
 	foreach ( array( 'title', 'editor', 'revisions', 'author', 'custom-fields' ) as $feature ) {
@@ -844,7 +852,7 @@ it( 'NEGATIVE: still sees zero incidents, because the previous test rolled back'
 <?php
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/tests/Integration/AcfKeysTest.php
 /**
- * ACF field-group keys and block.json, asserted as CONTRACTS.
+ * SCF field-group keys and block.json, asserted as CONTRACTS.
  *
  * @package Blame\Core\Tests
  */
@@ -865,10 +873,9 @@ const BTT_INCIDENT_FIELD_KEYS = array(
 );
 
 it( 'keeps every incident field key, read straight off the JSON', function (): void {
-	// The PRIMARY assertion, and it deliberately needs NOTHING — no ACF, no
-	// licence key, no database. A contract test that only runs where ACF PRO is
-	// installed is a contract test that gets skipped in CI, which is the one place
-	// it matters. Key Concept 6.
+	// The PRIMARY assertion, and it deliberately needs NOTHING — no SCF, no
+	// database, no network. It reads the committed JSON and nothing else, so it
+	// cannot be skipped for environmental reasons. Key Concept 6.
 	$file = dirname( __DIR__, 2 ) . '/includes/acf-json/group_incident_details.json';
 
 	expect( $file )->toBeReadableFile();
@@ -881,7 +888,7 @@ it( 'keeps every incident field key, read straight off the JSON', function (): v
 
 	$keys = array_column( $group['fields'], 'key' );
 
-	// Rename ANY of these in wp-admin and ACF treats it as a different field: the
+	// Rename ANY of these in wp-admin and SCF treats it as a different field: the
 	// old meta rows stay put, the new field reads nothing, and TypeScript gets
 	// `null` on a field codegen still types as `String`. No error, anywhere.
 	foreach ( BTT_INCIDENT_FIELD_KEYS as $key ) {
@@ -896,19 +903,20 @@ it( 'keeps every incident field key, read straight off the JSON', function (): v
 	expect( $by_key['field_incident_is_verified'] )->toBe( 'is_verified' );
 } );
 
-it( 'agrees with what ACF actually loaded, when ACF is present', function (): void {
+it( 'agrees with what SCF actually loaded, when SCF is present', function (): void {
 	if ( ! function_exists( 'acf_get_fields' ) ) {
-		// SKIPPED, loudly. ACF PRO needs a licence key (appendix 04 §2), so a CI
-		// runner may legitimately not have it. Read the skip count on every run:
-		// a skipped test is not a passing test, and Lesson 24.4 owns closing this.
-		$this->markTestSkipped( 'ACF is not active; the JSON contract test above still ran.' );
+		// SKIPPED, loudly — and on a correctly configured runner this should never
+		// happen, because SCF is a free wordpress.org install. Read the skip count
+		// on every run: a skipped test is not a passing test, and a skip HERE now
+		// means CI did not install SCF, not that it could not.
+		$this->markTestSkipped( 'SCF is not active; the JSON contract test above still ran.' );
 	}
 
 	$loaded = array_column( (array) acf_get_fields( 'group_incident_details' ), 'key' );
 
-	// This one catches what the JSON test cannot: a group ACF REFUSED to load —
-	// malformed JSON, a location rule that matches nothing, a PRO-only field type
-	// on ACF free. The JSON can be perfect and the group still absent.
+	// This one catches what the JSON test cannot: a group SCF REFUSED to load —
+	// malformed JSON, a location rule that matches nothing, a field type this
+	// install does not have. The JSON can be perfect and the group still absent.
 	foreach ( BTT_INCIDENT_FIELD_KEYS as $key ) {
 		expect( $loaded )->toContain( $key );
 	}
@@ -962,7 +970,7 @@ it( 'confirms the blocks are REGISTERED, when build/ exists', function (): void 
 
 **Verify §6:**
 
-- [ ] Four tests. Read the **skip count**: three of four skipping means the environment has no ACF
+- [ ] Four tests. Read the **skip count**: three of four skipping means the environment has no SCF
       and no block build, and only the JSON contract test ran. Usable, and not green.
 - [ ] **NEGATIVE, on a probe copy.** Rename a key and watch the primary test fail:
       `sed -i.bak 's/field_incident_occurred_at/field_incident_happened_at/' includes/acf-json/group_incident_details.json`,
@@ -1248,7 +1256,7 @@ docker compose run --rm \
 # Expected: several seconds of "Installing…" — WordPress installing itself into
 #           wp_test — then 17 tests. READ THE SKIP COUNT: every skip is a plugin
 #           this environment does not have, and a skipped test is not a passing one.
-#           Without WPGraphQL, ACF and a blocks build that is SEVEN of the
+#           Without WPGraphQL, SCF and a blocks build that is SEVEN of the
 #           seventeen, and seven skips look exactly like a green run.
 
 # 4. The transaction isolation is real, not assumed. BOTH HALVES, deliberately.
@@ -1306,16 +1314,16 @@ docker compose exec -T -w /var/www/html/wp-content/plugins/blame-the-tech-core w
 #           If it prints a path under vendor/roots/, every plugin-dependent test
 #           will skip — and forty skips look exactly like a green run.
 
-# 10. The ACF key contract holds, and it holds WITHOUT ACF
+# 10. The SCF key contract holds, and it holds WITHOUT SCF
 docker compose run --rm composer exec -- php -r '
 $g = json_decode(file_get_contents("includes/acf-json/group_incident_details.json"), true);
 $k = array_column($g["fields"], "key");
 echo in_array("field_incident_occurred_at", $k, true) ? "key present" : "KEY MISSING", PHP_EOL;'
 # Expected: key present. Run from the `composer` service on purpose: this assertion
-#           needs no ACF, no licence key and no database, which is exactly why it is
+#           needs no SCF, no licence key and no database, which is exactly why it is
 #           the PRIMARY test rather than the runtime one.
 
-# 11. NEGATIVE — a renamed ACF key fails, on a probe copy
+# 11. NEGATIVE — a renamed SCF key fails, on a probe copy
 sed -i.bak 's/field_incident_occurred_at/field_incident_happened_at/' \
   $PLUGIN/includes/acf-json/group_incident_details.json
 docker compose exec -T -e WP_TESTS_DB_PASSWORD="$WP_TESTS_DB_PASSWORD" \
@@ -1404,7 +1412,7 @@ tail -3 eslint.config.mjs
 ```
 
 Check 16 is the one to run even if you skip the rest: it is the single sentence this whole lesson
-exists to make true. Check 11 is the one to run even if you run nothing else — a renamed ACF key is
+exists to make true. Check 11 is the one to run even if you run nothing else — a renamed SCF key is
 the only failure in this stack that produces no error message of any kind, anywhere.
 
 
@@ -1419,7 +1427,7 @@ the only failure in this stack that produces no error message of any kind, anywh
    test. Explain why the role it creates survives every test's rollback, what would happen if the
    call moved into a `beforeEach`, and why `wp_roles()->for_site()` on the next line is not
    optional.
-3. The ACF key test reads the JSON file directly and a second test asks ACF what it loaded. Both
+3. The SCF key test reads the JSON file directly and a second test asks SCF what it loaded. Both
    assert the same nine keys. Describe a real failure that the first catches and the second does
    not, and one the second catches and the first does not — then say which you would keep if you
    could only keep one, and why that answer depends on your CI environment rather than on your code.
@@ -1457,7 +1465,7 @@ the only failure in this stack that produces no error message of any kind, anywh
 - [`@graphql-eslint/eslint-plugin`](https://the-guild.dev/graphql/eslint/docs) — flat-config setup,
   the `graphQLConfig` key and the rule presets, including which rules ship at `warn` and therefore
   fail a `--max-warnings=0` build
-- [ACF — Local JSON](https://www.advancedcustomfields.com/resources/local-json/) — how
+- [SCF — Local JSON](https://www.advancedcustomfields.com/resources/local-json/) — how
   `acf-json/` loading works, and the paragraph on field keys that explains why a rename is a
   different field rather than a renamed one
 

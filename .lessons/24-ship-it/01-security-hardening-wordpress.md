@@ -337,7 +337,7 @@ on the named database, which is more than WordPress needs.
 WordPress needs exactly this, on one schema — `SELECT`, `INSERT`, `UPDATE`, `DELETE` for every
 request; `CREATE`, `ALTER`, `INDEX` and `DROP` for `dbDelta()` on activation (the leads table,
 16.3) and for `wp core update-db`. `CREATE TEMPORARY TABLES` is the one row you may drop and
-test, because ACF, WPGraphQL and Polylang do not use it.
+test, because SCF, WPGraphQL and Polylang do not use it.
 
 Here is what the three you must never grant would buy someone who found a SQL injection:
 
@@ -373,7 +373,7 @@ rebuilding" is a deployment mechanism and not a schedule. Write it down:
 | WordPress core security release | the on-call engineer | within 48 hours | bump the base image tag, PR, CI, deploy |
 | Plugin security advisory (any severity) | the on-call engineer | within 48 hours | bump in `composer.json` or the Dockerfile, PR, CI, deploy |
 | Core / plugin minor release | whoever is on maintenance | the next fortnightly window | one PR, `wp core update-db` runs in the release command |
-| Major version of ACF, WPGraphQL or Polylang | a named owner, scheduled | a deliberate piece of work | schema regenerated, `codegen:check` is the gate |
+| Major version of SCF, WPGraphQL or Polylang | a named owner, scheduled | a deliberate piece of work | schema regenerated, `codegen:check` is the gate |
 
 Automatic background updates are **off**, which is a real trade and not obviously the right one.
 On a Classic site they are a genuine win because the alternative is nothing. Here the alternative
@@ -689,7 +689,7 @@ SQL'
       — `dbDelta()` on the leads table is what exercises `CREATE`, `ALTER` and `DROP`. The
       eight are a floor, not a suggestion.
 
-> **`CREATE TEMPORARY TABLES` is the row worth experimenting with**, and it is absent above. ACF,
+> **`CREATE TEMPORARY TABLES` is the row worth experimenting with**, and it is absent above. SCF,
 > WPGraphQL and Polylang do not need it; some analytics and migration plugins do, and they fail
 > with a MySQL error rather than a WordPress one. If a new plugin says `command denied to user`,
 > check this first — adding the grant back is a one-line, reviewable decision.
@@ -852,7 +852,7 @@ controls are the query allowlist, the capability matrix, the grant list and the 
 | Core security release | on-call | 48 h | base image tag bump → PR → CI → deploy |
 | Plugin security advisory | on-call | 48 h | version bump → PR → CI → deploy |
 | Core / plugin minor | maintenance rota | next fortnightly window | one PR; `wp core update-db` runs in the release command |
-| Major ACF / WPGraphQL / Polylang | named owner | scheduled work | schema regenerated; `codegen:check` is the gate |
+| Major SCF / WPGraphQL / Polylang | named owner | scheduled work | schema regenerated; `codegen:check` is the gate |
 
 Background auto-updates are **off**: the container is immutable and would lose the mutation on
 the next deploy. This is only defensible while the 48-hour commitment above is staffed.

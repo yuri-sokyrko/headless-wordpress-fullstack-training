@@ -31,7 +31,7 @@ to handle.
 
 By the end of this lesson you will have:
 
-- WPGraphQL, WPGraphQL for ACF and the supporting plugins installed, pinned and active
+- WPGraphQL, WPGraphQL for SCF and the supporting plugins installed, pinned and active
 - `/graphql` answering a `{ generalSettings { title } }` query with JSON
 - GraphiQL open, with the docs pane used to find `incidents` without looking at any lesson
 - The same read expressed three ways — `WP_Query`, REST, GraphQL — with round-trip counts and
@@ -122,14 +122,14 @@ slug and downtime, newest first.** Five fields per row.
 | Round trips | 0 | 3–4, or 1 with `_embed` | **1** |
 | Fields returned per post | whatever you `echo` | ~25 top-level, most of them `rendered` HTML | **exactly 5** |
 | Terms | one extra query, cached | separate request, or `_embed` | in the same response |
-| ACF `downtime_minutes` | `get_post_meta()`, free | **absent** unless the field group opts into REST | in the same response |
+| SCF `downtime_minutes` | `get_post_meta()`, free | **absent** unless the field group opts into REST | in the same response |
 | Adding a sixth field | edit the template | often free — it was already in the payload | edit the query, and the diff shows it |
 
 Two distinct failures hide in that table. **Over-fetching** is REST handing you
 `content.rendered`, `excerpt.rendered`, `guid`, `_links` and twenty more keys when you wanted
 five values; you pay for it in bytes, in JSON parse time, and in a cache entry that is mostly
 waste. **Under-fetching** is the opposite and worse: the payload does not contain the severity
-term or the ACF field, so you make another request, and the page cannot render until the slowest
+term or the SCF field, so you make another request, and the page cannot render until the slowest
 of them returns. `_embed` trades under-fetching for more over-fetching — it inlines the terms
 *and* the author *and* the featured media, in full.
 
@@ -152,7 +152,7 @@ type Incident implements Node & ContentNode & NodeWithTitle & UniformResourceIde
   date: String
   severities(first: Int, after: String): IncidentToSeverityConnection
   scapegoats(first: Int, after: String): IncidentToScapegoatConnection
-  incidentDetails: IncidentDetails          # from ACF, Lesson 04.2
+  incidentDetails: IncidentDetails          # from SCF, Lesson 04.2
 }
 ```
 
@@ -304,9 +304,9 @@ docker compose run --rm wpcli wp post list --post_type=incident --format=count
 - [ ] The incident count is `40`. If it is `0`, run `docker compose run --rm wpcli wp blame seed --fresh`
       before continuing — pagination and facets are unteachable on an empty site.
 
-### Step 2: Confirm WPGraphQL and WPGraphQL for ACF are installed
+### Step 2: Confirm WPGraphQL and WPGraphQL for SCF are installed
 
-Lesson 04.2 installed both, because the ACF field groups could not be inspected without them.
+Lesson 04.2 installed both, because the SCF field groups could not be inspected without them.
 Both commands below are idempotent, so run them either way — "already installed" is the expected
 answer, not a problem. Remember the house rule from
 [appendix 07 §2](../appendix/07-command-reference.md#2-wp-cli) — every `wp` command in this course
@@ -366,7 +366,7 @@ Do these five things in order. The point is the fourth one.
    Read the argument list on `incidents` — you are looking at the `WP_Query` mapping table from
    Key Concept 5, generated from your own registrations.
 3. In the editor, type `{ incidents(first: 3) { nodes { ` and press `Ctrl+Space`. Every field on
-   `Incident` is offered, including `incidentDetails` from ACF.
+   `Incident` is offered, including `incidentDetails` from SCF.
 4. **Find `downtimeMinutes` without looking at this lesson or the appendix.** Docs pane →
    `Incident` → `incidentDetails` → `IncidentDetails` → the field list. That path is the skill;
    the query is not.
@@ -419,7 +419,7 @@ curl -s 'http://localhost:8080/wp-json/wp/v2/incident?per_page=10&_embed=1' | wc
 curl -s 'http://localhost:8080/wp-json/wp/v2/incident?per_page=1' | jq -r '.[0] | keys[]'
 ```
 
-Note two things in that key list. It is long, and `downtime_minutes` is **not in it** — ACF fields
+Note two things in that key list. It is long, and `downtime_minutes` is **not in it** — SCF fields
 are absent from REST unless the field group opts in separately, so the honest REST version of this
 question needs a `register_rest_field()` you have not written.
 
@@ -523,7 +523,7 @@ curl -s -X POST http://localhost:8080/graphql \
   -d '{"query":"{ incidents(first: 100) { nodes { slug } } }"}' | jq '.data.incidents.nodes | length'
 # Expected: 40
 
-# 5. ACF fields are in the schema and resolve
+# 5. SCF fields are in the schema and resolve
 curl -s -X POST http://localhost:8080/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ incidents(first: 1) { nodes { incidentDetails { downtimeMinutes environment } } } }"}' | jq -c '.data.incidents.nodes[0]'
@@ -553,7 +553,7 @@ curl -s -X POST http://localhost:8080/graphql \
 curl -s 'http://localhost:8080/wp-json/wp/v2/incident?per_page=1' | jq -r '.[0] | keys | length'
 # Expected: 20 or more
 
-# 10. ...and the ACF value is not among them
+# 10. ...and the SCF value is not among them
 curl -s 'http://localhost:8080/wp-json/wp/v2/incident?per_page=1' | jq -r '.[0] | keys[]' | grep -c downtime
 # Expected: 0   (REST would need a register_rest_field; GraphQL needed nothing)
 

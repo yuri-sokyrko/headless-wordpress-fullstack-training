@@ -49,7 +49,7 @@ By the end of this lesson you will have:
 Every WordPress form you have written is the same three concerns in the same order. `sanitize_text_field()`,
 `sanitize_email()` and `absint()` coerce input to a shape. Then a block of `if ( empty( $x ) )`
 checks builds an error bag. Then, if the bag is empty, you write. `WP_Error` carries the codes and
-messages back to the template, and `add_settings_error()` prints them. Gravity Forms and ACF do
+messages back to the template, and `add_settings_error()` prints them. Gravity Forms and SCF do
 this with more UI, but the shape is identical.
 
 | Classic WordPress | This stack |
@@ -57,7 +57,7 @@ this with more UI, but the shape is identical.
 | `sanitize_email()`, `absint()`, `sanitize_text_field()` | a Zod schema's coercion and refinement |
 | a hand-rolled error bag / `WP_Error` with codes | `safeParse().error.flatten().fieldErrors` |
 | `add_settings_error()` output | `useActionState` state rendered under each field |
-| ACF field validation rules in the group JSON | `schemas.ts`, in git, next to the code that uses it |
+| SCF field validation rules in the group JSON | `schemas.ts`, in git, next to the code that uses it |
 | `wp_verify_nonce()` on the POST | Next's Origin/Host check on Server Actions (Lesson 15.5) |
 | `<input name="…">` and `$_POST['…']` | `FormData` — Server Actions receive exactly the same thing |
 

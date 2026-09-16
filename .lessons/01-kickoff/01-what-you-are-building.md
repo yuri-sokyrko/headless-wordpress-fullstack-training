@@ -39,7 +39,7 @@ By the end of this lesson you will have:
 ## Classic WP Analogy
 
 Think about how you would scope this in Classic WordPress. You would reach for a plugin
-registering `incident` and `tech_review`, three taxonomies, an ACF field group per type, a
+registering `incident` and `tech_review`, three taxonomies, an SCF field group per type, a
 custom role for public submitters, and a child theme with `archive-incident.php`,
 `single-incident.php`, `taxonomy-scapegoat.php` and a `page-hobt.php` template. You would wire
 the submission form with `admin_post_` and a nonce, and invalidate caches by clearing the
@@ -73,10 +73,10 @@ the last column as the real specification — the satire is scaffolding.
 | Section | Route | Backed by | Authored by | The technique it forces |
 |---|---|---|---|---|
 | Incidents index | `/[locale]/incidents` | `incident` post type + 3 taxonomies | public users, moderated | Faceted lists, cursor pagination, a client filter island |
-| Incident detail | `/[locale]/incidents/[slug]` | `incident` + `Incident Details` ACF group | — | Blocks as data, ISR, tag-based revalidation |
-| Scapegoats | `/[locale]/scapegoats` | `scapegoat` taxonomy + `Scapegoat Profile` | editors | Taxonomy modelling, term counts, ACF **term** field groups |
+| Incident detail | `/[locale]/incidents/[slug]` | `incident` + `Incident Details` SCF group | — | Blocks as data, ISR, tag-based revalidation |
+| Scapegoats | `/[locale]/scapegoats` | `scapegoat` taxonomy + `Scapegoat Profile` | editors | Taxonomy modelling, term counts, SCF **term** field groups |
 | Blog | `/[locale]/blog` | core `post`, rewrite base `blog` | editors | Custom Gutenberg blocks, core block mapping |
-| Tech reviews | `/[locale]/reviews` | `tech_review` + `Tech Review Fields` | editors only | ACF repeaters, ratings, JSON-LD `Review` |
+| Tech reviews | `/[locale]/reviews` | `tech_review` + `Tech Review Fields` | editors only | SCF repeaters, ratings, JSON-LD `Review` |
 | HOBT promo | `/[locale]/hobt` | core `page` + `HOBT Promo` + blocks | editors, block-composed | Lead capture into a non-post table, SSG |
 | Auth | `/[locale]/login`, `/register`, `/account` | `wp_users` + a custom role | — | JWT in httpOnly cookies, proxy guards |
 
@@ -173,7 +173,7 @@ none of which exist for a meta key.
 
 **The cost, stated plainly:** a term has no revisions and no rich editorial body. If a scapegoat
 ever needed long-form content with revision history, this decision would have to be revisited.
-The `Scapegoat Profile` ACF **term** field group —
+The `Scapegoat Profile` SCF **term** field group —
 [appendix 03 §4.2](../appendix/03-content-model-reference.md#42-scapegoat-profile) — covers
 everything this application actually needs (`avatar`, `tagline`, `defensiveness`,
 `official_excuse`), and that is the honest boundary of the decision. Model the relationship you
@@ -204,7 +204,7 @@ core blocks are the half that is actually most of the work.
 ### 5. Tech reviews: the repeater that teaches you about generated types
 
 `tech_review` is editors-only, which makes it the simplest content type in the app and lets it
-carry a different lesson: **ACF repeaters do not become arrays of strings.**
+carry a different lesson: **SCF repeaters do not become arrays of strings.**
 
 A `pros` repeater with a single `item` text sub-field looks like a `string[]` in the wp-admin UI.
 It is not:
@@ -223,7 +223,7 @@ Module 19 something real to emit as JSON-LD `Review` structured data.
 ### 6. The HOBT funnel: two buttons, two entirely different mechanisms
 
 **HOBT** — *How To Omit Blaming Tech* — is the fictional course the site upsells. Its landing
-page at `/[locale]/hobt` is a core `page` with the `HOBT Promo` ACF group and a body composed
+page at `/[locale]/hobt` is a core `page` with the `HOBT Promo` SCF group and a body composed
 **entirely from blocks**. Marketing reorders the page in wp-admin and it changes on the live site
 without a deploy. That is the whole argument for blocks-as-data, and it is why Module 14 is one
 of the two conceptual jumps in the course.
@@ -281,7 +281,7 @@ The incidents index. The facet rail is the one client island; the cards are serv
 ```
 
 The incident detail page. The body is `editorBlocks` mapped to React components; the sidebar is
-ACF fields read straight off the query:
+SCF fields read straight off the query:
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -344,7 +344,7 @@ The HOBT landing page. Note how little of it is code you will change after Modul
 ├────────────────────────────────────────────────────────────────────┤
 │                                                                    │
 │   HOBT — How To Omit Blaming Tech                  hobtPromo       │
-│   Stop blaming DNS. Start shipping.               (ACF, page)      │
+│   Stop blaming DNS. Start shipping.               (SCF, page)      │
 │                                                                    │
 │   [ Get Demo ]   [ Start Now ]        only 12 seats left           │
 │    'use client'    plain <a>            seatsLeft -> short         │
@@ -376,7 +376,7 @@ same instinct as "dequeue the scripts you don't need", with much better tools.
 |---|---|---|---|
 | `incident`, `tech_review`, three taxonomies | post types + taxonomies | Module 03 | There is nothing to query until the types exist |
 | Moderation roles and capabilities | `incident_reporter`, `map_meta_cap` | Module 03 | Capabilities are what the Module 16 mutation checks |
-| `Incident Details`, `HOBT Promo`, repeaters | ACF Local JSON | Module 04 | Field groups are the schema WPGraphQL exposes |
+| `Incident Details`, `HOBT Promo`, repeaters | SCF Local JSON | Module 04 | Field groups are the schema WPGraphQL exposes |
 | 40 incidents, 8 reviews, 10 posts | `wp blame seed` | Module 04 | Every later list view needs deterministic data |
 | Every read the front end needs | WPGraphQL queries | Module 05 | You cannot fetch a query you have not written |
 | `blameScore`, guarded mutations, `wordpress-headless/schema.graphql` | schema extensions | Module 06 | Codegen in Module 10 reads that committed schema |
@@ -436,7 +436,7 @@ Then close it.
 Open [appendix 03](../appendix/03-content-model-reference.md) and read **only**
 [§1 Post types](../appendix/03-content-model-reference.md#1-post-types) and
 [§2 Taxonomies](../appendix/03-content-model-reference.md#2-taxonomies). Skip §3 onward; enums,
-ACF groups and capabilities arrive in Modules 03–06 and reading them now costs you the
+SCF groups and capabilities arrive in Modules 03–06 and reading them now costs you the
 attention you will need then.
 
 Two things to notice while you are there, because they contradict instincts you have earned
@@ -465,7 +465,7 @@ Where the two disagree, the appendix wins.
 
 ## Section to content model
 
-| Section | Route | Post type | Taxonomies | ACF field group | Custom table |
+| Section | Route | Post type | Taxonomies | SCF field group | Custom table |
 |---|---|---|---|---|---|
 | Incidents index | `/[locale]/incidents` | `incident` | `scapegoat`, `severity`, `tech_stack` | `Incident Details` | — |
 | Incident detail | `/[locale]/incidents/[slug]` | `incident` | `scapegoat`, `severity`, `tech_stack` | `Incident Details` | — |
@@ -508,7 +508,7 @@ Rules for filling it in:
 - [ ] No cell is blank, and no cell still says `TODO`.
 - [ ] The HOBT row names `HOBT Promo` **and** `wp_btt_leads` — it is the only row that uses the
       last column.
-- [ ] The Scapegoats row names `Scapegoat Profile` as an ACF group on a **taxonomy**, not on a
+- [ ] The Scapegoats row names `Scapegoat Profile` as an SCF group on a **taxonomy**, not on a
       post type.
 - [ ] You wrote at least two genuine open questions, each naming a module number.
 
@@ -624,7 +624,7 @@ Modules 03 through 06 will be harder than they need to be. Both take two minutes
   surprising one
 - [WPGraphQL: custom post types](https://www.wpgraphql.com/docs/custom-post-types/) — the four
   extra registration arguments that turn a post type into a schema type
-- [ACF Repeater field](https://www.advancedcustomfields.com/resources/repeater/) — worth
+- [SCF Repeater field](https://www.advancedcustomfields.com/resources/repeater/) — worth
   reading now so the generated object list types in Key Concept 5 are not a shock in Module 04
 - [The `wpdb` class](https://developer.wordpress.org/reference/classes/wpdb/) — the API behind
   the `wp_btt_leads` table; read the `prepare()` section specifically

@@ -29,7 +29,7 @@ new machine takes traffic, and aborts the deploy on a non-zero exit**:
 wp core update-db && wp plugin activate --all && wp rewrite flush --hard && wp blame ensure-languages
 ```
 
-Four commands, each idempotent, each necessary. And **the reason this step is boring is that ACF
+Four commands, each idempotent, each necessary. And **the reason this step is boring is that SCF
 field groups are PHP-registered from `includes/acf-json/`** — the decision made back in Module 04.
 Field groups in the database would mean an export/import step in every single release, plus a
 whole class of "works on staging" failures. Say it plainly, because it is the highest-leverage
@@ -136,7 +136,7 @@ Each `FROM` starts a new filesystem; only what you explicitly `COPY --from` surv
   │  blocks/src/         │  → /blocks/build        (six blocks; build/ is GITIGNORED)
   └───────┬──────────────┘
   ┌── plugins ───────────┐  curl · pinned third-party zips
-  │  version pins        │  → /plugins/*           (WPGraphQL, ACF, Polylang, Yoast …)
+  │  version pins        │  → /plugins/*           (WPGraphQL, SCF, Polylang, Yoast …)
   └───────┬──────────────┘
           ▼
   ┌── runtime ───────────────────────────────────────────────────┐
@@ -282,7 +282,7 @@ callback is written as `static fn(): bool => true` **with a comment saying it is
 WordPress emits that notice specifically so that "public" has to be typed on purpose rather than
 achieved by forgetting a line.
 
-And public means **fingerprinting data leaks.** "WPGraphQL 2.1.0, ACF 6.3.6, Polylang 3.6.6" tells
+And public means **fingerprinting data leaks.** "WPGraphQL 2.1.0, SCF 6.3.6, Polylang 3.6.6" tells
 an attacker exactly which CVE lists to read. So the response is split:
 
 | Caller | Body |
@@ -329,14 +329,14 @@ rewrite rules drift silently — a much worse trade, and the honest one to make.
 
 The most valuable thing in this lesson is a step that does not exist.
 
-ACF field groups can live in two places. In the database, as `acf-field-group` posts — which means
+SCF field groups can live in two places. In the database, as `acf-field-group` posts — which means
 every release needs an export from staging and an import into production, in the right order,
 by a person, with a whole class of "it works on staging" failures when it is skipped. Or in
 **Local JSON**, as `.json` files inside the plugin, loaded from disk.
 
-[Lesson 04.1](../04-acf-content-modeling-and-seeding/01-acf-field-groups-as-code.md) chose Local
+[Lesson 04.1](../04-scf-content-modeling-and-seeding/01-scf-field-groups-as-code.md) chose Local
 JSON and recorded it as ADR 0004. The consequence lands exactly here: `includes/acf-json/*.json`
-is copied into the image by the same `COPY` as the rest of the plugin, ACF reads it on the next
+is copied into the image by the same `COPY` as the rest of the plugin, SCF reads it on the next
 request, and there is nothing to migrate. **It is the highest-leverage architectural choice in
 the pipeline, and it pays off in this lesson and nowhere else.** A decision made in Module 04, on
 grounds of reviewability, removes an entire release step in Module 24.
@@ -523,12 +523,12 @@ WORKDIR /plugins
 # `wp plugin install --version=` fetches, which is why the analogy table says
 # plugins are installed at BUILD time.
 ARG WPGRAPHQL_VERSION=2.1.0
-ARG ACF_VERSION=6.3.6
+ARG SCF_VERSION=6.9.5
 ARG POLYLANG_VERSION=3.6.6
 ARG YOAST_VERSION=24.0
 RUN set -eu; \
     for spec in "wp-graphql:${WPGRAPHQL_VERSION}" \
-                "advanced-custom-fields:${ACF_VERSION}" \
+                "secure-custom-fields:${SCF_VERSION}" \
                 "polylang:${POLYLANG_VERSION}" \
                 "wordpress-seo:${YOAST_VERSION}"; do \
       slug="${spec%%:*}"; ver="${spec##*:}"; \
@@ -552,7 +552,7 @@ RUN set -eu; \
       test -n "$url" || { echo "A plugin URL build arg is empty. Fail loudly."; exit 1; }; \
       curl -fsSL -o /tmp/p.zip "$url"; unzip -q /tmp/p.zip -d /plugins; rm /tmp/p.zip; \
     done \
- && test -d /plugins/wp-graphql && test -d /plugins/advanced-custom-fields
+ && test -d /plugins/wp-graphql && test -d /plugins/secure-custom-fields
 
 # WP-CLI, fetched here because this stage has curl. It ships in the runtime
 # image on purpose — Key Concept 8. Root-owned and 0755: executable by the web
@@ -717,7 +717,7 @@ defined( 'ABSPATH' ) || exit;
  */
 const HEALTH_EXPECTED_PLUGINS = array(
 	'wp-graphql'                    => '2.1.0',
-	'advanced-custom-fields'        => '6.3.6',
+	'secure-custom-fields'        => '6.3.6',
 	'polylang'                      => '3.6.6',
 	'wp-graphql-content-blocks'     => '4.5.0',
 	'wp-graphql-jwt-authentication' => '0.7.2',
@@ -875,7 +875,7 @@ function rest_health( WP_REST_Request $request ): WP_REST_Response {
 	);
 
 	/*
-	 * DETAIL IS FINGERPRINTING DATA. "WPGraphQL 2.1.0, ACF 6.3.6" tells an
+	 * DETAIL IS FINGERPRINTING DATA. "WPGraphQL 2.1.0, SCF 6.3.6" tells an
 	 * attacker which CVE list to read, and a MySQL error message names paths
 	 * and table prefixes. So the public body carries one boolean per check and
 	 * nothing else; the detail requires the app token, compared with
@@ -1270,7 +1270,7 @@ Two kinds of change ship through the same pipeline and only one of them reverses
 |---|---|---|
 | PHP, blocks, theme, plugin pins | seconds, exact | redeploy the previous image SHA |
 | `wp core update-db` | **none** | forward-only. No `--downgrade-db` exists |
-| An ACF field group | seconds | it is a JSON file in the image (ADR 0004) |
+| An SCF field group | seconds | it is a JSON file in the image (ADR 0004) |
 | A `dbDelta()` change to `wp_btt_leads` | forward-only | write migrations additively |
 
 **Core upgrades are a manual workflow, and this is the order.** Never as part of a feature deploy.

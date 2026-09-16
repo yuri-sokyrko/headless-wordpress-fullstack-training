@@ -24,7 +24,7 @@ The design decision buried in `scapegoat-picker` is the one worth arguing about:
 the block would make the front end's job trivially easy and would mean that renaming a scapegoat
 term leaves stale names scattered through forty published posts, with no way to find them. Store
 the reference; resolve it at read time. That is the same instinct that made `scapegoat` a
-taxonomy rather than an ACF text field in the first place, and Lesson 14.4 is where it pays off.
+taxonomy rather than an SCF text field in the first place, and Lesson 14.4 is where it pays off.
 
 By the end of this lesson you will have:
 
@@ -349,7 +349,7 @@ tagline and avatar, which is an extra query with its own cache tag. That is a re
 paid once in one component, and it is bounded. The other choice's cost is unbounded and lands on
 the editor who renamed a term innocently.
 
-This is the same argument that made `scapegoat` a taxonomy rather than an ACF text field in
+This is the same argument that made `scapegoat` a taxonomy rather than an SCF text field in
 [appendix 03 §2](../appendix/03-content-model-reference.md#why-these-are-taxonomies-and-not-acf-fields):
 classification belongs in one row that everything points at. A block that copies the label out
 of that row re-introduces exactly the duplication the taxonomy decision removed.

@@ -23,7 +23,7 @@ Key Concept 3 is mostly a tour of the two ways it silently does not.
 
 The interesting half of this lesson is *why* these are taxonomies at all, and it is a
 performance argument you can now measure yourself with the `EXPLAIN` skills from Lesson 02.3.
-"This incident blames DNS" could plausibly be an ACF select stored in `wp_postmeta`. Make it a
+"This incident blames DNS" could plausibly be an SCF select stored in `wp_postmeta`. Make it a
 taxonomy instead and WordPress maintains `wp_term_taxonomy.count` for you, so the blame
 leaderboard becomes one indexed read rather than a `COUNT(*)` grouped over an unindexed EAV
 table; term archives, term URLs and indexed `tax_query` joins come free. The contract states
@@ -94,7 +94,7 @@ You have used this API for years; the shape underneath it is what this lesson is
 
 `wp_term_taxonomy.count` is an ordinary `BIGINT` column that WordPress keeps up to date on every
 save, via `wp_update_term_count()`. Ten scapegoat terms means ten rows and ten counts, so "which
-scapegoat is blamed most" is a `SELECT` over ten rows. Model the same fact as an ACF select and
+scapegoat is blamed most" is a `SELECT` over ten rows. Model the same fact as an SCF select and
 you get one `wp_postmeta` row per incident, and a `GROUP BY` over every one of them:
 
 | | Taxonomy (`wp_term_taxonomy.count`) | Post meta (`GROUP BY meta_value`) |
@@ -228,11 +228,11 @@ should mean.
 > scapegoat is the point. A closed set wants checkboxes and no "Add New", and in the block editor
 > `hierarchical` is the only switch that produces them without shipping JavaScript.
 
-### 4. Taxonomy, CPT with a relationship, or ACF select
+### 4. Taxonomy, CPT with a relationship, or SCF select
 
 The full decision, with the answer this project reaches:
 
-| | Taxonomy + term meta | CPT + relationship field | ACF select |
+| | Taxonomy + term meta | CPT + relationship field | SCF select |
 |---|---|---|---|
 | Maintained count | ✅ free | ❌ `COUNT(*)` over `wp_postmeta` | ❌ same |
 | Indexed filtering | ✅ `tax_query` | ⚠️ `meta_query` on a post ID | ❌ `meta_query` on a string |
@@ -249,7 +249,7 @@ excuse — but if scapegoats ever needed a 2,000-word essay with revisions, this
 have to be revisited. **Model the relationship you have, not the one you might want**, and write
 down what you gave up, because the next person will otherwise assume you did not know.
 
-Note the last column. `environment` and `resolution_status` stay ACF selects even though they
+Note the last column. `environment` and `resolution_status` stay SCF selects even though they
 look exactly like `severity` — nobody will ever browse "all incidents in staging" as a
 destination page, so the URL, the archive and the maintained count are worth nothing. Numeric
 facets like `downtime_minutes` cannot be taxonomies at all, which is the residual trap Module
@@ -665,7 +665,7 @@ docker compose run --rm wpcli wp db query "EXPLAIN SELECT t.name, tt.count
   FROM wp_terms t INNER JOIN wp_term_taxonomy tt ON tt.term_id = t.term_id
   WHERE tt.taxonomy = 'scapegoat' ORDER BY tt.count DESC LIMIT 10;"
 
-# B. The post-meta leaderboard — what an ACF select would have forced
+# B. The post-meta leaderboard — what an SCF select would have forced
 docker compose run --rm wpcli wp db query "EXPLAIN SELECT m.meta_value, COUNT(*) AS n
   FROM wp_postmeta m INNER JOIN wp_posts p ON p.ID = m.post_id
   WHERE m.meta_key = 'scapegoat' AND p.post_type = 'incident' AND p.post_status = 'publish'

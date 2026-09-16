@@ -676,7 +676,7 @@ function create_incident_payload( array $input, AppContext $context, ResolveInfo
 	// The `incident_submission_open` kill switch from appendix 03 §4.5 is
 	// honoured by the Server Action in Module 16. It is deliberately NOT
 	// checked here: it is a content setting, not an authorisation decision,
-	// and a mutation that fails closed when an ACF options page has never
+	// and a mutation that fails closed when an SCF options page has never
 	// been saved takes the submission form down for a reason nobody can see.
 
 	// ── 3. SANITISE ────────────────────────────────────────────────────

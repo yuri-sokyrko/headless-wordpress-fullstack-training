@@ -488,7 +488,7 @@ whole model (Key Concept 8). Insert this object into the `fields` array, immedia
 }
 ```
 
-Then bump the group's `modified` timestamp at the bottom of the file, so ACF notices:
+Then bump the group's `modified` timestamp at the bottom of the file, so SCF notices:
 
 ```json
 	"modified": 1750000000
@@ -505,7 +505,7 @@ Open `http://localhost:8080/wp-admin/admin.php?page=btt-site-settings`, add two 
 ```bash
 # The values land in the single wp_options row the options page owns.
 docker compose run --rm wpcli wp option get options_btt_redirects
-# Expected: 2 — ACF stores the row COUNT under the parent key and each cell under
+# Expected: 2 — SCF stores the row COUNT under the parent key and each cell under
 #           options_btt_redirects_0_from and so on. That shape is why Key Concept 8
 #           caps the list at a few dozen.
 ```
@@ -929,7 +929,7 @@ git commit -m "feat(next): sitemap, robots, trailing-slash rule and wordpress-so
 
 - [ ] `grep -c 'Apex, not' ../docs/architecture.md` is `1`.
 - [ ] The section from Lesson 19.2 is still there. You appended; you did not replace.
-- [ ] `git status --short` is clean, and the ACF JSON change is in the same commit as the code
+- [ ] `git status --short` is clean, and the SCF JSON change is in the same commit as the code
       that consumes it. A field the front end reads and a field group that does not declare it
       are two halves of one change.
 
@@ -1145,5 +1145,5 @@ is the most expensive thing in this lesson and it is entirely silent.
 - [Google Search Central — redirects and Google Search](https://developers.google.com/search/docs/crawling-indexing/301-redirects)
   — which status codes Google treats as permanent, which answers the 301-versus-308 question
   directly
-- [ACF — repeater field](https://www.advancedcustomfields.com/resources/repeater/) — the storage
+- [SCF — repeater field](https://www.advancedcustomfields.com/resources/repeater/) — the storage
   shape behind `options_btt_redirects_0_from`, which is what Key Concept 8's size limit is about

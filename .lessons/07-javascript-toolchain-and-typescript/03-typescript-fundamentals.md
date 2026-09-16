@@ -489,7 +489,7 @@ mkdir -p src/types
 // hand-written type drifts from the schema.
 
 /* ── Registered GraphQL enums (appendix 03 §3) ────────────────────────────
-   SCREAMING_SNAKE on the wire; the underlying ACF select values are kebab-case and
+   SCREAMING_SNAKE on the wire; the underlying SCF select values are kebab-case and
    the PHP resolver maps between them (Lesson 06.1). A client only sees the wire. */
 
 export type IncidentEnvironment =
@@ -548,7 +548,7 @@ export type Incident = {
   readonly blameScore: number | null; // registered in Lesson 06.1, computed server-side
   readonly incidentDetails: IncidentDetails | null;
   // In the schema these are Relay CONNECTIONS, not arrays, and `scapegoats` carries an
-  // ACF term field group. Lesson 07.4 fixes both — flat `Term[]` is a placeholder.
+  // SCF term field group. Lesson 07.4 fixes both — flat `Term[]` is a placeholder.
   readonly severities: readonly SeverityTerm[];
   readonly scapegoats: readonly Term[];
   readonly techStacks: readonly Term[];
@@ -616,7 +616,7 @@ Read each message — last line first — then fix them in place:
 
 Error 2 is the important one and error 3 is the surprising one, and they are the same lesson from
 two directions: the compiler has read your own content model and is describing a state your data
-genuinely reaches — an incident saved without ACF fields, or one nobody ever classified.
+genuinely reaches — an incident saved without SCF fields, or one nobody ever classified.
 
 Then delete the file:
 

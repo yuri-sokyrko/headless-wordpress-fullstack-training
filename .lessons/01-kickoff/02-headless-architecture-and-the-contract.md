@@ -109,8 +109,8 @@ things you already write.
 |---|---|---|
 | `register_post_type()` | + `show_in_graphql`, `graphql_single_name`, `graphql_plural_name` | The post type becomes a schema type with a Relay connection |
 | `register_taxonomy()` | + the same three arguments | `tax_query` becomes a `where` argument the front end can express |
-| An ACF select storing `'production'` | a registered GraphQL **enum**, `IncidentEnvironment` | Codegen emits a union type in TypeScript instead of `string` |
-| An ACF field group saved in the database | ACF **Local JSON** in `includes/acf-json/` | The content model is code, in git, and diffable — no DB migration on deploy |
+| An SCF select storing `'production'` | a registered GraphQL **enum**, `IncidentEnvironment` | Codegen emits a union type in TypeScript instead of `string` |
+| An SCF field group saved in the database | SCF **Local JSON** in `includes/acf-json/` | The content model is code, in git, and diffable — no DB migration on deploy |
 | `add_shortcode()` | a Gutenberg block with typed attributes | The front end reads structured data without executing PHP |
 
 The whole list is specified in [appendix 03](../appendix/03-content-model-reference.md), and the
@@ -383,7 +383,7 @@ an honest verdict on whether it is ever fully paid.
 | **Menus** | `wp_nav_menu()` returned markup; you now get data | Module 05 | Yes, and arguably better. Every walker class and `nav_menu_css_class` filter you ever wrote is gone — and so is the fight to get semantic markup out of it |
 | **Forms** | Contact Form 7 and Gravity Forms render their own front end | Module 16 | No. You own the entire pipeline, spam defence included: honeypot, form-render timing, Turnstile, rate limiting, and server-side re-validation |
 | **Search** | There is no `s=` query-var behaviour handed to you for free | Module 05 (`search:` on connections) | Partly. WPGraphQL exposes a search argument, but relevance ranking, faceting and typo tolerance are yours. A real product reaches for a search service |
-| **The plugin ecosystem** | Anything that renders front-end HTML has nowhere to render it | never | **No — this is a permanent loss.** Sliders, related-post widgets, page builders, cookie banners and most SEO front-end output stop working. What survives is plugins that only touch **data** (ACF, Polylang) or the **editor** (Yoast's metadata UI) |
+| **The plugin ecosystem** | Anything that renders front-end HTML has nowhere to render it | never | **No — this is a permanent loss.** Sliders, related-post widgets, page builders, cookie banners and most SEO front-end output stop working. What survives is plugins that only touch **data** (SCF, Polylang) or the **editor** (Yoast's metadata UI) |
 | **Comments** | Core comments assume a WordPress-rendered page and `comment_form()` | not in this course | No. The data is queryable; the moderation UI, spam handling and rendering would all be yours to build |
 | **Cache invalidation** | There is no `wp_cache_flush()` that reaches a CDN in another company's network | Module 18 | Yes, but it becomes code you own and test: a signed webhook, tag names centralised in one module, and a failure mode where a 401 is silent by design |
 | **Debuggability** | One stack trace becomes two processes, two log streams and a network hop | Modules 02, 24 | Partly. `docker compose logs -f wordpress` plus the Next terminal covers local work; production needs Sentry and structured logging |

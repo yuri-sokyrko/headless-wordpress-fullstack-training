@@ -271,7 +271,7 @@ sources are not**, and finding that out is the work.
 |---|---|---|---|
 | `SessionMenu` | `Header` (Lesson 18.1) | `/api/auth/session`, on mount | **yes** — see below |
 | Turnstile widget | `LeadForm` (Lesson 16.3) | `api.js`, `afterInteractive` | **yes** — 65 px, from an empty `<div>` |
-| `seatsLeft` urgency badge | `HobtHero` (Lesson 11.5) | never — server-rendered from ACF | **no** |
+| `seatsLeft` urgency badge | `HobtHero` (Lesson 11.5) | never — server-rendered from SCF | **no** |
 | `core/embed` iframe | nowhere | never — not in the registry | **no** |
 
 **`SessionMenu` is a shift this course created two modules ago, knowingly.** Lesson 18.1 moved the
@@ -715,7 +715,7 @@ What changed, and what did not:
 
 **Regions audited and deliberately NOT changed:**
 
-- `seatsLeft` badge — server-rendered from ACF; present in the first byte or absent from it.
+- `seatsLeft` badge — server-rendered from SCF; present in the first byte or absent from it.
   No arrival, nothing to reserve.
 - `core/embed` — not in the block registry, and `RichText` strips `<iframe>` in both
   `ALLOWED_TAGS` and `FORBID_TAGS`. Produces no layout, therefore no shift. The rule for the day

@@ -366,7 +366,7 @@ about **rows in a MySQL database**, not about your code.
 | `/en/incidents/incident-01` exists at all | `wp blame seed` having run |
 | the heading is `Deployed on a Friday (#1)` | the seeder's fixed titles |
 | the primary nav has four top-level items | five menu items somebody created **by hand** in Lesson 05.4 |
-| `/en/hobt` shows the ACF headline | an options page and a field group somebody filled in by hand |
+| `/en/hobt` shows the SCF headline | an options page and a field group somebody filled in by hand |
 
 The last three rows are the problem, and they are invisible on your machine because your machine
 is the one where the hand work happened. Write this spec first anyway. Feeling it go red for a
@@ -529,7 +529,7 @@ const ROUTES: readonly Route[] = [
   { path: '/en/reviews', heading: 'Tech Reviews' },
   { path: '/en/reviews/review-01', heading: 'Hyperscale Cloud Co' },
   { path: '/en/scapegoats', heading: 'The Blame Leaderboard' },
-  // The ACF `headline` field on the HOBT page, not a hard-coded string.
+  // The SCF `headline` field on the HOBT page, not a hard-coded string.
   { path: '/en/hobt', heading: 'How To Omit Blaming Tech' },
 ];
 

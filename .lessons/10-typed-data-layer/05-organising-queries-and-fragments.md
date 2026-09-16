@@ -21,7 +21,7 @@ that consumes it.
 
 This is the lesson that makes overfetching visible. A GraphQL query is a bill you present to
 WordPress, and every field on it costs a resolver call — sometimes a `get_post_meta()`,
-sometimes an ACF field lookup, occasionally an N+1 that Module 06's DataLoader work is holding
+sometimes an SCF field lookup, occasionally an N+1 that Module 06's DataLoader work is holding
 back. You will read the WPGraphQL query log for one page, find the fields nobody renders, and
 delete them. Doing that once, deliberately, is worth more than any amount of caching, and it is
 the habit Module 21 assumes you have when it measures Core Web Vitals.
@@ -246,7 +246,7 @@ Every field on a query is a bill you present to WordPress.
 | Field kind | What it costs on the WordPress side |
 |---|---|
 | `title`, `slug`, `date` | already in the `wp_posts` row the resolver loaded |
-| `incidentDetails { … }` | ACF field lookups, i.e. `get_post_meta()` per field |
+| `incidentDetails { … }` | SCF field lookups, i.e. `get_post_meta()` per field |
 | `severities { nodes { … } }` | a term query per node — the N+1 Lesson 06.4 measured |
 | `author { node { … } }` | a user lookup per node, plus whatever hangs off it |
 | `blameScore` | a **computed** field: severity weight × confidence × downtime, resolved per node |
@@ -529,7 +529,7 @@ query PostBySlug($slug: ID!) {
 
 ```graphql
 # next-app/src/graphql/reviews.graphql
-# /[locale]/reviews and /[locale]/reviews/[slug]. `pros` and `cons` are ACF repeaters,
+# /[locale]/reviews and /[locale]/reviews/[slug]. `pros` and `cons` are SCF repeaters,
 # so they arrive as object lists with an `item` field — not string arrays. Appendix 03.
 query ReviewsList($first: Int!, $after: String) {
   techReviews(first: $first, after: $after, where: { status: PUBLISH }) {
@@ -940,4 +940,4 @@ were not, which points at the `documents` glob in `codegen.ts`.
 - [Next.js — `fetch` API reference](https://nextjs.org/docs/app/api-reference/functions/fetch) —
   re-read the cache-key description alongside Key Concept 3's two-document argument
 - [WordPress — `get_post_meta()`](https://developer.wordpress.org/reference/functions/get_post_meta/)
-  — what an ACF field selection actually costs on the WordPress side, per field, per node
+  — what an SCF field selection actually costs on the WordPress side, per field, per node

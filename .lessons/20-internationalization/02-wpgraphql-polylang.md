@@ -242,7 +242,7 @@ they are exceptions for the same reason: **the thing they fetch has no language.
 
 | Document | Fetches | Why no `$language` |
 |---|---|---|
-| `SiteChrome` | `generalSettings`, the ACF options page | one global record. Polylang can translate options with its Strings Translation screen; this project does not, so there is one set of values and asking for a language would be asking a question with no answer |
+| `SiteChrome` | `generalSettings`, the SCF options page | one global record. Polylang can translate options with its Strings Translation screen; this project does not, so there is one set of values and asking for a language would be asking a question with no answer |
 | `PrimaryMenu` | `menuItems(where: { location: PRIMARY })` | one menu. Polylang stores a menu per location **per language** (`primary___de` in `nav_menu_locations`), and Lesson 20.1's fixture seeds only the English one |
 | `ScapegoatLeaderboard` | `scapegoats(where: { orderby: COUNT })` | taxonomies are not translatable here (Lesson 20.1 §6), so terms have no language and the connection has no `language` key to pass |
 
@@ -306,7 +306,7 @@ One wrinkle follows, and it is duplicate content rather than a crash. `/hobt` ha
 route (Lesson 14.4 §7 lists the five reserved first segments), so the English HOBT page is
 unreachable through the `[...slug]` catch-all. Its German translation's slug is `hobt-de`, which
 is **not** reserved — so `/de/hobt-de` renders the same document as `/de/hobt` through a
-different route, with a different heading and no ACF field group, and Lesson 19.4's sitemap
+different route, with a different heading and no SCF field group, and Lesson 19.4's sitemap
 would list both. The fix generalises: **a page reachable through a dedicated route is not
 reachable through the catch-all in any language.** The catch-all already has the translation
 group, so it asks whether any member of it sits at a reserved URI.
@@ -415,7 +415,7 @@ git diff -- ../wordpress-headless/schema.graphql | grep '^+' | grep -vE 'languag
 | Expected in the diff | Not expected |
 |---|---|
 | `enum LanguageCodeEnum` and `type Language` | any change to an existing field's type |
-| `language: Language` and `translations: [...]` on the translatable post types | any change to `Incident`'s ACF field group |
+| `language: Language` and `translations: [...]` on the translatable post types | any change to `Incident`'s SCF field group |
 | `language: LanguageCodeFilterEnum` inside each `…WhereArgs` input | a new root query field |
 | the same three on each translatable post type and term type | anything mentioning `menu` |
 
@@ -981,7 +981,7 @@ The catch-all needs the opposite fix — it can reach a page it should not:
 // A page reachable through a DEDICATED route is not reachable through the
 // catch-all — in ANY language. `hobt` is reserved, but its German translation's
 // slug is `hobt-de`, which is not, so /de/hobt-de would render the same content
-// as /de/hobt with a different heading and no ACF group: two URLs, one document,
+// as /de/hobt with a different heading and no SCF group: two URLs, one document,
 // and Lesson 19.4's sitemap would list both.
 //
 // Ask the translation group rather than extending RESERVED with fixture slugs.
@@ -999,7 +999,7 @@ left there — is the line that changes.
 **Verify §7:**
 
 - [ ] `curl -s http://localhost:3000/de/hobt | grep -c '<h1'` returns `1`, and the page renders
-      the ACF headline rather than a bare title.
+      the SCF headline rather than a bare title.
 - [ ] `curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/de/hobt-de` returns `404`.
       One document, one URL.
 - [ ] `curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/de/ueber-uns` returns

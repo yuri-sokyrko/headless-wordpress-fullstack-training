@@ -236,7 +236,7 @@ The naming scheme, which is frozen because Module 18 has to reproduce it in PHP:
 | `pageTag('hobt')` | `page:hobt` | one node |
 | `listTag('incident')` | `incidents` | every list of that type |
 | `termTag('scapegoat', 'the-intern')` | `scapegoat:the-intern` | one term and its archives |
-| `siteTag()` | `site-settings` | the ACF options page |
+| `siteTag()` | `site-settings` | the SCF options page |
 | `menuTag('primary')` | `menu:primary` | one menu location |
 
 Lowercase, colon-separated, **singular for a node and plural for a list**. Note the deliberate
@@ -459,7 +459,7 @@ export function taxonomyListTag(taxonomy: TaxonomyName, locale?: string): string
   return locale === undefined ? plural : `${plural}:${segment(locale)}`;
 }
 
-/** The ACF options page from appendix 03 section 4.5. One entry, one tag. */
+/** The SCF options page from appendix 03 section 4.5. One entry, one tag. */
 export function siteTag(): string {
   return 'site-settings';
 }

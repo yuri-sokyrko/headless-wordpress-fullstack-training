@@ -75,7 +75,7 @@ being the fastest way to work.
 
 The second break is a genuinely new problem: **the contract between two codebases**. In Classic
 WordPress there was no contract, because there was no boundary — a template read post meta
-directly and a typo was a blank space on the page. Now a renamed ACF field key in PHP silently
+directly and a typo was a blank space on the page. Now a renamed SCF field key in PHP silently
 becomes `null` in TypeScript, at runtime, in production. Nothing in Classic testing practice
 prepares you for that, and it is why Lesson 23.5 spends its second half on schema and
 field-group contract tests rather than on more resolver coverage.
@@ -102,7 +102,7 @@ one fails differently.
    │                         │                                                  │
    │  Next Data Cache ◀──────┼── ④ the TAG STRING ───┼──  webhook identifiers   │
    │                         │   `incident:incident-01`, built ONLY by tags.ts  │
-   │  ACF-derived types ◀────┼── ⑤ the FIELD KEY ────┼──  includes/acf-json/    │
+   │  SCF-derived types ◀────┼── ⑤ the FIELD KEY ────┼──  includes/acf-json/    │
    └─────────────────────────┘   field_incident_occurred_at                     │
                                                      └──────────────────────────┘
 ```
@@ -130,14 +130,14 @@ two-sided contract into a one-sided one that fourteen Vitest assertions already 
 
 The fourth column is the one that matters. Without it you get a suite where "an anonymous user
 cannot submit an incident" is asserted in Vitest, in Pest, in `wp-phpunit` and in Playwright,
-while nobody ever checks that a renamed ACF key breaks the front end.
+while nobody ever checks that a renamed SCF key breaks the front end.
 
 | # | Suite | Tool | Speed | Its job | It explicitly does **not** cover |
 |---|---|---|---|---|---|
 | **1** | Unit | Vitest, `environment: 'node'`; jsdom + RTL per file | milliseconds; ~1–3 s for a jsdom file | pure functions — `tags.ts`, `errors.ts`, `content.ts`, `rate-limit.ts`, `nav.ts`, `matchesFilters` — and **sync client components** reached by role and accessible name | whether anything calls them; real layout, focus rings, scrolling; any async Server Component |
 | **2** | Networked | Vitest + **MSW v2**, plus `vi.mock` | milliseconds | anything that talks to WPGraphQL or a route: `client.ts`, Server Actions, route handlers, and the one island that fetches | rendering a route; cookie *attributes*, which sit behind `server-only`; whether WordPress would really accept the mutation |
 | **3** | PHP unit | Pest + Brain Monkey | under a second, no WordPress | `blameScore` arithmetic, enum mapping in both directions, the signature builder, branching on `get_user_meta` | anything WordPress enforces — capabilities, `map_meta_cap`, schema registration |
-| **4** | PHP integration | `wp-phpunit` + real MySQL | ~10–20 s including boot | registration and `graphql_single_name`, real roles and real capabilities, ACF field-group keys, in-process `graphql()` | the browser; TypeScript; anything above the API |
+| **4** | PHP integration | `wp-phpunit` + real MySQL | ~10–20 s including boot | registration and `graphql_single_name`, real roles and real capabilities, SCF field-group keys, in-process `graphql()` | the browser; TypeScript; anything above the API |
 | **5** | E2E | Playwright, real Chromium | 1–5 minutes, whole stack up | journeys across both applications, and everything the first four structurally cannot reach | *why* it broke; any route you did not list |
 
 Suites 1 and 2 share one runner, one config file and one command. The boundary between them is
@@ -387,7 +387,7 @@ stands at the end of this module, which is the honest input to Lesson 24.5's "Kn
 | Visual regression | **deliberately not**, per 12.1: no snapshot tests of rendered markup, anywhere. `npx playwright test --update-snapshots` exists and this course never calls it |
 | The wp-admin editing experience | Lesson 23.8's agentic exploration, which is advisory and not a gate |
 | Email deliverability | Mailpit proves `wp_mail()` was called with the right body, and nothing about a real inbox |
-| Third-party behaviour: ACF, WPGraphQL, Polylang, Turnstile | pinned versions, plus the schema snapshot that tells you when their **output** changed |
+| Third-party behaviour: SCF, WPGraphQL, Polylang, Turnstile | pinned versions, plus the schema snapshot that tells you when their **output** changed |
 | `wp core update-db` | nothing. There is no down migration; Lesson 24.7's restorable backup is the only protection, and 12.1 named this as the one property with no replacement |
 | Cookie **attributes** in a unit test | `server-only` puts `cookies.ts` out of reach of Vitest. Lesson 23.6 reads them from a real browser context; Lesson 23.3 records the gap |
 

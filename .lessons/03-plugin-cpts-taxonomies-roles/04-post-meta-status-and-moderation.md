@@ -96,20 +96,20 @@ carelessly registered meta key is writable through REST by anyone who can edit t
 
 ### 2. Registered meta versus a hand-rolled meta box
 
-The pre-ACF way was `add_meta_box`, a `wp_nonce_field`, and a `save_post` handler that reads
+The pre-SCF way was `add_meta_box`, a `wp_nonce_field`, and a `save_post` handler that reads
 `$_POST` and calls `update_post_meta`. That code still works. Here is what it does not do:
 
 | | `add_meta_box` + `save_post` | `register_post_meta` |
 |---|---|---|
-| Editing UI | you write the HTML | none — ACF or the block editor provides it |
+| Editing UI | you write the HTML | none — SCF or the block editor provides it |
 | Declared type | ❌ nothing knows the key exists | ✅ `type` + `single` |
 | Sanitised on **every** write path | ❌ only the one you wrote | ✅ including WP-CLI and the seeder |
 | Authorisation | your own `current_user_can` — if you remembered | ✅ `auth_callback`, consulted by core |
 | Discoverable | ❌ grep | ✅ `get_registered_meta_keys()` |
 
-**The verdict: register the key, and let something else draw the form.** ACF draws the form
+**The verdict: register the key, and let something else draw the form.** SCF draws the form
 (Module 04) and writes to exactly the same `wp_postmeta` rows under the same key names. Two
-registrations, one storage, different jobs — ACF owns the editing experience,
+registrations, one storage, different jobs — SCF owns the editing experience,
 `register_post_meta` owns the contract.
 
 That division explains something you have certainly seen: half the custom fields in a legacy
@@ -126,7 +126,7 @@ Three routes exist, and this project uses two of them:
 
 | Route | Used for | Where |
 |---|---|---|
-| **ACF field group with `show_in_graphql`** | every field in appendix 03 §4.1 — they arrive under `incidentDetails` | Lesson 04.2 |
+| **SCF field group with `show_in_graphql`** | every field in appendix 03 §4.1 — they arrive under `incidentDetails` | Lesson 04.2 |
 | **`register_graphql_field()`** | computed values like `blameScore`, and enum-typed projections of raw strings | Module 06 |
 | Exposing raw meta wholesale | nothing, ever | — |
 
@@ -221,7 +221,7 @@ alphabetically by slug, they sort by severity.
 
 Meta registration and the moderation status. Field names come from
 [appendix 03 §4.1](../appendix/03-content-model-reference.md#41-incident-details) and must match
-it exactly — Module 04's ACF group writes to these same keys.
+it exactly — Module 04's SCF group writes to these same keys.
 
 ```php
 // wordpress-headless/wp-content/plugins/blame-the-tech-core/includes/statuses.php
@@ -323,7 +323,7 @@ function can_moderate_incident_meta( bool $allowed, string $meta_key, int $objec
 /**
  * Register every non-taxonomy field of `incident`.
  *
- * ACF builds the editing UI for these keys in Module 04 and writes to the same
+ * SCF builds the editing UI for these keys in Module 04 and writes to the same
  * rows; registration gives them a type, a sanitiser, a REST projection and an
  * authorisation callback. The spec array below IS appendix 03 §4.1, in code:
  * key => [ type, sanitize_callback, overrides ].
@@ -381,7 +381,7 @@ function register_incident_meta(): void {
 - [ ] Every key has an explicit `auth_callback`. The default is `__return_true`, so an omission
       is not a smaller mistake than a wrong callback — it is a bigger one.
 - [ ] `is_verified` is the only key using `can_moderate_incident_meta`.
-- [ ] Every key name matches appendix 03 §4.1 character for character. Module 04's ACF group
+- [ ] Every key name matches appendix 03 §4.1 character for character. Module 04's SCF group
       writes to these keys; a typo here becomes two meta rows that never meet.
 
 ### Step 2: Write `includes/admin/incident-columns.php`

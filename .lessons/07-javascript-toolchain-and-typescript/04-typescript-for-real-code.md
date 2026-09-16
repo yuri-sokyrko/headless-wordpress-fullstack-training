@@ -373,7 +373,7 @@ export type Connection<TNode> = {
   readonly edges?: readonly Edge<TNode>[]; // the long form — rarely needed
 };
 
-/* ── Media, and the ACF image edge (appendix 03 §4.2) ────────────────── */
+/* ── Media, and the SCF image edge (appendix 03 §4.2) ────────────────── */
 
 export type MediaItem = {
   readonly id: string;
@@ -381,11 +381,11 @@ export type MediaItem = {
   readonly altText: string;
 };
 
-// ACF image fields do NOT arrive as a bare object. WPGraphQL for ACF returns an
+// SCF image fields do NOT arrive as a bare object. WPGraphQL for SCF returns an
 // `AcfMediaItemConnectionEdge`, so the media item sits one level down, under `node`.
 export type AcfMediaEdge = { readonly node: MediaItem } | null;
 
-/* ── Scapegoat Profile (appendix 03 §4.2) — an ACF TERM field group ──── */
+/* ── Scapegoat Profile (appendix 03 §4.2) — an SCF TERM field group ──── */
 
 export type ScapegoatProfile = {
   readonly avatar: AcfMediaEdge;
@@ -406,7 +406,7 @@ export type Scapegoat = {
 
 /* ── Tech Review Fields (appendix 03 §4.3) ───────────────────────────── */
 
-// An ACF REPEATER is not a string array. It generates one object type per repeater with
+// An SCF REPEATER is not a string array. It generates one object type per repeater with
 // the sub-field as a property — `TechReviewFieldsPros`, never `string[]`. This is the
 // most common "why is my generated type not what I expected?" moment in headless WP.
 export type TechReviewPro = { readonly item: string | null };

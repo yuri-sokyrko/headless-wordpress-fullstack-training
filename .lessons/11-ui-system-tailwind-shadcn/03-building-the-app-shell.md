@@ -46,7 +46,7 @@ You are rebuilding `header.php` and `footer.php`, with the same ingredients:
 | `register_nav_menus()` in `functions.php` | the same call, still in the theme (Lesson 02.4) — locations are theme-scoped, so this is the one thing the plugin cannot take over |
 | `Walker_Nav_Menu` subclass to change markup | a `.map()` over the items |
 | `current-menu-item` class added by WordPress | `usePathname()` compared to the item URL |
-| `get_option('btt_footer_blurb')` | the `siteSettings` ACF options page |
+| `get_option('btt_footer_blurb')` | the `siteSettings` SCF options page |
 | A hamburger toggled by a jQuery click handler | `MobileNav` state and the Radix `Dialog` |
 
 The best part of this comparison is the `Walker`. If you have ever written a
@@ -106,7 +106,7 @@ src/app/[locale]/layout.tsx        renders once, persists across navigation
    └── <Footer>                    ← Server Component, fetches siteSettings
 ```
 
-### 2. Navigation comes from core WordPress menus, not from an ACF field
+### 2. Navigation comes from core WordPress menus, not from an SCF field
 
 This is a modelling decision recorded in the contract, and it is worth understanding rather
 than accepting. `Site Settings` in
@@ -115,7 +115,7 @@ holds the tagline, the footer blurb, the CTA labels and the social links — and
 **no navigation**. The nav lives in core menus and is read with
 `menuItems(where: { location: PRIMARY })`.
 
-| | Core WordPress menus | An ACF repeater called `nav_items` |
+| | Core WordPress menus | An SCF repeater called `nav_items` |
 |---|---|---|
 | Editor UI | Appearance → Menus, drag to reorder and nest | a flat repeater, reorder by dragging rows |
 | Nesting | native, any depth | a `parent` select you build, or none |
@@ -684,7 +684,7 @@ export async function Footer() {
   );
 
   const settings = data.siteSettings;
-  // `social_links` is an ACF repeater, so every row AND every sub-field is
+  // `social_links` is an SCF repeater, so every row AND every sub-field is
   // independently nullable — appendix 03 §4.5. An editor who adds a row and
   // saves before typing produces exactly this shape.
   const social = settings?.socialLinks ?? [];

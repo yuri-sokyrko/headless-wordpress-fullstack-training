@@ -251,7 +251,7 @@ than a form that is not there. Lesson 04.3's table said exactly this, and neithe
 security control.
 
 And now the sharp bit, which is the reason this concept exists rather than being one line in a Task
-step. **An unsaved ACF options page returns `null`.** So the reader has to decide what `null` means,
+step. **An unsaved SCF options page returns `null`.** So the reader has to decide what `null` means,
 and this application makes opposite decisions in two places:
 
 | Missing value | Treated as | Because |
@@ -736,7 +736,7 @@ import { siteTag } from '@/lib/graphql/tags';
   });
 
   // `!== false`, not `=== true`. TWO optional links, because the shape is two
-  // levels: `siteSettings` is the ACF options PAGE and `siteChrome` is the field
+  // levels: `siteSettings` is the SCF options PAGE and `siteChrome` is the field
   // group on it (Lesson 04.3 §5). Either can be null on an install nobody has
   // saved, and treating null as "closed" gives a fresh environment a dead
   // submission form for a reason no error message mentions. Compare the rate

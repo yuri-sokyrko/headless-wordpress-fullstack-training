@@ -40,18 +40,18 @@ By the end of this lesson you will have:
 ## Classic WP Analogy
 
 You have delivered this feature before, and the Classic route to it was a page template plus
-ACF flexible content:
+SCF flexible content:
 
 | Classic WordPress | Here |
 |---|---|
 | `templates/hobt.php` with a fixed section order | `page.tsx` rendering `editorBlocks` in the editor's order |
-| ACF flexible content layouts | Gutenberg blocks |
+| SCF flexible content layouts | Gutenberg blocks |
 | `if (get_row_layout() === 'hero')` in a `while (have_rows())` loop | `switch (block.__typename)` in the registry |
 | `get_template_part('parts/hero')` per layout | one component per block type |
 | `page-{slug}.php` for one-off pages | the `[...slug]` catch-all plus a block set |
 | `get_term($id)` to resolve a stored term reference | the same lookup, in `ScapegoatPicker` |
 
-ACF flexible content is a genuinely good answer to this problem, and if you built the Classic
+SCF flexible content is a genuinely good answer to this problem, and if you built the Classic
 version of this page you built something close to what you are building now. The block version
 wins on editor experience — the editor sees the page rather than a stack of collapsed field
 groups — and on the fact that blocks are core, so the content survives a plugin decision.
@@ -361,7 +361,7 @@ Four things stayed page-mounted, and each has its own reason:
 |---|---|
 | `HobtHero` | `priceUsd` and `seatsLeft` are **commerce data**. They must be queryable — Module 19's structured data reads the price — and an editor must not be able to reorder the price below the testimonials. It is also the LCP element that gets `priority` in Lesson 14.5 |
 | Both `HobtCtaBand` instances | **Commercial furniture.** `startNowUrl` and `demoBookingUrl` are field-group data with no block representation, and *where the offer appears* on a paid landing page is a product decision rather than an editorial one. Lesson 12.3 asserts two of each control on this route for exactly that reason |
-| `HobtModules` | an ACF repeater with **no block representation**. There is no `btt/modules` block, and inventing one to move a field group into the body would be work with no buyer |
+| `HobtModules` | an SCF repeater with **no block representation**. There is no `btt/modules` block, and inventing one to move a field group into the body would be work with no buyer |
 | `HobtTestimonials` | the same, plus the avatars Lesson 14.5 adds |
 
 So an editor-composed page and a field-group-composed page are **not** mutually exclusive, and a
@@ -844,7 +844,7 @@ export function HobtCta({ block, locale }: BlockComponentProps<'BttHobtCta'>) {
   // so a primary block CTA and a page-mounted one look like the same product.
   const variant = attributes?.variant === 'outline' ? 'outline' : 'blame';
 
-  // Kebab-case, matching the wp_btt_leads.source column and the ACF select
+  // Kebab-case, matching the wp_btt_leads.source column and the SCF select
   // convention. Module 16 maps it to the LeadSource GraphQL enum
   // (hobt-cta-block → HOBT_CTA_BLOCK) when it calls submitHobtLead. Carried as a
   // data attribute so it is inspectable now and wired up in Lesson 16.3.
@@ -1046,7 +1046,7 @@ npm run codegen && npm run type-check
 - [ ] `http://localhost:3000/en/about` returns 200 with "About" as its `<h1>` and the seeded
       paragraph below it.
 - [ ] `http://localhost:3000/en/no-such-page` returns **404** and renders `not-found.tsx`.
-- [ ] `http://localhost:3000/en/hobt` still renders the ACF headline, not a bare title —
+- [ ] `http://localhost:3000/en/hobt` still renders the SCF headline, not a bare title —
       the dedicated route won. If you see a plain "HOBT" heading, you have a routing conflict,
       which should be impossible; check you did not put the catch-all above `[locale]`.
 
@@ -1130,7 +1130,7 @@ npm run verify
 - [ ] `grep -rn 'dangerouslySetInnerHTML' src/app/` returns **nothing**. Three routes rendered
       the blob at the start of this module; zero do now.
 - [ ] `/en/incidents/incident-01` and `/en/reviews/review-01` both return 200 and still show
-      their ACF data. Only the body changed.
+      their SCF data. Only the body changed.
 - [ ] Both routes still have exactly one `<h1>`, and it is still the incident title and the
       company name respectively. Lesson 12.3's smoke spec asserts both by name.
 
@@ -1283,7 +1283,7 @@ curl -s http://localhost:3000/en/hobt | grep -o 'data-block="[A-Za-z]*"' | sort 
 #           stretch block AND added its inline fragment, and it renders as
 #           nothing at all in a production build either way.
 
-# 3. Exactly one <h1> on /hobt, and it is still the ACF headline. HobtHero stayed
+# 3. Exactly one <h1> on /hobt, and it is still the SCF headline. HobtHero stayed
 #    page-mounted precisely so this stays true — Key Concept 8.
 curl -s http://localhost:3000/en/hobt | grep -o '<h1' | wc -l
 # Expected: 1
