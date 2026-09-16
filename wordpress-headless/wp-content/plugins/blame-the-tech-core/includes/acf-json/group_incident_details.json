@@ -1,0 +1,236 @@
+{
+  "key": "group_incident_details",
+  "title": "Incident Details",
+  "fields": [
+    {
+      "key": "field_incident_occurred_at",
+      "label": "Occurred at",
+      "name": "occurred_at",
+      "aria-label": "",
+      "type": "date_time_picker",
+      "instructions": "When the incident started. Cannot be in the future.",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
+      "display_format": "d\/m\/Y g:i a",
+      "return_format": "Y-m-dTH:i:sP",
+      "first_day": 1,
+      "default_to_current_date": 0
+    },
+    {
+      "key": "field_incident_downtime_minutes",
+      "label": "Downtime (min)",
+      "name": "downtime_minutes",
+      "aria-label": "",
+      "type": "number",
+      "instructions": "",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "25",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "min": 0,
+      "max": 100000,
+      "step": 1,
+      "prepend": "",
+      "append": "min",
+      "placeholder": ""
+    },
+    {
+      "key": "field_incident_estimated_cost_usd",
+      "label": "Estimated cost (USD)",
+      "name": "estimated_cost_usd",
+      "aria-label": "",
+      "type": "number",
+      "instructions": "Optional. An empty field reads back as an empty string, not 0.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "25",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "min": 0,
+      "max": 1000000000,
+      "step": 1,
+      "prepend": "$",
+      "append": "",
+      "placeholder": ""
+    },
+    {
+      "key": "field_incident_environment",
+      "label": "Environment",
+      "name": "environment",
+      "aria-label": "",
+      "type": "select",
+      "instructions": "",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
+      "choices": {
+        "production": "Production",
+        "staging": "Staging",
+        "development": "Development",
+        "works-on-my-machine": "Works On My Machine"
+      },
+      "default_value": "production",
+      "allow_null": 0,
+      "multiple": 0,
+      "ui": 0,
+      "ajax": 0,
+      "return_format": "value",
+      "placeholder": "",
+      "create_options": 0,
+      "save_options": 0
+    },
+    {
+      "key": "field_incident_resolution_status",
+      "label": "Resolution",
+      "name": "resolution_status",
+      "aria-label": "",
+      "type": "select",
+      "instructions": "",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
+      "choices": {
+        "open": "Open",
+        "mitigated": "Mitigated",
+        "blamed": "Blamed",
+        "wontfix": "Won't Fix"
+      },
+      "default_value": "open",
+      "allow_null": 0,
+      "multiple": 0,
+      "ui": 0,
+      "ajax": 0,
+      "return_format": "value",
+      "placeholder": "",
+      "create_options": 0,
+      "save_options": 0
+    },
+    {
+      "key": "field_incident_blame_confidence",
+      "label": "Blame confidence",
+      "name": "blame_confidence",
+      "aria-label": "",
+      "type": "range",
+      "instructions": "How sure are we, really.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "",
+        "class": "",
+        "id": ""
+      },
+      "default_value": 73,
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "prepend": "",
+      "append": "%"
+    },
+    {
+      "key": "field_incident_stack_trace",
+      "label": "Stack trace",
+      "name": "stack_trace",
+      "aria-label": "",
+      "type": "textarea",
+      "instructions": "Plain text. Rendered inside <pre>, escaped, never as HTML.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "maxlength": 20000,
+      "rows": 10,
+      "new_lines": "",
+      "placeholder": ""
+    },
+    {
+      "key": "field_incident_reporter_display_name",
+      "label": "Reporter (display)",
+      "name": "reporter_display_name",
+      "aria-label": "",
+      "type": "text",
+      "instructions": "Denormalised on purpose: public reporters are not WordPress authors.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "maxlength": 80,
+      "placeholder": "",
+      "prepend": "",
+      "append": ""
+    },
+    {
+      "key": "field_incident_is_verified",
+      "label": "Verified by moderator",
+      "name": "is_verified",
+      "aria-label": "",
+      "type": "true_false",
+      "instructions": "Moderators only. Ignored when an API client supplies it.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
+      "message": "",
+      "default_value": 0,
+      "ui": 1,
+      "ui_on_text": "Verified",
+      "ui_off_text": "Unverified"
+    }
+  ],
+  "location": [
+    [
+      {
+        "param": "post_type",
+        "operator": "==",
+        "value": "incident"
+      }
+    ]
+  ],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "hide_on_screen": "",
+  "active": true,
+  "description": "Structured incident data. Field names are fixed by appendix 03 section 4.1.",
+  "show_in_rest": 0,
+  "display_title": "",
+  "allow_ai_access": false,
+  "ai_description": "",
+  "show_in_graphql": 1,
+  "graphql_field_name": "incidentDetails",
+  "map_graphql_types_from_location_rules": 0,
+  "graphql_types": "",
+  "modified": 1789552384
+}

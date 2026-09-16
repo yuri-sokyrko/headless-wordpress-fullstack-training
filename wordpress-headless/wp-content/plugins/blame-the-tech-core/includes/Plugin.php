@@ -33,6 +33,7 @@ final class Plugin
 		'includes/statuses.php',
 		'includes/admin/incident-columns.php',
 		'includes/roles.php',
+		'includes/acf.php',
 	);
 
 	/**
