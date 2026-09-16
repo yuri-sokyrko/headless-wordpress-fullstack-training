@@ -1,0 +1,304 @@
+{
+    "key": "group_tech_review_fields",
+    "title": "Tech Review Fields",
+    "fields": [
+        {
+            "key": "field_review_company_name",
+            "label": "Company name",
+            "name": "company_name",
+            "aria-label": "",
+            "type": "text",
+            "instructions": "",
+            "required": 1,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "50",
+                "class": "",
+                "id": ""
+            },
+            "default_value": "",
+            "maxlength": 120,
+            "placeholder": "",
+            "prepend": "",
+            "append": ""
+        },
+        {
+            "key": "field_review_logo",
+            "label": "Logo",
+            "name": "logo",
+            "aria-label": "",
+            "type": "image",
+            "instructions": "WPGraphQL ignores return_format and always resolves a connection edge.",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "50",
+                "class": "",
+                "id": ""
+            },
+            "return_format": "id",
+            "library": "all",
+            "preview_size": "medium",
+            "mime_types": "jpg,jpeg,png,svg,webp",
+            "min_width": 0,
+            "min_height": 0,
+            "min_size": 0,
+            "max_width": 0,
+            "max_height": 0,
+            "max_size": 0
+        },
+        {
+            "key": "field_review_rating_overall",
+            "label": "Overall",
+            "name": "rating_overall",
+            "aria-label": "",
+            "type": "range",
+            "instructions": "",
+            "required": 1,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "25",
+                "class": "",
+                "id": ""
+            },
+            "default_value": 5,
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "prepend": "",
+            "append": "\/10"
+        },
+        {
+            "key": "field_review_rating_dx",
+            "label": "Developer experience",
+            "name": "rating_dx",
+            "aria-label": "",
+            "type": "range",
+            "instructions": "",
+            "required": 1,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "25",
+                "class": "",
+                "id": ""
+            },
+            "default_value": 5,
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "prepend": "",
+            "append": "\/10"
+        },
+        {
+            "key": "field_review_rating_docs",
+            "label": "Documentation",
+            "name": "rating_docs",
+            "aria-label": "",
+            "type": "range",
+            "instructions": "",
+            "required": 1,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "25",
+                "class": "",
+                "id": ""
+            },
+            "default_value": 5,
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "prepend": "",
+            "append": "\/10"
+        },
+        {
+            "key": "field_review_rating_incident_response",
+            "label": "Incident response",
+            "name": "rating_incident_response",
+            "aria-label": "",
+            "type": "range",
+            "instructions": "",
+            "required": 1,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "25",
+                "class": "",
+                "id": ""
+            },
+            "default_value": 5,
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "prepend": "",
+            "append": "\/10"
+        },
+        {
+            "key": "field_review_verdict",
+            "label": "Verdict",
+            "name": "verdict",
+            "aria-label": "",
+            "type": "select",
+            "instructions": "Kebab-case values. Lesson 06.1 maps these onto the TechReviewVerdict enum.",
+            "required": 1,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "50",
+                "class": "",
+                "id": ""
+            },
+            "choices": {
+                "adopt": "Adopt",
+                "trial": "Trial",
+                "assess": "Assess",
+                "hold": "Hold"
+            },
+            "default_value": "assess",
+            "allow_null": 0,
+            "multiple": 0,
+            "ui": 0,
+            "ajax": 0,
+            "return_format": "value",
+            "placeholder": "",
+            "create_options": 0,
+            "save_options": 0
+        },
+        {
+            "key": "field_review_reviewed_at",
+            "label": "Reviewed at",
+            "name": "reviewed_at",
+            "aria-label": "",
+            "type": "date_picker",
+            "instructions": "",
+            "required": 1,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "50",
+                "class": "",
+                "id": ""
+            },
+            "display_format": "d\/m\/Y",
+            "return_format": "Y-m-d",
+            "first_day": 1,
+            "default_to_current_date": 0
+        },
+        {
+            "key": "field_review_pros",
+            "label": "Pros",
+            "name": "pros",
+            "aria-label": "",
+            "type": "repeater",
+            "instructions": "One per row. Surfaces as [TechReviewFieldsPros] in GraphQL, not [String].",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "50",
+                "class": "",
+                "id": ""
+            },
+            "layout": "table",
+            "pagination": 0,
+            "min": 0,
+            "max": 8,
+            "collapsed": "",
+            "button_label": "Add pro",
+            "show_in_graphql": 1,
+            "graphql_description": "",
+            "graphql_field_name": "pros",
+            "graphql_non_null": 0,
+            "rows_per_page": 20,
+            "sub_fields": [
+                {
+                    "key": "field_review_pros_item",
+                    "label": "Item",
+                    "name": "item",
+                    "aria-label": "",
+                    "type": "text",
+                    "instructions": "",
+                    "required": 1,
+                    "conditional_logic": 0,
+                    "wrapper": {
+                        "width": "",
+                        "class": "",
+                        "id": ""
+                    },
+                    "default_value": "",
+                    "maxlength": 160,
+                    "parent_repeater": "field_review_pros",
+                    "placeholder": "",
+                    "prepend": "",
+                    "append": ""
+                }
+            ]
+        },
+        {
+            "key": "field_review_cons",
+            "label": "Cons",
+            "name": "cons",
+            "aria-label": "",
+            "type": "repeater",
+            "instructions": "One per row. Surfaces as [TechReviewFieldsCons] in GraphQL.",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "50",
+                "class": "",
+                "id": ""
+            },
+            "layout": "table",
+            "pagination": 0,
+            "min": 0,
+            "max": 8,
+            "collapsed": "",
+            "button_label": "Add con",
+            "rows_per_page": 20,
+            "sub_fields": [
+                {
+                    "key": "field_review_cons_item",
+                    "label": "Item",
+                    "name": "item",
+                    "aria-label": "",
+                    "type": "text",
+                    "instructions": "",
+                    "required": 1,
+                    "conditional_logic": 0,
+                    "wrapper": {
+                        "width": "",
+                        "class": "",
+                        "id": ""
+                    },
+                    "default_value": "",
+                    "maxlength": 160,
+                    "parent_repeater": "field_review_cons",
+                    "placeholder": "",
+                    "prepend": "",
+                    "append": ""
+                }
+            ]
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "tech_review"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": "",
+    "active": true,
+    "description": "Satirical company reviews. Field names fixed by appendix 03 section 4.3.",
+    "show_in_rest": 0,
+    "display_title": "",
+    "allow_ai_access": false,
+    "ai_description": "",
+    "show_in_graphql": 1,
+    "graphql_field_name": "techReviewFields",
+    "map_graphql_types_from_location_rules": 0,
+    "graphql_types": "",
+    "modified": 1789563379
+}
