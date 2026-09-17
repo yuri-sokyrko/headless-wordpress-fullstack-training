@@ -28,6 +28,8 @@ add_filter('acf/json/save_file_name', __NAMESPACE__ . '\\acf_json_file_name', 10
 add_filter('acf/settings/show_admin', __NAMESPACE__ . '\\acf_show_admin');
 add_filter('acf/prepare_field/name=is_verified', __NAMESPACE__ . '\\hide_verified_from_reporters');
 add_action('admin_notices', __NAMESPACE__ . '\\acf_json_writability_notice');
+add_filter('acf/settings/autoload', '__return_false');
+add_action('acf/init', __NAMESPACE__ . '\\register_options_pages');
 
 
 /**
@@ -142,5 +144,42 @@ function acf_json_writability_notice(): void
 		esc_html__('SCF Local JSON is not writable.', 'blame-the-tech-core'),
 		esc_html__('Field group saves will go to the database instead. Fix the directory, then run:', 'blame-the-tech-core'),
 		esc_html('sudo chown -R 33:33 includes/acf-json')
+	);
+}
+
+/**
+ * Register the Site Settings options page.
+ *
+ * `acf/init` rather than `init`: acf_add_options_page() is defined by SCF's own
+ * bootstrap, and calling it on plain `init` is a race you sometimes win.
+ *
+ * The guard is defensive, not conditional: SCF ships acf_add_options_page(),
+ * but a plugin that registers a screen on a function it never checked for is a
+ * fatal waiting for the one install that lacks it — see Lesson 04.1 Key Concept 8.
+ */
+function register_options_pages(): void
+{
+	if (!function_exists('acf_add_options_page')) {
+		return;
+	}
+
+	acf_add_options_page(
+		array(
+			'page_title' => __('Site Settings', 'blame-the-tech-core'),
+			'menu-title' => __('Site Settings', 'blame-the-tech-core'),
+			// The slug the field group's location rule matches on. Changing it
+			// orphans the field group, which then appears nowhere.
+			'menu_slug' => 'btt-site-settings',
+			'capability' => 'manage_options',
+			'position' => '59.5',
+			'icon_url' => 'dashicons-admin-settings',
+			'redirect' => false,
+			'update_button' => __('Save settings', 'blame-the-tech-core'),
+			'updated_message' => __('Site settings saved.', 'blame-the-tech-core'),
+			// Read by WPGraphQL for SCF: puts this page on the ROOT query, so the
+			// Next root layout can fetch it without a node. Key Concept 5.
+			'show_in_graphql' => true,
+			'graphql_field_name' => 'siteSettings',
+		)
 	);
 }

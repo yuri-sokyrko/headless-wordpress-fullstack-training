@@ -1,0 +1,382 @@
+{
+  "key": "group_hobt_promo",
+  "title": "HOBT Promo",
+  "fields": [
+    {
+      "key": "field_hobt_headline",
+      "label": "Headline",
+      "name": "headline",
+      "aria-label": "",
+      "type": "text",
+      "instructions": "",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "maxlength": 120,
+      "placeholder": "",
+      "prepend": "",
+      "append": ""
+    },
+    {
+      "key": "field_hobt_subheadline",
+      "label": "Subheadline",
+      "name": "subheadline",
+      "aria-label": "",
+      "type": "textarea",
+      "instructions": "",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "maxlength": 300,
+      "rows": 3,
+      "new_lines": "",
+      "placeholder": ""
+    },
+    {
+      "key": "field_hobt_hero_image",
+      "label": "Hero image",
+      "name": "hero_image",
+      "aria-label": "",
+      "type": "image",
+      "instructions": "",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "",
+        "class": "",
+        "id": ""
+      },
+      "return_format": "id",
+      "library": "all",
+      "preview_size": "medium",
+      "mime_types": "jpg,jpeg,png,webp",
+      "min_width": 0,
+      "min_height": 0,
+      "min_size": 0,
+      "max_width": 0,
+      "max_height": 0,
+      "max_size": 0
+    },
+    {
+      "key": "field_hobt_price_usd",
+      "label": "Price (USD)",
+      "name": "price_usd",
+      "aria-label": "",
+      "type": "number",
+      "instructions": "",
+      "required": 1,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "33",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "min": 0,
+      "max": 100000,
+      "step": 1,
+      "prepend": "$",
+      "append": "",
+      "placeholder": ""
+    },
+    {
+      "key": "field_hobt_seats_left",
+      "label": "Seats left",
+      "name": "seats_left",
+      "aria-label": "",
+      "type": "number",
+      "instructions": "Drives the urgency badge, so \/hobt gets a shorter revalidate in Module 18.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "33",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "prepend": "",
+      "append": "seats",
+      "placeholder": ""
+    },
+    {
+      "key": "field_hobt_demo_booking_url",
+      "label": "Demo booking URL",
+      "name": "demo_booking_url",
+      "aria-label": "",
+      "type": "url",
+      "instructions": "Where a successful lead submission redirects (Module 16).",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "34",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "placeholder": ""
+    },
+    {
+      "key": "field_hobt_start_now_url",
+      "label": "Start now URL",
+      "name": "start_now_url",
+      "aria-label": "",
+      "type": "url",
+      "instructions": "",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "50",
+        "class": "",
+        "id": ""
+      },
+      "default_value": "",
+      "placeholder": ""
+    },
+    {
+      "key": "field_hobt_modules",
+      "label": "Modules",
+      "name": "modules",
+      "aria-label": "",
+      "type": "repeater",
+      "instructions": "Generates HobtPromoModules in the schema.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "",
+        "class": "",
+        "id": ""
+      },
+      "layout": "block",
+      "pagination": 0,
+      "min": 0,
+      "max": 30,
+      "collapsed": "field_hobt_modules_title",
+      "button_label": "Add module",
+      "rows_per_page": 20,
+      "sub_fields": [
+        {
+          "key": "field_hobt_modules_title",
+          "label": "Title",
+          "name": "title",
+          "aria-label": "",
+          "type": "text",
+          "instructions": "",
+          "required": 1,
+          "conditional_logic": 0,
+          "wrapper": {
+            "width": "60",
+            "class": "",
+            "id": ""
+          },
+          "default_value": "",
+          "maxlength": 120,
+          "parent_repeater": "field_hobt_modules",
+          "placeholder": "",
+          "prepend": "",
+          "append": ""
+        },
+        {
+          "key": "field_hobt_modules_duration_minutes",
+          "label": "Duration (min)",
+          "name": "duration_minutes",
+          "aria-label": "",
+          "type": "number",
+          "instructions": "",
+          "required": 0,
+          "conditional_logic": 0,
+          "wrapper": {
+            "width": "40",
+            "class": "",
+            "id": ""
+          },
+          "default_value": "",
+          "min": 0,
+          "max": 6000,
+          "step": 5,
+          "parent_repeater": "field_hobt_modules",
+          "placeholder": "",
+          "prepend": "",
+          "append": ""
+        },
+        {
+          "key": "field_hobt_modules_summary",
+          "label": "Summary",
+          "name": "summary",
+          "aria-label": "",
+          "type": "textarea",
+          "instructions": "",
+          "required": 0,
+          "conditional_logic": 0,
+          "wrapper": {
+            "width": "",
+            "class": "",
+            "id": ""
+          },
+          "default_value": "",
+          "maxlength": 400,
+          "rows": 3,
+          "new_lines": "",
+          "parent_repeater": "field_hobt_modules",
+          "placeholder": ""
+        }
+      ]
+    },
+    {
+      "key": "field_hobt_testimonials",
+      "label": "Testimonials",
+      "name": "testimonials",
+      "aria-label": "",
+      "type": "repeater",
+      "instructions": "Generates HobtPromoTestimonials in the schema.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": {
+        "width": "",
+        "class": "",
+        "id": ""
+      },
+      "layout": "block",
+      "pagination": 0,
+      "min": 0,
+      "max": 12,
+      "collapsed": "field_hobt_testimonials_author",
+      "button_label": "Add testimonial",
+      "rows_per_page": 20,
+      "sub_fields": [
+        {
+          "key": "field_hobt_testimonials_quote",
+          "label": "Quote",
+          "name": "quote",
+          "aria-label": "",
+          "type": "textarea",
+          "instructions": "",
+          "required": 1,
+          "conditional_logic": 0,
+          "wrapper": {
+            "width": "",
+            "class": "",
+            "id": ""
+          },
+          "default_value": "",
+          "maxlength": 400,
+          "rows": 3,
+          "new_lines": "",
+          "parent_repeater": "field_hobt_testimonials",
+          "placeholder": ""
+        },
+        {
+          "key": "field_hobt_testimonials_author",
+          "label": "Author",
+          "name": "author",
+          "aria-label": "",
+          "type": "text",
+          "instructions": "",
+          "required": 1,
+          "conditional_logic": 0,
+          "wrapper": {
+            "width": "40",
+            "class": "",
+            "id": ""
+          },
+          "default_value": "",
+          "maxlength": 80,
+          "parent_repeater": "field_hobt_testimonials",
+          "placeholder": "",
+          "prepend": "",
+          "append": ""
+        },
+        {
+          "key": "field_hobt_testimonials_role",
+          "label": "Role",
+          "name": "role",
+          "aria-label": "",
+          "type": "text",
+          "instructions": "",
+          "required": 0,
+          "conditional_logic": 0,
+          "wrapper": {
+            "width": "40",
+            "class": "",
+            "id": ""
+          },
+          "default_value": "",
+          "maxlength": 80,
+          "parent_repeater": "field_hobt_testimonials",
+          "placeholder": "",
+          "prepend": "",
+          "append": ""
+        },
+        {
+          "key": "field_hobt_testimonials_avatar",
+          "label": "Avatar",
+          "name": "avatar",
+          "aria-label": "",
+          "type": "image",
+          "instructions": "",
+          "required": 0,
+          "conditional_logic": 0,
+          "wrapper": {
+            "width": "20",
+            "class": "",
+            "id": ""
+          },
+          "return_format": "id",
+          "library": "all",
+          "preview_size": "thumbnail",
+          "mime_types": "jpg,jpeg,png,webp",
+          "parent_repeater": "field_hobt_testimonials",
+          "min_width": 0,
+          "min_height": 0,
+          "min_size": 0,
+          "max_width": 0,
+          "max_height": 0,
+          "max_size": 0
+        }
+      ]
+    }
+  ],
+  "location": [
+    [
+      {
+        "param": "post_type",
+        "operator": "==",
+        "value": "page"
+      },
+      {
+        "param": "page_template",
+        "operator": "==",
+        "value": "templates\/hobt.php"
+      }
+    ]
+  ],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "default",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "hide_on_screen": "",
+  "active": true,
+  "description": "HOBT landing page promo data. Two AND-ed location rules — see Key Concept 6.",
+  "show_in_rest": 0,
+  "display_title": "",
+  "allow_ai_access": false,
+  "ai_description": "",
+  "show_in_graphql": 1,
+  "graphql_field_name": "hobtPromo",
+  "map_graphql_types_from_location_rules": 1,
+  "graphql_types": ["Page"],
+  "modified": 1789626171
+}

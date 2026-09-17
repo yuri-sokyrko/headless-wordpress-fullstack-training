@@ -1,0 +1,144 @@
+{
+  "key": "group_site_settings",
+  "title": "Site Settings",
+  "fields": [
+    {
+      "key": "field_settings_site_tagline",
+      "label": "Site tagline",
+      "name": "site_tagline",
+      "type": "text",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": 160
+    },
+    {
+      "key": "field_settings_primary_cta_label",
+      "label": "Primary CTA label",
+      "name": "primary_cta_label",
+      "type": "text",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": 40
+    },
+    {
+      "key": "field_settings_primary_cta_url",
+      "label": "Primary CTA URL",
+      "name": "primary_cta_url",
+      "type": "url",
+      "instructions": "A campaign target, not navigation. Menus come from core — Key Concept 7.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "50", "class": "", "id": "" },
+      "default_value": ""
+    },
+    {
+      "key": "field_settings_footer_blurb",
+      "label": "Footer blurb",
+      "name": "footer_blurb",
+      "type": "textarea",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "", "class": "", "id": "" },
+      "default_value": "",
+      "maxlength": 300,
+      "rows": 3,
+      "new_lines": ""
+    },
+    {
+      "key": "field_settings_social_links",
+      "label": "Social links",
+      "name": "social_links",
+      "type": "repeater",
+      "instructions": "Generates SiteSettingsSocialLinks in the schema.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "", "class": "", "id": "" },
+      "layout": "table",
+      "pagination": 0,
+      "min": 0,
+      "max": 8,
+      "collapsed": "",
+      "button_label": "Add link",
+      "rows_per_page": 20,
+      "sub_fields": [
+        {
+          "key": "field_settings_social_links_network",
+          "label": "Network",
+          "name": "network",
+          "type": "select",
+          "required": 1,
+          "conditional_logic": 0,
+          "wrapper": { "width": "40", "class": "", "id": "" },
+          "choices": {
+            "mastodon": "Mastodon",
+            "bluesky": "Bluesky",
+            "github": "GitHub",
+            "linkedin": "LinkedIn",
+            "youtube": "YouTube",
+            "rss": "RSS"
+          },
+          "default_value": "mastodon",
+          "allow_null": 0,
+          "multiple": 0,
+          "ui": 0,
+          "ajax": 0,
+          "return_format": "value",
+          "parent_repeater": "field_settings_social_links"
+        },
+        {
+          "key": "field_settings_social_links_url",
+          "label": "URL",
+          "name": "url",
+          "type": "url",
+          "required": 1,
+          "conditional_logic": 0,
+          "wrapper": { "width": "60", "class": "", "id": "" },
+          "default_value": "",
+          "parent_repeater": "field_settings_social_links"
+        }
+      ]
+    },
+    {
+      "key": "field_settings_incident_submission_open",
+      "label": "Incident submissions open",
+      "name": "incident_submission_open",
+      "type": "true_false",
+      "instructions": "Kill switch. Module 06's createIncident mutation is the authoritative check — Key Concept 8.",
+      "required": 0,
+      "conditional_logic": 0,
+      "wrapper": { "width": "", "class": "", "id": "" },
+      "message": "",
+      "default_value": 1,
+      "ui": 1,
+      "ui_on_text": "Open",
+      "ui_off_text": "Closed"
+    }
+  ],
+  "location": [
+    [
+      {
+        "param": "options_page",
+        "operator": "==",
+        "value": "btt-site-settings"
+      }
+    ]
+  ],
+  "menu_order": 0,
+  "position": "normal",
+  "style": "seamless",
+  "label_placement": "top",
+  "instruction_placement": "label",
+  "hide_on_screen": "",
+  "active": true,
+  "description": "Global settings, fetched once on the GraphQL root query. NO navigation here.",
+  "show_in_rest": 0,
+  "show_in_graphql": 1,
+  "graphql_field_name": "siteChrome",
+  "map_graphql_types_from_location_rules": 0,
+  "graphql_types": "",
+  "modified": 1730000000
+}
