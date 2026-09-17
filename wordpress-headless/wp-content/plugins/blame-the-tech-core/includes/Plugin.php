@@ -37,11 +37,13 @@ final class Plugin
 	);
 
 	/**
-	 * Files loaded only under WP-CLI. Lesson 04.4 fills this in.
+	 * Files loaded only under WP-CLI.
 	 *
 	 * @var string[]
 	 */
-	private const CLI_INCLUDES = array();
+	private const CLI_INCLUDES = array(
+		'includes/cli/blame-command.php',
+	);
 
 	/**
 	 * Wire the plugin up. Called at plugin-load time, before `init`.

@@ -101,6 +101,18 @@ literal credentials. The variable inventory — which are secret, which side hol
 `.env` is gitignored and never committed. `.env.example` is the only env file in git, and it
 contains names and `__CHANGE_ME__` placeholders only.
 
+## Commands CI and deploys run
+
+| Command                       | Runs where             | Idempotent                         |
+| ----------------------------- | ---------------------- | ---------------------------------- |
+| `wp core update-db`           | deploy                 | yes                                |
+| `wp plugin activate --all`    | deploy                 | yes                                |
+| `wp blame migrate`            | deploy                 | yes, by version gate (Lesson 04.5) |
+| `wp rewrite flush --hard`     | deploy                 | yes                                |
+| `wp blame seed --fresh --yes` | CI only                | yes in effect, **destructive**     |
+| `wp blame reset --yes`        | CI only                | yes, **destructive**               |
+| `wp blame ensure-languages`   | deploy, from Module 20 | yes                                |
+
 ## What is not in git
 
 | Not committed                  | Why                                                                                                                                                                              |
@@ -133,22 +145,22 @@ expects `Leads.php` to be findable in the tree below before it writes it.
 
 ## Which module creates what
 
-| Module | What lands here                                                                                                                                                                                                                                                                                                      |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 02     | `docker-compose.yml`, `docker-compose.dev.yml`, `.env.example`, `php.ini`, `uploads.ini`, the `btt-headless` theme stub, this runbook                                                                                                                                                                                 |
-| 03     | `wp-content/plugins/blame-the-tech-core/` — plugin header, Composer PSR-4 autoload, post types, taxonomies, custom statuses, roles and capabilities                                                                                                                                                                   |
-| 04     | `includes/acf-json/` field groups, `includes/cli/` with the `wp blame seed` command, the option-based migration runner                                                                                                                                                                                                |
-| 06     | `includes/graphql/` — registered enums, the `blameScore` field, `createIncident`, `registerDeveloper`, `submitHobtLead`, and the committed `schema.graphql` contract                                                                                                                                                  |
-| 07     | `blame-the-tech-core/phpcs.xml.dist` — WordPress Coding Standards, beside the code it describes                                                                                                                                                                                                                       |
-| 12     | `wp-content/mu-plugins/blame-seeder/` — determinism fixes to the Module 04 seeder, plus `wp blame fixture export\|load\|status` (dev/CI only, never in the production image)                                                                                                                                          |
-| 13     | `wp-content/plugins/blame-the-tech-blocks/` — six blocks, `block.json` each, `@wordpress/scripts` build, `theme.json`                                                                                                                                                                                                 |
-| 15     | JWT configuration and `incident_reporter` hardening                                                                                                                                                                                                                                                                  |
-| 16     | `includes/Leads.php` — the HOBT lead capture the funnel writes to                                                                                                                                                                                                                                                    |
-| 17     | `includes/Preview.php` — preview token issue and the `/wp-json/btt/v1/preview/verify` endpoint                                                                                                                                                                                                                        |
-| 18     | `includes/Revalidate.php` — the HMAC-signed revalidation webhook                                                                                                                                                                                                                                                     |
-| 20     | Polylang bootstrap and the idempotent `wp blame ensure-languages` command                                                                                                                                                                                                                                            |
-| 23     | `tests/` — Pest + Brain Monkey unit tests and `wp-phpunit` integration tests, both executed in the `phptest` service (PHP 8.3, while the site runs 8.4 — Lesson 23.4 §1.1), `phpunit.xml.dist`, and a `wp_test` database created by one idempotent `exec` rather than a Compose edit                                   |
-| 24     | `Dockerfile` (multi-stage, non-root, opcache; **WP-CLI stays**, because `release_command` is four `wp` invocations), `.dockerignore`, `fly.toml`, `railway.json`, `phpstan.neon`, `includes/health.php`, `includes/observability.php`, `mu-plugins/000-btt-hardening.php`                                              |
+| Module | What lands here                                                                                                                                                                                                                                                                      |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 02     | `docker-compose.yml`, `docker-compose.dev.yml`, `.env.example`, `php.ini`, `uploads.ini`, the `btt-headless` theme stub, this runbook                                                                                                                                                |
+| 03     | `wp-content/plugins/blame-the-tech-core/` — plugin header, Composer PSR-4 autoload, post types, taxonomies, custom statuses, roles and capabilities                                                                                                                                  |
+| 04     | `includes/acf-json/` field groups, `includes/cli/` with the `wp blame seed` command, the option-based migration runner                                                                                                                                                               |
+| 06     | `includes/graphql/` — registered enums, the `blameScore` field, `createIncident`, `registerDeveloper`, `submitHobtLead`, and the committed `schema.graphql` contract                                                                                                                 |
+| 07     | `blame-the-tech-core/phpcs.xml.dist` — WordPress Coding Standards, beside the code it describes                                                                                                                                                                                      |
+| 12     | `wp-content/mu-plugins/blame-seeder/` — determinism fixes to the Module 04 seeder, plus `wp blame fixture export\|load\|status` (dev/CI only, never in the production image)                                                                                                         |
+| 13     | `wp-content/plugins/blame-the-tech-blocks/` — six blocks, `block.json` each, `@wordpress/scripts` build, `theme.json`                                                                                                                                                                |
+| 15     | JWT configuration and `incident_reporter` hardening                                                                                                                                                                                                                                  |
+| 16     | `includes/Leads.php` — the HOBT lead capture the funnel writes to                                                                                                                                                                                                                    |
+| 17     | `includes/Preview.php` — preview token issue and the `/wp-json/btt/v1/preview/verify` endpoint                                                                                                                                                                                       |
+| 18     | `includes/Revalidate.php` — the HMAC-signed revalidation webhook                                                                                                                                                                                                                     |
+| 20     | Polylang bootstrap and the idempotent `wp blame ensure-languages` command                                                                                                                                                                                                            |
+| 23     | `tests/` — Pest + Brain Monkey unit tests and `wp-phpunit` integration tests, both executed in the `phptest` service (PHP 8.3, while the site runs 8.4 — Lesson 23.4 §1.1), `phpunit.xml.dist`, and a `wp_test` database created by one idempotent `exec` rather than a Compose edit |
+| 24     | `Dockerfile` (multi-stage, non-root, opcache; **WP-CLI stays**, because `release_command` is four `wp` invocations), `.dockerignore`, `fly.toml`, `railway.json`, `phpstan.neon`, `includes/health.php`, `includes/observability.php`, `mu-plugins/000-btt-hardening.php`            |
 
 ## Expected final tree
 
