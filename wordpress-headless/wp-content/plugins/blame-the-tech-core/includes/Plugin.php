@@ -42,6 +42,8 @@ final class Plugin
 	 * @var string[]
 	 */
 	private const CLI_INCLUDES = array(
+		'includes/cli/migrations.php',
+		'includes/cli/seed.php',
 		'includes/cli/blame-command.php',
 	);
 

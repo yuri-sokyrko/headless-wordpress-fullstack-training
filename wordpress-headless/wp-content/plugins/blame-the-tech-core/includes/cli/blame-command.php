@@ -131,7 +131,8 @@ final class Blame_Command
 	 */
 	public function seed(array $args, array $assoc_args): void
 	{
-		WP_CLI::warning('wp blame seed is a stub. Lesson 04.5 implements it.');
+		// Same namespace, so the function resolves without a `use`.
+		seed_all($assoc_args);
 	}
 
 	/**
@@ -154,14 +155,12 @@ final class Blame_Command
 	 */
 	public function reset(array $args, array $assoc_args): void
 	{
-		// Passing $assoc_args is what makes --yes work. confirm() looks for the
-		// flag itself, so there is no `if` to forget.
 		WP_CLI::confirm(
-			'This deletes every seeded incident, review, post, page and media item. Continue?',
+			'This force-deletes every seeded incident, review, post, page and media item. Continue?',
 			$assoc_args
 		);
 
-		WP_CLI::warning('wp blame reset is a stub. Lesson 04.5 implements it.');
+		WP_CLI::success(sprintf('removed %d items', reset_seeded()));
 	}
 
 	/**
@@ -189,6 +188,63 @@ final class Blame_Command
 		}
 
 		WP_CLI::warning('wp blame ensure-languages is a stub. Module 20 implements it.');
+	}
+
+	/**
+	 * Apply every schema migration that has not run yet.
+	 *
+	 * Forward only. To undo something, add a new migration.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : List what would run, and change nothing.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp blame migrate --dry-run
+	 *     wp blame migrate
+	 *
+	 * @when after_wp_load
+	 *
+	 * @param string[]             $args       Positional arguments (none).
+	 * @param array<string, mixed> $assoc_args Associative arguments.
+	 */
+	public function migrate(array $args, array $assoc_args): void
+	{
+		$dry_run = (bool) \WP_CLI\Utils\get_flag_value($assoc_args, 'dry-run', false);
+		$from    = (int) get_option('btt_db_version', 0);
+
+		if ($from > DB_VERSION) {
+			// The database has seen a newer deploy than this code. Rolling the
+			// code back does not roll the data back — say so rather than
+			// pretending everything is fine.
+			WP_CLI::warning(
+				sprintf('Database is at version %d but this code expects %d.', $from, DB_VERSION)
+			);
+		}
+
+		$applied = run_migrations($dry_run);
+
+		if (array() === $applied) {
+			WP_CLI::success(sprintf('Database is at version %d. Nothing to do.', $from));
+
+			return;
+		}
+
+		foreach ($applied as $version => $changed) {
+			WP_CLI::log(
+				$dry_run
+					? sprintf('pending: migration %d', $version)
+					: sprintf('migration %d: %d row(s) changed', $version, (int) $changed)
+			);
+		}
+
+		WP_CLI::success(
+			$dry_run
+				? sprintf('%d migration(s) pending.', count($applied))
+				: sprintf('Database is now at version %d.', DB_VERSION)
+		);
 	}
 
 	/**
