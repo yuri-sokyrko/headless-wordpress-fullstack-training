@@ -34,6 +34,8 @@ final class Plugin
 		'includes/admin/incident-columns.php',
 		'includes/roles.php',
 		'includes/acf.php',
+		'includes/graphql/enums.php',
+		'includes/graphql/fields.php',
 	);
 
 	/**
