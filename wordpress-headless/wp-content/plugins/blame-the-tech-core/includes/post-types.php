@@ -61,6 +61,7 @@ function register_post_types(): void
 			'show_in_graphql' => true,
 			'graphql_single_name' => 'Incident',
 			'graphql_plural_name' => 'Incidents',
+			'graphql_exclude_mutations' => array('create', 'update', 'delete'),
 
 			// ── URLs ────────────────────────────────────────────────────────
 			'hierarchical' => false,

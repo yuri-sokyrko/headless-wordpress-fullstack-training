@@ -36,6 +36,10 @@ final class Plugin
 		'includes/acf.php',
 		'includes/graphql/enums.php',
 		'includes/graphql/fields.php',
+		'includes/graphql/app-token.php',
+		'includes/graphql/mutation-create-incident.php',
+		'includes/graphql/mutation-register-developer.php',
+		'includes/graphql/mutation-submit-hobt-lead.php',
 	);
 
 	/**
