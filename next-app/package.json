@@ -1,0 +1,24 @@
+{
+  "name": "btt-next-app",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Blame The Tech - front end for the headless WordPress API",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0 <23",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "blame": "echo 'Lesson 07.2 writes scripts/blame.mjs and wires this script.' && exit 1",
+    "type-check": "echo 'Lesson 07.3 adds tsconfig.json and runs tsc --noEmit here.' && exit 1",
+    "typecheck": "npm run type-check",
+    "lint": "echo 'Lesson 07.5 adds eslint.config.mjs and wires this script.' && exit 1",
+    "format": "echo 'Lesson 07.5 adds .prettierrc and wires this script.' && exit 1",
+    "format:check": "echo 'Lesson 07.5 adds .prettierrc and wires this script.' && exit 1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "^5.9.3"
+  }
+}
