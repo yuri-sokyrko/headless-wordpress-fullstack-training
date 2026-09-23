@@ -4,5 +4,19 @@ services:
       WORDPRESS_DEBUG: 1
 
   db:
+    image: mysql:8.4
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --require-secure-transport=OFF
+      - --mysql-native-password=ON
     ports:
       - "3306:3306"
+
+  wpcli:
+    environment:
+      MYSQL_PWD: ${WORDPRESS_DB_PASSWORD}
+      LIBMYSQL_ENABLE_CLEARTEXT_PLUGIN: 1
+    volumes:
+      - ./my.cnf:/etc/my.cnf:ro
+      - ./my.cnf:/var/www/.my.cnf:ro

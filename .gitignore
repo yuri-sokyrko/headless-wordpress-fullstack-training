@@ -89,6 +89,9 @@ wordpress-headless/wp-content/plugins/blame-the-tech-blocks/build/
 wp-salts.php
 fly.secrets*
 
+# Local config files
+my.cnf
+
 # =============================================================================
 #  COURSE-AUTHORING ONLY — never ships to a student
 #

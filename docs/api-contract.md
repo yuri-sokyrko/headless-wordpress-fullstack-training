@@ -95,3 +95,38 @@ SQL; detail goes to `graphql_debug()`, which surfaces only in local development.
   `schema.graphql` and the JSDoc on the generated TypeScript type.
 - A pull request that changes `schema.graphql` destructively needs a deploy plan in its
   description.
+
+  ## 8. Query budget and limits
+
+Measured on the 40-incident seed, second run, local Docker stack, <today's date>.
+
+| Query                                                   | `first: 5` | `first: 40` | Shape                                |
+| ------------------------------------------------------- | ---------- | ----------- | ------------------------------------ |
+| `incidents { nodes { title } }`                         | 18         | 19          | flat                                 |
+| `incidents { nodes { title blameScore } }`              | 18         | 19          | flat — computed from primed caches   |
+| `incidents { nodes { scapegoats { nodes { name } } } }` | 23         | 58          | **linear** — one term query per node |
+| `scapegoats { nodes { name count } }`                   | 6          | 6           | flat — `count` is an indexed column  |
+
+Fixed cost before any resolver runs: `wp_options` autoload — <your bytes> bytes.
+
+### Limits in force
+
+| Limit                | Value                                    | Where                                                    |
+| -------------------- | ---------------------------------------- | -------------------------------------------------------- |
+| Nodes per connection | 50                                       | `graphql_connection_max_query_amount`                    |
+| Query depth          | 10, for callers without `manage_options` | `QueryDepth` validation rule                             |
+| Query complexity     | 500                                      | `QueryComplexity` validation rule                        |
+| Public introspection | on in `local`, off elsewhere             | code, keyed on `WP_ENVIRONMENT_TYPE`                     |
+| `graphql_debug`      | on in `local`, off elsewhere             | same filter — `extensions.debug` is a disclosure channel |
+| Persisted queries    | Module 24, WPGraphQL Smart Cache         | production only; the strongest control                   |
+
+### Rules
+
+- A resolver on a type is called once per node, and the client chooses the node count. A resolver
+  may compute; it must not fetch.
+- Term meta is primed by nothing. Any resolver reaching for `get_term_meta()` or an SCF term
+  field needs `update_termmeta_cache()` for the batch first.
+- A linear query shape is a review finding, not a performance opinion. Re-ask the question from
+  the other side of the relationship before reaching for a cache.
+- Every list in a saved operation passes an explicit `first`. `@graphql-eslint` fails the build
+  otherwise.

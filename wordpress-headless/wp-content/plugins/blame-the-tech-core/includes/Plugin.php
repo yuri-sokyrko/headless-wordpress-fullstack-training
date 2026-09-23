@@ -40,6 +40,7 @@ final class Plugin
 		'includes/graphql/mutation-create-incident.php',
 		'includes/graphql/mutation-register-developer.php',
 		'includes/graphql/mutation-submit-hobt-lead.php',
+		'includes/graphql/performance.php',
 	);
 
 	/**
