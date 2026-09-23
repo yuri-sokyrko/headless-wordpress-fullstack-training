@@ -1,10 +1,10 @@
 <?php
 
 /**
- * Custom GraphQL fields on `Incident`.
+ * Custom GraphQL fields on `Incident` and `TechReview`.
  *
  * Two jobs:
- *   1. Retype the two SCF select fields so they are real enums (Lesson 06.1 §5).
+ *   1. Retype SCF select fields so they are real enums (Lesson 06.1 §5).
  *   2. Register `blameScore` and `blameScoreBreakdown` (§6).
  *
  * Every resolver here MUST be computation only. A field on a type is resolved
@@ -130,57 +130,65 @@ function incident_blame_breakdown(int $post_id): ?array
 }
 
 /**
- * The companion interface WPGraphQL for SCF generates alongside
- * `IncidentDetails` (`<Type>_Fields`, registered from the same field array —
- * see WPGraphQLAcf\Registry::register_graphql_object_type()). Every field
- * retyped on `IncidentDetails` must be retyped here too, or graphql-php's
- * interface-conformance check rejects the schema: an implementing type's
- * field type must stay compatible with the interface's declared type.
+ * The object type WPGraphQL for SCF generates from the `Tech Review Fields`
+ * field group (`group_tech_review_fields.json`, `graphql_field_name`
+ * "techReviewFields").
  */
-const SCF_INCIDENT_INTERFACE = SCF_INCIDENT_TYPE . '_Fields';
+const SCF_TECH_REVIEW_TYPE = 'TechReviewFields';
 
-/** Retype the two SCF select fields as real enums. */
-function register_incident_enum_fields(): void
+/**
+ * Retype one SCF select field to a real enum, on both its object type and the
+ * companion `<Type>_Fields` interface WPGraphQL for SCF generates alongside it
+ * (registered from the same field array — see
+ * WPGraphQLAcf\Registry::register_graphql_object_type()). Both must change
+ * together: graphql-php's interface-conformance check rejects a schema where
+ * an implementing type's field type is no longer compatible with the
+ * interface's declared type.
+ */
+function retype_scf_enum_field(string $type_name, string $field_name, string $enum, string $meta_key): void
 {
-	$fields = array(
-		// GraphQL field name => [ enum type, wp_postmeta key ].
-		'environment'      => array('IncidentEnvironment', 'environment'),
-		'resolutionStatus' => array('IncidentResolutionStatus', 'resolution_status'),
+	$resolve = static function ($source, array $args, AppContext $context, ResolveInfo $info) use ($enum, $meta_key): ?string {
+		$post_id = source_post_id($source);
+
+		if (0 === $post_id) {
+			return null;
+		}
+
+		// Return the STORED value. graphql-php serialises it to the
+		// enum name. Upper-casing here would break the field.
+		return normalize_stored_value($enum, get_post_meta($post_id, $meta_key, true));
+	};
+
+	$field_config = array(
+		'type'        => $enum,
+		'description' => sprintf(
+			/* translators: %s: GraphQL enum type name. */
+			__('Stored as a kebab-case value in post meta and exposed as %s. Null when unset or when the stored value is not a legal enum value.', 'blame-the-tech-core'),
+			$enum
+		),
+		'resolve'     => $resolve,
 	);
 
-	foreach ($fields as $field_name => list($enum, $meta_key)) {
-		$resolve = static function ($source, array $args, AppContext $context, ResolveInfo $info) use ($enum, $meta_key): ?string {
-			$post_id = source_post_id($source);
-
-			if (0 === $post_id) {
-				return null;
-			}
-
-			// Return the STORED value. graphql-php serialises it to the
-			// enum name. Upper-casing here would break the field.
-			return normalize_stored_value($enum, get_post_meta($post_id, $meta_key, true));
-		};
-
-		$field_config = array(
-			'type'        => $enum,
-			'description' => sprintf(
-				/* translators: %s: GraphQL enum type name. */
-				__('Stored as a kebab-case value in post meta and exposed as %s. Null when unset or when the stored value is not a legal enum value.', 'blame-the-tech-core'),
-				$enum
-			),
-			'resolve'     => $resolve,
-		);
-
-		// SCF registered this field as [String] on both the object type and
-		// its `_Fields` interface. A field cannot be registered twice, so
-		// retyping is remove-then-add on each. See Lesson 06.1 §5 for the
-		// two costs this incurs.
-		deregister_graphql_field(SCF_INCIDENT_TYPE, $field_name);
-		register_graphql_field(SCF_INCIDENT_TYPE, $field_name, $field_config);
-
-		deregister_graphql_field(SCF_INCIDENT_INTERFACE, $field_name);
-		register_graphql_field(SCF_INCIDENT_INTERFACE, $field_name, $field_config);
+	// SCF registered this field as [String] on both the object type and its
+	// `_Fields` interface. A field cannot be registered twice, so retyping is
+	// remove-then-add on each. See Lesson 06.1 §5 for the two costs this incurs.
+	foreach (array($type_name, $type_name . '_Fields') as $target) {
+		deregister_graphql_field($target, $field_name);
+		register_graphql_field($target, $field_name, $field_config);
 	}
+}
+
+/** Retype the two SCF select fields on `IncidentDetails` as real enums. */
+function register_incident_enum_fields(): void
+{
+	retype_scf_enum_field(SCF_INCIDENT_TYPE, 'environment', 'IncidentEnvironment', 'environment');
+	retype_scf_enum_field(SCF_INCIDENT_TYPE, 'resolutionStatus', 'IncidentResolutionStatus', 'resolution_status');
+}
+
+/** Retype `verdict` on `TechReviewFields` as a real enum. */
+function register_tech_review_enum_fields(): void
+{
+	retype_scf_enum_field(SCF_TECH_REVIEW_TYPE, 'verdict', 'TechReviewVerdict', 'verdict');
 }
 
 /** `blameScore`, and the object type that explains it. */
@@ -201,6 +209,9 @@ function register_blame_score_fields(): void
 				'severitySlug'    => array(
 					'type'        => 'String',
 					'description' => __('The severity term slug the weight came from.', 'blame-the-tech-core'),
+					// Lesson 06.3 §5: a reason names the replacement AND the date.
+					// A deprecation with no date is a field that lives forever.
+					'deprecationReason' => __('Duplicates `severities { nodes { slug } }`, which is the canonical route, and leaks a WordPress term slug into a computed field. Use that connection instead. Removed after 2026-06-01.', 'blame-the-tech-core'),
 					'resolve'     => static fn($source): ?string => isset($source['severitySlug']) ? (string) $source['severitySlug'] : null,
 				),
 				'severityWeight'  => array(
@@ -250,6 +261,7 @@ function register_blame_score_fields(): void
 }
 
 add_action('graphql_register_types', __NAMESPACE__ . '\\register_incident_enum_fields');
+add_action('graphql_register_types', __NAMESPACE__ . '\\register_tech_review_enum_fields');
 add_action('graphql_register_types', __NAMESPACE__ . '\\register_blame_score_fields');
 
 /**

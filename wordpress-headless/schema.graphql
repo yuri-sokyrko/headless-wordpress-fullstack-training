@@ -384,22 +384,13 @@ type MediaItem implements Node & ContentNode & UniformResourceIdentifiable & Dat
   ): ContentNodeToEnqueuedStylesheetConnection
 
   "The filename of the mediaItem for the specified size (default size is full)"
-  file(
-    "Size of the MediaItem to return"
-    size: MediaItemSizeEnum
-  ): String
+  file("Size of the MediaItem to return" size: MediaItemSizeEnum): String
 
   "The path to the original file relative to the uploads directory"
-  filePath(
-    "Size of the MediaItem to return"
-    size: MediaItemSizeEnum
-  ): String
+  filePath("Size of the MediaItem to return" size: MediaItemSizeEnum): String
 
   "The filesize in bytes of the resource"
-  fileSize(
-    "Size of the MediaItem to return"
-    size: MediaItemSizeEnum
-  ): Int
+  fileSize("Size of the MediaItem to return" size: MediaItemSizeEnum): Int
 
   "The global unique identifier for this content node. This is a stable, unique identifier for the node that does not change even if the node is moved or its url changes."
   guid: String
@@ -441,7 +432,8 @@ type MediaItem implements Node & ContentNode & UniformResourceIdentifiable & Dat
   mediaDetails: MediaDetails
 
   "The unique numeric identifier for the content node."
-  mediaItemId: Int! @deprecated(reason: "Deprecated in favor of the databaseId field")
+  mediaItemId: Int!
+    @deprecated(reason: "Deprecated in favor of the databaseId field")
 
   "Url of the mediaItem"
   mediaItemUrl: String
@@ -486,10 +478,7 @@ type MediaItem implements Node & ContentNode & UniformResourceIdentifiable & Dat
   slug: String
 
   "Url of the mediaItem"
-  sourceUrl(
-    "Size of the MediaItem to return"
-    size: MediaItemSizeEnum
-  ): String
+  sourceUrl("Size of the MediaItem to return" size: MediaItemSizeEnum): String
 
   "The srcset attribute specifies the URL of the image to use in different situations. It is a comma separated string of urls and their widths."
   srcSet(
@@ -504,10 +493,7 @@ type MediaItem implements Node & ContentNode & UniformResourceIdentifiable & Dat
   template: ContentTemplate
 
   "The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made."
-  title(
-    "Format of the field output"
-    format: PostObjectFieldFormatEnum
-  ): String
+  title("Format of the field output" format: PostObjectFieldFormatEnum): String
 
   "The unique resource identifier path"
   uri: String
@@ -2610,7 +2596,10 @@ input UserToCommentConnectionWhereArgs {
   search: String
 
   "Comment status to limit results by."
-  status: String @deprecated(reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string")
+  status: String
+    @deprecated(
+      reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string"
+    )
 
   "One or more Comment Statuses to limit results by"
   statusIn: [CommentStatusEnum]
@@ -2724,13 +2713,17 @@ type Comment implements Node & DatabaseIdentifier & UniformResourceIdentifiable 
   agent: String
 
   "The approval status of the comment."
-  approved: Boolean @deprecated(reason: "Deprecated in favor of the `status` field")
+  approved: Boolean
+    @deprecated(reason: "Deprecated in favor of the `status` field")
 
   "The author of the comment"
   author: CommentToCommenterConnectionEdge
 
   "IP address for the author at the time of commenting."
-  authorIp: String @deprecated(reason: "Use the ipAddress field on the edge between the comment and author")
+  authorIp: String
+    @deprecated(
+      reason: "Use the ipAddress field on the edge between the comment and author"
+    )
 
   "ID for the comment, unique among comments."
   commentId: Int @deprecated(reason: "Deprecated in favor of databaseId")
@@ -2952,7 +2945,10 @@ input CommentToParentCommentConnectionWhereArgs {
   search: String
 
   "Comment status to limit results by."
-  status: String @deprecated(reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string")
+  status: String
+    @deprecated(
+      reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string"
+    )
 
   "One or more Comment Statuses to limit results by"
   statusIn: [CommentStatusEnum]
@@ -3054,7 +3050,10 @@ input CommentToCommentConnectionWhereArgs {
   search: String
 
   "Comment status to limit results by."
-  status: String @deprecated(reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string")
+  status: String
+    @deprecated(
+      reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string"
+    )
 
   "One or more Comment Statuses to limit results by"
   statusIn: [CommentStatusEnum]
@@ -3330,7 +3329,8 @@ interface IncidentConnectionEdge implements Edge {
 "A publicli submitted outage, moderated before publication."
 type Incident implements Node & ContentNode & UniformResourceIdentifiable & DatabaseIdentifier & NodeWithTemplate & Previewable & NodeWithTitle & NodeWithContentEditor & NodeWithAuthor & NodeWithRevisions & WithAcfIncidentDetails {
   "The unique numeric identifier for the content node."
-  incidentId: Int! @deprecated(reason: "Deprecated in favor of the databaseId field")
+  incidentId: Int!
+    @deprecated(reason: "Deprecated in favor of the databaseId field")
 
   "The ancestors of the content node."
   ancestors(
@@ -3345,7 +3345,10 @@ type Incident implements Node & ContentNode & UniformResourceIdentifiable & Data
 
     "Cursor used along with the \"last\" argument to reference where in the dataset to get data"
     before: String
-  ): IncidentToIncidentConnection @deprecated(reason: "This content type is not hierarchical and typically will not have ancestors")
+  ): IncidentToIncidentConnection
+    @deprecated(
+      reason: "This content type is not hierarchical and typically will not have ancestors"
+    )
 
   "Connection between the NodeWithAuthor type and the User type"
   author: NodeWithAuthorToUserConnectionEdge
@@ -3477,7 +3480,10 @@ type Incident implements Node & ContentNode & UniformResourceIdentifiable & Data
   modifiedGmt: String
 
   "The parent of the content node."
-  parent: IncidentToParentConnectionEdge @deprecated(reason: "This content type is not hierarchical and typically will not have a parent")
+  parent: IncidentToParentConnectionEdge
+    @deprecated(
+      reason: "This content type is not hierarchical and typically will not have a parent"
+    )
 
   "The password for the incident object."
   password: String
@@ -3594,10 +3600,7 @@ type Incident implements Node & ContentNode & UniformResourceIdentifiable & Data
   ): IncidentToTermNodeConnection
 
   "The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made."
-  title(
-    "Format of the field output"
-    format: PostObjectFieldFormatEnum
-  ): String
+  title("Format of the field output" format: PostObjectFieldFormatEnum): String
 
   "The unique resource identifier path"
   uri: String
@@ -3630,10 +3633,7 @@ interface NodeWithTitle implements Node {
   id: ID!
 
   "The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made."
-  title(
-    "Format of the field output"
-    format: PostObjectFieldFormatEnum
-  ): String
+  title("Format of the field output" format: PostObjectFieldFormatEnum): String
 }
 
 "Content that has a main body field which can contain formatted text and media. Provides access to both raw (with appropriate permissions) and rendered versions of the content."
@@ -3819,7 +3819,10 @@ type BlameScoreBreakdown {
   score: Float
 
   "The severity term slug the weight came from."
-  severitySlug: String @deprecated(reason: "Duplicates `severities { nodes { slug } }`, which is the canonical route, and leaks a WordPress term slug into a computed field. Use that connection instead. Removed after 2026-06-01.")
+  severitySlug: String
+    @deprecated(
+      reason: "Duplicates `severities { nodes { slug } }`, which is the canonical route, and leaks a WordPress term slug into a computed field. Use that connection instead. Removed after 2026-06-01."
+    )
 
   "Weight for that severity: 1.0, 0.6, 0.3 or 0.1."
   severityWeight: Float
@@ -4101,7 +4104,10 @@ input IncidentToScapegoatConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -4644,7 +4650,10 @@ input IncidentToSeverityConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -5079,7 +5088,10 @@ input SeverityToSeverityConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -5436,7 +5448,10 @@ input IncidentToTechStackConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -6015,7 +6030,10 @@ type Post implements Node & ContentNode & UniformResourceIdentifiable & Database
 
     "Cursor used along with the \"last\" argument to reference where in the dataset to get data"
     before: String
-  ): PostToPostConnection @deprecated(reason: "This content type is not hierarchical and typically will not have ancestors")
+  ): PostToPostConnection
+    @deprecated(
+      reason: "This content type is not hierarchical and typically will not have ancestors"
+    )
 
   "Connection between the NodeWithAuthor type and the User type"
   author: NodeWithAuthorToUserConnectionEdge
@@ -6198,7 +6216,10 @@ type Post implements Node & ContentNode & UniformResourceIdentifiable & Database
   modifiedGmt: String
 
   "The parent of the content node."
-  parent: PostToParentConnectionEdge @deprecated(reason: "This content type is not hierarchical and typically will not have a parent")
+  parent: PostToParentConnectionEdge
+    @deprecated(
+      reason: "This content type is not hierarchical and typically will not have a parent"
+    )
 
   "The password for the post object."
   password: String
@@ -6228,7 +6249,8 @@ type Post implements Node & ContentNode & UniformResourceIdentifiable & Database
   ): PostToPostFormatConnection
 
   "The unique numeric identifier for the content node."
-  postId: Int! @deprecated(reason: "Deprecated in favor of the databaseId field")
+  postId: Int!
+    @deprecated(reason: "Deprecated in favor of the databaseId field")
 
   "Connection between the post type and the post type"
   preview: PostToPreviewConnectionEdge
@@ -6324,10 +6346,7 @@ type Post implements Node & ContentNode & UniformResourceIdentifiable & Database
   ): PostToTermNodeConnection
 
   "The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made."
-  title(
-    "Format of the field output"
-    format: PostObjectFieldFormatEnum
-  ): String
+  title("Format of the field output" format: PostObjectFieldFormatEnum): String
 
   "URLs queued to be pinged."
   toPing: [String]
@@ -6534,7 +6553,10 @@ input PostToCategoryConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -6858,7 +6880,10 @@ input CategoryToCategoryConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -7272,7 +7297,10 @@ input PostToCommentConnectionWhereArgs {
   search: String
 
   "Comment status to limit results by."
-  status: String @deprecated(reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string")
+  status: String
+    @deprecated(
+      reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string"
+    )
 
   "One or more Comment Statuses to limit results by"
   statusIn: [CommentStatusEnum]
@@ -7383,7 +7411,10 @@ input PostToPostFormatConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -8052,7 +8083,10 @@ input PostToTagConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -8574,7 +8608,10 @@ input PostToTechStackConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -8694,7 +8731,10 @@ input PostToTermNodeConnectionWhereArgs {
   taxonomies: [TaxonomyEnum]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -8889,7 +8929,8 @@ interface TechReviewConnectionEdge implements Edge {
 "A satirical review of a company or a tool."
 type TechReview implements Node & ContentNode & UniformResourceIdentifiable & DatabaseIdentifier & NodeWithTemplate & Previewable & NodeWithTitle & NodeWithContentEditor & NodeWithFeaturedImage & NodeWithRevisions & WithAcfTechReviewFields {
   "The unique numeric identifier for the content node."
-  techReviewId: Int! @deprecated(reason: "Deprecated in favor of the databaseId field")
+  techReviewId: Int!
+    @deprecated(reason: "Deprecated in favor of the databaseId field")
 
   "The ancestors of the content node."
   ancestors(
@@ -8904,7 +8945,10 @@ type TechReview implements Node & ContentNode & UniformResourceIdentifiable & Da
 
     "Cursor used along with the \"last\" argument to reference where in the dataset to get data"
     before: String
-  ): TechReviewToTechReviewConnection @deprecated(reason: "This content type is not hierarchical and typically will not have ancestors")
+  ): TechReviewToTechReviewConnection
+    @deprecated(
+      reason: "This content type is not hierarchical and typically will not have ancestors"
+    )
 
   "The content of the post."
   content(
@@ -9027,7 +9071,10 @@ type TechReview implements Node & ContentNode & UniformResourceIdentifiable & Da
   modifiedGmt: String
 
   "The parent of the content node."
-  parent: TechReviewToParentConnectionEdge @deprecated(reason: "This content type is not hierarchical and typically will not have a parent")
+  parent: TechReviewToParentConnectionEdge
+    @deprecated(
+      reason: "This content type is not hierarchical and typically will not have a parent"
+    )
 
   "The password for the tech_review object."
   password: String
@@ -9111,10 +9158,7 @@ type TechReview implements Node & ContentNode & UniformResourceIdentifiable & Da
   ): TechReviewToTermNodeConnection
 
   "The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made."
-  title(
-    "Format of the field output"
-    format: PostObjectFieldFormatEnum
-  ): String
+  title("Format of the field output" format: PostObjectFieldFormatEnum): String
 
   "The unique resource identifier path"
   uri: String
@@ -9152,8 +9196,23 @@ type TechReviewFields implements TechReviewFields_Fields & AcfFieldGroup & AcfFi
   "Field of the &quot;date_picker&quot; Field Type added to the schema as part of the &quot;TechReviewFields&quot; Field Group (ACF Fields of the date_picker type return a date string according to the RFC3339 spec: https://datatracker.ietf.org/doc/html/rfc3339.)"
   reviewedAt: String
 
-  "Kebab-case values. Lesson 06.1 maps these onto the TechReviewVerdict enum."
-  verdict: [String]
+  "Stored as a kebab-case value in post meta and exposed as TechReviewVerdict. Null when unset or when the stored value is not a legal enum value."
+  verdict: TechReviewVerdict
+}
+
+"The tech-radar verdict on a company or tool."
+enum TechReviewVerdict {
+  "Use it."
+  ADOPT
+
+  "Read about it; do not ship it."
+  ASSESS
+
+  "Stop starting new things with it."
+  HOLD
+
+  "Use it somewhere that can fail."
+  TRIAL
 }
 
 "Connection between the TechReview type and the TechReview type"
@@ -9378,7 +9437,10 @@ input TechReviewToTechStackConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -9483,7 +9545,10 @@ input TechReviewToTermNodeConnectionWhereArgs {
   taxonomies: [TaxonomyEnum]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -9636,7 +9701,10 @@ input IncidentToTermNodeConnectionWhereArgs {
   taxonomies: [TaxonomyEnum]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -10146,7 +10214,8 @@ type Page implements Node & ContentNode & UniformResourceIdentifiable & Database
   modifiedGmt: String
 
   "The unique numeric identifier for the content node."
-  pageId: Int! @deprecated(reason: "Deprecated in favor of the databaseId field")
+  pageId: Int!
+    @deprecated(reason: "Deprecated in favor of the databaseId field")
 
   "The parent of the node. The parent object can be of various types"
   parent: HierarchicalContentNodeToParentContentNodeConnectionEdge
@@ -10200,10 +10269,7 @@ type Page implements Node & ContentNode & UniformResourceIdentifiable & Database
   template: ContentTemplate
 
   "The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made."
-  title(
-    "Format of the field output"
-    format: PostObjectFieldFormatEnum
-  ): String
+  title("Format of the field output" format: PostObjectFieldFormatEnum): String
 
   "The unique resource identifier path"
   uri: String
@@ -10707,7 +10773,10 @@ input PageToCommentConnectionWhereArgs {
   search: String
 
   "Comment status to limit results by."
-  status: String @deprecated(reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string")
+  status: String
+    @deprecated(
+      reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string"
+    )
 
   "One or more Comment Statuses to limit results by"
   statusIn: [CommentStatusEnum]
@@ -11319,7 +11388,10 @@ input MediaItemToCommentConnectionWhereArgs {
   search: String
 
   "Comment status to limit results by."
-  status: String @deprecated(reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string")
+  status: String
+    @deprecated(
+      reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string"
+    )
 
   "One or more Comment Statuses to limit results by"
   statusIn: [CommentStatusEnum]
@@ -11756,8 +11828,8 @@ interface TechReviewFields_Fields implements AcfFieldGroup & AcfFieldGroupFields
   "Field of the &quot;date_picker&quot; Field Type added to the schema as part of the &quot;TechReviewFields&quot; Field Group (ACF Fields of the date_picker type return a date string according to the RFC3339 spec: https://datatracker.ietf.org/doc/html/rfc3339.)"
   reviewedAt: String
 
-  "Kebab-case values. Lesson 06.1 maps these onto the TechReviewVerdict enum."
-  verdict: [String]
+  "Stored as a kebab-case value in post meta and exposed as TechReviewVerdict. Null when unset or when the stored value is not a legal enum value."
+  verdict: TechReviewVerdict
 }
 
 "The root entry point into the Graph"
@@ -11831,7 +11903,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
     contentType: ContentTypeEnum
 
     "Whether to return the Preview Node instead of the Published Node. When the ID of a Node is provided along with asPreview being set to true, the preview node with un-published changes will be returned instead of the published node. If no preview node exists or the requester doesn't have proper capabilities to preview, no node will be returned. If the ID provided is a URI and has a preview query arg, it will be used as a fallback if the \"asPreview\" argument is not explicitly provided as an argument."
-    asPreview: Boolean @deprecated(reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version.")
+    asPreview: Boolean
+      @deprecated(
+        reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version."
+      )
   ): ContentNode
 
   "Connection between the RootQuery type and the ContentNode type"
@@ -11891,7 +11966,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
     idType: IncidentIdType
 
     "Whether to return the Preview Node instead of the Published Node. When the ID of a Node is provided along with asPreview being set to true, the preview node with un-published changes will be returned instead of the published node. If no preview node exists or the requester doesn't have proper capabilities to preview, no node will be returned. If the ID provided is a URI and has a preview query arg, it will be used as a fallback if the \"asPreview\" argument is not explicitly provided as an argument."
-    asPreview: Boolean @deprecated(reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version.")
+    asPreview: Boolean
+      @deprecated(
+        reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version."
+      )
   ): Incident
 
   "A Incident object"
@@ -11907,7 +11985,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
 
     "Get the Incident by its slug (only available for non-hierarchical types)"
     slug: String
-  ): Incident @deprecated(reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)")
+  ): Incident
+    @deprecated(
+      reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)"
+    )
 
   "Connection between the RootQuery type and the Incident type"
   incidents(
@@ -11936,7 +12017,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
     idType: MediaItemIdType
 
     "Whether to return the Preview Node instead of the Published Node. When the ID of a Node is provided along with asPreview being set to true, the preview node with un-published changes will be returned instead of the published node. If no preview node exists or the requester doesn't have proper capabilities to preview, no node will be returned. If the ID provided is a URI and has a preview query arg, it will be used as a fallback if the \"asPreview\" argument is not explicitly provided as an argument."
-    asPreview: Boolean @deprecated(reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version.")
+    asPreview: Boolean
+      @deprecated(
+        reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version."
+      )
   ): MediaItem
 
   "A mediaItem object"
@@ -11952,7 +12036,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
 
     "Get the mediaItem by its slug (only available for non-hierarchical types)"
     slug: String
-  ): MediaItem @deprecated(reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)")
+  ): MediaItem
+    @deprecated(
+      reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)"
+    )
 
   "Connection between the RootQuery type and the mediaItem type"
   mediaItems(
@@ -12027,10 +12114,7 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
   ): RootQueryToMenuConnection
 
   "Fetches an object given its ID"
-  node(
-    "The unique identifier of the node"
-    id: ID
-  ): Node
+  node("The unique identifier of the node" id: ID): Node
 
   "Fetches an object given its Unique Resource Identifier"
   nodeByUri(
@@ -12047,7 +12131,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
     idType: PageIdType
 
     "Whether to return the Preview Node instead of the Published Node. When the ID of a Node is provided along with asPreview being set to true, the preview node with un-published changes will be returned instead of the published node. If no preview node exists or the requester doesn't have proper capabilities to preview, no node will be returned. If the ID provided is a URI and has a preview query arg, it will be used as a fallback if the \"asPreview\" argument is not explicitly provided as an argument."
-    asPreview: Boolean @deprecated(reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version.")
+    asPreview: Boolean
+      @deprecated(
+        reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version."
+      )
   ): Page
 
   "A page object"
@@ -12060,7 +12147,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
 
     "Get the page by its uri"
     uri: String
-  ): Page @deprecated(reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)")
+  ): Page
+    @deprecated(
+      reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)"
+    )
 
   "Connection between the RootQuery type and the page type"
   pages(
@@ -12084,10 +12174,7 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
   permalinkSettings: PermalinkSettings
 
   "A WordPress plugin"
-  plugin(
-    "The globally unique identifier of the plugin."
-    id: ID!
-  ): Plugin
+  plugin("The globally unique identifier of the plugin." id: ID!): Plugin
 
   "Connection between the RootQuery type and the Plugin type"
   plugins(
@@ -12116,7 +12203,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
     idType: PostIdType
 
     "Whether to return the Preview Node instead of the Published Node. When the ID of a Node is provided along with asPreview being set to true, the preview node with un-published changes will be returned instead of the published node. If no preview node exists or the requester doesn't have proper capabilities to preview, no node will be returned. If the ID provided is a URI and has a preview query arg, it will be used as a fallback if the \"asPreview\" argument is not explicitly provided as an argument."
-    asPreview: Boolean @deprecated(reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version.")
+    asPreview: Boolean
+      @deprecated(
+        reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version."
+      )
   ): Post
 
   "A post object"
@@ -12132,7 +12222,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
 
     "Get the post by its slug (only available for non-hierarchical types)"
     slug: String
-  ): Post @deprecated(reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)")
+  ): Post
+    @deprecated(
+      reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)"
+    )
 
   "A 0bject"
   postFormat(
@@ -12353,7 +12446,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
     idType: TechReviewIdType
 
     "Whether to return the Preview Node instead of the Published Node. When the ID of a Node is provided along with asPreview being set to true, the preview node with un-published changes will be returned instead of the published node. If no preview node exists or the requester doesn't have proper capabilities to preview, no node will be returned. If the ID provided is a URI and has a preview query arg, it will be used as a fallback if the \"asPreview\" argument is not explicitly provided as an argument."
-    asPreview: Boolean @deprecated(reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version.")
+    asPreview: Boolean
+      @deprecated(
+        reason: "Use the request-level preview context instead: send the `X-GraphQL-Preview` request header (or a `preview` object in the request `extensions`). When a request carries preview context, the context is applied and `asPreview` is ignored. This argument is planned for removal in a future major version."
+      )
   ): TechReview
 
   "A TechReview object"
@@ -12369,7 +12465,10 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
 
     "Get the TechReview by its slug (only available for non-hierarchical types)"
     slug: String
-  ): TechReview @deprecated(reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)")
+  ): TechReview
+    @deprecated(
+      reason: "Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)"
+    )
 
   "Connection between the RootQuery type and the TechReview type"
   techReviews(
@@ -12447,10 +12546,7 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
   ): RootQueryToTermNodeConnection
 
   "A Theme object"
-  theme(
-    "The globally unique identifier of the theme."
-    id: ID!
-  ): Theme
+  theme("The globally unique identifier of the theme." id: ID!): Theme
 
   "Connection between the RootQuery type and the Theme type"
   themes(
@@ -12686,7 +12782,10 @@ input RootQueryToCategoryConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -12842,7 +12941,10 @@ input RootQueryToCommentConnectionWhereArgs {
   search: String
 
   "Comment status to limit results by."
-  status: String @deprecated(reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string")
+  status: String
+    @deprecated(
+      reason: "Deprecated in favor of statusIn which accepts a list of one or more CommentStatusEnum values instead of a string"
+    )
 
   "One or more Comment Statuses to limit results by"
   statusIn: [CommentStatusEnum]
@@ -13502,7 +13604,8 @@ type MenuItem implements Node & DatabaseIdentifier {
   connectedNode: MenuItemToMenuItemLinkableConnectionEdge
 
   "The object connected to this menu item."
-  connectedObject: MenuItemObjectUnion @deprecated(reason: "Deprecated in favor of the connectedNode field")
+  connectedObject: MenuItemObjectUnion
+    @deprecated(reason: "Deprecated in favor of the connectedNode field")
 
   "Class attribute for the menu item link"
   cssClasses: [String]
@@ -13532,7 +13635,8 @@ type MenuItem implements Node & DatabaseIdentifier {
   menu: MenuItemToMenuConnectionEdge
 
   "WP ID of the menu item."
-  menuItemId: Int @deprecated(reason: "Deprecated in favor of the databaseId field")
+  menuItemId: Int
+    @deprecated(reason: "Deprecated in favor of the databaseId field")
 
   "Menu item order"
   order: Int
@@ -14186,7 +14290,10 @@ input RootQueryToPostFormatConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -14645,7 +14752,10 @@ input RootQueryToScapegoatConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -14747,7 +14857,10 @@ input RootQueryToSeverityConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -14885,7 +14998,10 @@ input RootQueryToTagConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -15161,7 +15277,10 @@ input RootQueryToTechStackConnectionWhereArgs {
   slug: [String]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -15284,7 +15403,10 @@ input RootQueryToTermNodeConnectionWhereArgs {
   taxonomies: [TaxonomyEnum]
 
   "Array of term taxonomy IDs, to match when querying terms."
-  termTaxonomId: [ID] @deprecated(reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL.")
+  termTaxonomId: [ID]
+    @deprecated(
+      reason: "Use `termTaxonomyId` instead. This will be removed in the next major version of WPGraphQL."
+    )
 
   "Array of term taxonomy IDs, to match when querying terms."
   termTaxonomyId: [ID]
@@ -15848,10 +15970,7 @@ type RootMutation {
   ): DeleteUserPayload
 
   "Increase the count."
-  increaseCount(
-    "The count to increase"
-    count: Int
-  ): Int
+  increaseCount("The count to increase" count: Int): Int
 
   "Create an unverified incident_reporter. Server-to-server only: requires the X-BTT-App-Token header. Returns the same payload whether or not the email was already registered."
   registerDeveloper(
@@ -16004,7 +16123,8 @@ type CreateCategoryPayload {
 "Input for the createComment mutation."
 input CreateCommentInput {
   "The approval status of the comment."
-  approved: String @deprecated(reason: "Deprecated in favor of the status field")
+  approved: String
+    @deprecated(reason: "Deprecated in favor of the status field")
 
   "The name of the comment's author."
   author: String
@@ -17087,7 +17207,10 @@ type SendPasswordResetEmailPayload {
   success: Boolean
 
   "The user that the password reset email was sent to"
-  user: User @deprecated(reason: "This field will be removed in a future version of WPGraphQL")
+  user: User
+    @deprecated(
+      reason: "This field will be removed in a future version of WPGraphQL"
+    )
 }
 
 "Input for the submitHobtLead mutation."
@@ -17180,7 +17303,8 @@ type UpdateCategoryPayload {
 "Input for the updateComment mutation."
 input UpdateCommentInput {
   "The approval status of the comment."
-  approved: String @deprecated(reason: "Deprecated in favor of the status field")
+  approved: String
+    @deprecated(reason: "Deprecated in favor of the status field")
 
   "The name of the comment's author."
   author: String
@@ -17507,7 +17631,10 @@ input UpdateSettingsInput {
   generalSettingsTitle: String
 
   "Site URL."
-  generalSettingsUrl: String @deprecated(reason: "The site URL is read-only and cannot be changed through the API.")
+  generalSettingsUrl: String
+    @deprecated(
+      reason: "The site URL is read-only and cannot be changed through the API."
+    )
 
   "The ID of the page that should display the latest posts"
   readingSettingsPageForPosts: Int
