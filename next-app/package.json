@@ -10,7 +10,7 @@
     "npm": ">=10"
   },
   "scripts": {
-    "blame": "echo 'Lesson 07.2 writes scripts/blame.mjs and wires this script.' && exit 1",
+    "blame": "node scripts/blame.mjs",
     "type-check": "echo 'Lesson 07.3 adds tsconfig.json and runs tsc --noEmit here.' && exit 1",
     "typecheck": "npm run type-check",
     "lint": "echo 'Lesson 07.5 adds eslint.config.mjs and wires this script.' && exit 1",
