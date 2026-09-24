@@ -1,13 +1,27 @@
+// next-app/tsconfig.json
 {
   "compilerOptions": {
     /* ── Language and libraries ─────────────────────────────────────── */
-    "target": "es2023",
-    "lib": ["ES2023"],
+    "target": "ES2023",
+    // CHANGED: a browser exists now. DOM gives you `document` and the element
+    // types; DOM.Iterable makes NodeList and FileList work in a for..of.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // NEW: compile JSX to jsx()/jsxs() imported from react/jsx-runtime, so no
+    // file needs `import React`. Lesson 09.1 changes this to "preserve".
+    "jsx": "react-jsx",
+    // React's types travel with its imports, so only @types/node is global.
     "types": ["node"],
 
     /* ── Modules ────────────────────────────────────────────────────── */
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    // CHANGED: emit plain ES modules and let the bundler decide the rest.
+    "module": "ESNext",
+    // CHANGED: resolve the way esbuild, Vite and Next do — extensionless
+    // specifiers, "exports" maps honoured, no CommonJS interop guesswork.
+    "moduleResolution": "bundler",
+    // NEW: one alias for the whole project. `@/types/content`, never
+    // `../../../types/content`. The Vite config repeats it in Step 4.
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] },
     "moduleDetection": "force",
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
@@ -18,7 +32,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
 
-    /* ── Correctness ────────────────────────────────────────────────── */
+    /* ── Correctness — untouched. All of Lesson 07.3 still applies. ─── */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -27,5 +41,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts"]
+  // CHANGED: .tsx files are components, and they are in the type-check surface.
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts"]
 }

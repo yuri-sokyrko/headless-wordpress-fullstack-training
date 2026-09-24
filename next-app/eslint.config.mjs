@@ -1,6 +1,8 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
   // ── Never linted ────────────────────────────────────────────────────
@@ -64,6 +66,47 @@ export default [
   // e.g. scripts/blame.mjs is nested, not at the project root.
   {
     files: ['**/*.mjs', '**/*.js'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+
+  // ── React ─────────────────────────────────────────────────────────────
+  // .ts as well as .tsx: a custom hook is a plain function in a .ts file, and
+  // rules-of-hooks has to see it (Lesson 08.4 writes one).
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: { react, 'react-hooks': reactHooks },
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    settings: { react: { version: 'detect' } },
+    rules: {
+      ...react.configs.flat.recommended.rules,
+
+      // Off because `jsx: react-jsx` compiles JSX with no React import. These
+      // two would fire on every component file in the project.
+      'react/react-in-jsx-scope': 'off',
+      'react/jsx-uses-react': 'off',
+
+      // Off because TypeScript types the props. propTypes are the runtime
+      // alternative and this project has a compile-time one.
+      'react/prop-types': 'off',
+
+      // Calling a hook conditionally breaks React's internal ordering. There is
+      // no valid reason to do it, so: error.
+      'react-hooks/rules-of-hooks': 'error',
+
+      // The plugin ships this as a warning. `npm run lint` runs with
+      // --max-warnings=0 (Lesson 07.5), so a warning already fails the build —
+      // calling it a warning only hides which line is at fault.
+      'react-hooks/exhaustive-deps': 'error',
+    },
+  },
+
+  // The throwaway harness from Step 4 is outside tsconfig.json's `include`, so
+  // the type-aware rules have no program to consult for it. Turn those off here
+  // rather than adding a disposable directory to the type-check surface. The
+  // syntactic rules, including rules-of-hooks, still apply. Lesson 09.1 deletes
+  // the directory and this block with it.
+  {
+    files: ['scratch/**/*.{ts,tsx}'],
     ...tseslint.configs.disableTypeChecked,
   },
 
