@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    /* ── Language and libraries ─────────────────────────────────────── */
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+
+    /* ── Modules ────────────────────────────────────────────────────── */
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+
+    /* ── Output ─────────────────────────────────────────────────────── */
+    "noEmit": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* ── Correctness ────────────────────────────────────────────────── */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["src/**/*.ts", "scripts/**/*.ts"]
+}

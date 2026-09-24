@@ -11,7 +11,7 @@
   },
   "scripts": {
     "blame": "node scripts/blame.mjs",
-    "type-check": "echo 'Lesson 07.3 adds tsconfig.json and runs tsc --noEmit here.' && exit 1",
+    "type-check": "tsc --noEmit",
     "typecheck": "npm run type-check",
     "lint": "echo 'Lesson 07.5 adds eslint.config.mjs and wires this script.' && exit 1",
     "format": "echo 'Lesson 07.5 adds .prettierrc and wires this script.' && exit 1",
