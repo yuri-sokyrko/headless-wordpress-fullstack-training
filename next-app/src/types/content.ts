@@ -60,9 +60,9 @@ export type Incident = {
   readonly incidentDetails: IncidentDetails | null;
   // In the schema these are Relay CONNECTIONS, not arrays, and `scapegoats` carries an
   // SCF term field group. Lesson 07.4 fixes both — flat `Term[]` is a placeholder.
-  readonly severities: readonly SeverityTerm[];
-  readonly scapegoats: readonly Term[];
-  readonly techStacks: readonly Term[];
+  readonly severities: Connection<SeverityTerm>;
+  readonly scapegoats: Connection<Scapegoat>;
+  readonly techStacks: Connection<Term>;
   readonly content?: string | null; // only when you select it
 };
 
@@ -70,5 +70,113 @@ export type Incident = {
 
 // `incidents` is nullable because a GraphQL error arrives with HTTP 200 and no data.
 export type BlameBoardData = {
-  readonly incidents: { readonly nodes: readonly Incident[] } | null;
+  readonly incidents: Connection<Incident> | null;
 };
+
+/* ── Relay connections (appendix 05 §2), as generics ─────────────────── */
+export type PageInfo = {
+  readonly hasNextPage: boolean;
+  readonly endCursor: string | null;
+};
+
+export type Edge<TNode> = {
+  readonly cursos: string;
+  readonly node: TNode;
+};
+
+export type Connection<TNode> = {
+  readonly nodes: readonly TNode[];
+  readonly pageInfo?: PageInfo; // Only whe you select it
+  readonly edges?: readonly Edge<TNode>[]; // the long form - rarely needed
+};
+
+/* ── Media, and the SCF image edge (appendix 03 §4.2) ────────────────── */
+export type MediaItem = {
+  readonly id: string;
+  readonly sourceUrl: string;
+  readonly altText: string;
+};
+
+// SCF image fields do NOT arrive as a bare object. WPGraphQL for SCF returns an
+// `AcfMediaItemConnectionEdge`, so the media item sits one level down, under `node`.
+export type AcfMediaEdge = { readonly node: MediaItem } | null;
+
+/* ── Scapegoat Profile (appendix 03 §4.2) — an SCF TERM field group ──── */
+
+export type ScapegoatProfile = {
+  readonly avatar: AcfMediaEdge;
+  readonly tagline: string | null;
+  readonly defensiveness: number | null; // Range 1–10 → Float
+  readonly firstBlamedOn: string | null; // Date Picker → String
+  readonly officialExuse: string | null;
+  readonly isSentient: boolean | null;
+};
+
+export type Scapegoat = {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly count: number | null;
+  readonly scapegoatProfile?: ScapegoatProfile | null; // optional AND nullable
+};
+
+/* ── Tech Review Fields (appendix 03 §4.3) ───────────────────────────── */
+
+// An SCF REPEATER is not a string array. It generates one object type per repeater with
+// the sub-field as a property — `TechReviewFieldsPros`, never `string[]`. This is the
+// most common "why is my generated type not what I expected?" moment in headless WP.
+export type TechReviewPro = { readonly item: string | null };
+export type TechReviewCon = { readonly item: string | null };
+
+export type TechReviewFields = {
+  readonly companyName: string | null;
+  readonly logo: AcfMediaEdge;
+  readonly ratingOverall: number | null;
+  readonly ratingDx: number | null;
+  readonly ratingDocs: number | null;
+  readonly ratingIncidentResponse: number | null;
+  readonly verdict: TechReviewVerdict | null;
+  readonly pros: readonly TechReviewPro[] | null;
+  readonly cons: readonly TechReviewCon[] | null;
+  readonly reviewedAt: string | null;
+};
+
+export type TechReview = {
+  readonly id: string;
+  readonly databaseId: number;
+  readonly slug: string;
+  readonly title: string;
+  readonly date: string | null;
+  readonly techReviewFields: TechReviewFields | null;
+  readonly techStacks: Connection<Term>;
+};
+
+/* ── Derived types (Key Concept 2) ───────────────────────────────────── */
+export type IncidentCardFields = Pick<Incident, 'id' | 'slug' | 'title' | 'date' | 'blameScore'>;
+
+export type IncidentDraft = Partial<IncidentDetails>;
+
+// Exhaustive by construction: add a fifth severity term and this stops compiling.
+export const SEVERITY_LABEL: Record<SeverityLevel, string> = {
+  's1-catastrophic': 'S1 — Catastrophic',
+  's2-major': 'S2 — Major',
+  's3-minor': 'S3 — Minor',
+  's4-cosmetic': 'S4 — Cosmetic',
+};
+
+/* ── Blocks as a discriminated union (Module 13's six, plus a core one) ─ */
+type BlockOf<TName extends string, TAttributes> = {
+  readonly __typename: TName; // the DISCRIMINANT. Never `name` - that is typed `string`.
+  readonly clientId: string;
+  readonly parentClientId: string | null;
+  readonly attributes: TAttributes | null;
+};
+
+export type Block =
+  | BlockOf<'CoreParagraph', { readonly content: string | null }>
+  | BlockOf<'BttIncidentCallout', { readonly severity: SeverityLevel | null }>
+  | BlockOf<'BttBlameQuote', { readonly attribution: string | null }>
+  | BlockOf<'BttScapegoatPicker', { readonly termId: number | null }>
+  | BlockOf<'BttIncidentTicker', { readonly count: number | null }>
+  | BlockOf<'BttHobtCta', { readonly label: string | null }>
+  | BlockOf<'BttTechVerdictCard', { readonly reviewSlug: string | null }>;
