@@ -39,7 +39,7 @@ export type SeverityTerm = {
 
 /* ── Incident Details (appendix 03 §4.1) ─────────────────────────────── */
 export type IncidentDetails = {
-  readonly occuredAt: string | null; // ISO 8601 string. There is no Date over JSON.
+  readonly occurredAt: string | null; // ISO 8601 string. There is no Date over JSON.
   readonly downtimeMinutes: number | null;
   readonly estimatedCostUsd: number | null;
   readonly environment: IncidentEnvironment | null;
