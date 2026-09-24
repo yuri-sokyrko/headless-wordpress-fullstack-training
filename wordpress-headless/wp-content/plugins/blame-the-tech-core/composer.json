@@ -16,9 +16,19 @@
     "sort-packages": true,
     "platform": {
       "php": "8.4"
+    },
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
     }
   },
+  "scripts": {
+    "phpcs": "phpcs",
+    "phpcbf": "phpcbf"
+  },
   "require-dev": {
-    "php-stubs/wp-cli-stubs": "~2.11.0"
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "php-stubs/wp-cli-stubs": "~2.11.0",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "wp-coding-standards/wpcs": "^3.1"
   }
 }

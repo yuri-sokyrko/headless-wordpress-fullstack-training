@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Custom post types.
  *
@@ -12,7 +11,7 @@ declare(strict_types=1);
 
 namespace Blame\Core;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * The blog lives under /blog. `post` has no rewrite slug of its own — core
@@ -20,7 +19,7 @@ defined('ABSPATH') || exit;
  */
 const BLOG_PERMALINK_STRUCTURE = '/blog/%postname%/';
 
-add_action('init', __NAMESPACE__ . '\\register_post_types');
+add_action( 'init', __NAMESPACE__ . '\\register_post_types' );
 
 
 /**
@@ -29,58 +28,57 @@ add_action('init', __NAMESPACE__ . '\\register_post_types');
  * Runs on `init`, and is also called directly by Plugin::activate(), because
  * `init` has not fired for this plugin during its own activation.
  */
-function register_post_types(): void
-{
+function register_post_types(): void {
 	register_post_type(
 		'incident',
 		array(
-			'labels' => array(
-				'name' => __('Incidents', 'blame-the-tech-core'),
-				'singular_name' => __('Incident', 'blame-the-tech-core'),
-				'menu_name' => __('Incidents', 'blame-the-tech-core'),
-				'add_new_item' => __('Add New Incident', 'blame-the-tech-core'),
-				'edit_item' => __('Edit Incident', 'blame-the-tech-core'),
-				'all_items' => __('All Incidents', 'blame-the-tech-core'),
-				'not_found' => __('No incidents found.', 'blame-the-tech-core'),
+			'labels'                    => array(
+				'name'          => __( 'Incidents', 'blame-the-tech-core' ),
+				'singular_name' => __( 'Incident', 'blame-the-tech-core' ),
+				'menu_name'     => __( 'Incidents', 'blame-the-tech-core' ),
+				'add_new_item'  => __( 'Add New Incident', 'blame-the-tech-core' ),
+				'edit_item'     => __( 'Edit Incident', 'blame-the-tech-core' ),
+				'all_items'     => __( 'All Incidents', 'blame-the-tech-core' ),
+				'not_found'     => __( 'No incidents found.', 'blame-the-tech-core' ),
 			),
-			'description' => __('A publicli submitted outage, moderated before publication.', 'blame-the-tech-core'),
+			'description'               => __( 'A publicli submitted outage, moderated before publication.', 'blame-the-tech-core' ),
 
 			// ── Visibility ──────────────────────────────────────────────────
-			'public' => true,
-			'public_queryable' => true,
-			'show_ui' => true,
-			'show_in_menu' => true,
-			'show_in_nav_menus' => false, // navigation comes from core menus, not from this
-			'menu_position' => 21,
-			'menu_icon' => 'dashicons-warning',
+			'public'                    => true,
+			'public_queryable'          => true,
+			'show_ui'                   => true,
+			'show_in_menu'              => true,
+			'show_in_nav_menus'         => false, // navigation comes from core menus, not from this.
+			'menu_position'             => 21,
+			'menu_icon'                 => 'dashicons-warning',
 
 			// ── Consumers ───────────────────────────────────────────────────
 			// REQUIRED. The block editor is a REST client; false = white screen.
-			'show_in_rest' => true,
-			'rest_base' => 'incidents',
-			'show_in_graphql' => true,
-			'graphql_single_name' => 'Incident',
-			'graphql_plural_name' => 'Incidents',
-			'graphql_exclude_mutations' => array('create', 'update', 'delete'),
+			'show_in_rest'              => true,
+			'rest_base'                 => 'incidents',
+			'show_in_graphql'           => true,
+			'graphql_single_name'       => 'Incident',
+			'graphql_plural_name'       => 'Incidents',
+			'graphql_exclude_mutations' => array( 'create', 'update', 'delete' ),
 
 			// ── URLs ────────────────────────────────────────────────────────
-			'hierarchical' => false,
-			'has_archive' => 'incidents',
-			'rewrite' => array(
-				'slug' => 'incidents',
+			'hierarchical'              => false,
+			'has_archive'               => 'incidents',
+			'rewrite'                   => array(
+				'slug'       => 'incidents',
 				'with_front' => false, // stay out from under the /blog prefix
 			),
 
 			// ── Storage ─────────────────────────────────────────────────────
 			// `custom-fields` is what exposes the REST `meta` object. Lesson 03.4
 			// and ACF both depend on it.
-			'supports' => array('title', 'editor', 'revisions', 'author', 'custom-fields'),
-			'delete_with_user'    => false, // deleting a reporter must not delete the record
+			'supports'                  => array( 'title', 'editor', 'revisions', 'author', 'custom-fields' ),
+			'delete_with_user'          => false, // deleting a reporter must not delete the record
 
-			// ── Authorisation ───────────────────────────────────────────────
-			'capability_type' => 'incident',
-			'map_meta_cap' => true,
-			'capabilities' => array(
+		// ── Authorisation ───────────────────────────────────────────────
+			'capability_type'           => 'incident',
+			'map_meta_cap'              => true,
+			'capabilities'              => array(
 				// Without this line `create_posts` falls back to `edit_incidents`
 				// and "may submit" cannot be granted separately from "may edit".
 				'create_posts' => 'create_incidents',
@@ -91,39 +89,39 @@ function register_post_types(): void
 	register_post_type(
 		'tech_review',
 		array(
-			'labels' => array(
-				'name' => __('Tech Reviews', 'blame-the-tech-core'),
-				'singular_name' => __('Tech Review', 'blame-the-tech-core'),
-				'menu_name' => __('Tech Reviews', 'blame-the-tech-core'),
-				'add_new_item' => __('Add New Tech Review', 'blame-the-tech-core'),
-				'edit_item' => __('Edit Tech Review', 'blame-the-tech-core'),
-				'all_items' => __('All Tech Reviews', 'blame-the-tech-core'),
-				'not_found' => __('No tech reviews found.', 'blame-the-tech-core'),
+			'labels'              => array(
+				'name'          => __( 'Tech Reviews', 'blame-the-tech-core' ),
+				'singular_name' => __( 'Tech Review', 'blame-the-tech-core' ),
+				'menu_name'     => __( 'Tech Reviews', 'blame-the-tech-core' ),
+				'add_new_item'  => __( 'Add New Tech Review', 'blame-the-tech-core' ),
+				'edit_item'     => __( 'Edit Tech Review', 'blame-the-tech-core' ),
+				'all_items'     => __( 'All Tech Reviews', 'blame-the-tech-core' ),
+				'not_found'     => __( 'No tech reviews found.', 'blame-the-tech-core' ),
 			),
-			'description' => __('A satirical review of a company or a tool.', 'blame-the-tech-core'),
+			'description'         => __( 'A satirical review of a company or a tool.', 'blame-the-tech-core' ),
 
-			'public' => true,
-			'publicly_queryable' => true,
-			'show_ui' => true,
-			'show_in_menu' => true,
-			'show_in_nav_menus' => false,
-			'menu_position' => 22,
-			'menu_icon' => 'dashicons-star-half',
+			'public'              => true,
+			'publicly_queryable'  => true,
+			'show_ui'             => true,
+			'show_in_menu'        => true,
+			'show_in_nav_menus'   => false,
+			'menu_position'       => 22,
+			'menu_icon'           => 'dashicons-star-half',
 
-			'show_in_rest' => true,
-			'rest_base' => 'tech-reviews',
-			'show_in_graphql' => true,
+			'show_in_rest'        => true,
+			'rest_base'           => 'tech-reviews',
+			'show_in_graphql'     => true,
 			'graphql_single_name' => 'TechReview',
 			'graphql_plural_name' => 'TechReviews',
 
-			'hierarchical' => false,
-			'has_archive' => 'reviews',
-			'rewrite' => array(
-				'slug' => 'reviews',
+			'hierarchical'        => false,
+			'has_archive'         => 'reviews',
+			'rewrite'             => array(
+				'slug'       => 'reviews',
 				'with_front' => false,
 			),
 
-			'supports' => array('title', 'editor', 'thumbnail', 'revisions'),
+			'supports'            => array( 'title', 'editor', 'thumbnail', 'revisions' ),
 
 			// Editor-only content, so core `post` capabilities are correct and
 			// nothing needs granting. The cost, stated plainly: you cannot grant
@@ -142,8 +140,7 @@ function register_post_types(): void
  * holds it, and until someone does, the Incidents menu does not even render.
  * Lesson 03.5 adds the role that deliberately holds only part of this list.
  */
-function grant_incident_caps_to_core_roles(): void
-{
+function grant_incident_caps_to_core_roles(): void {
 	$caps = array(
 		'create_incidents',
 		'edit_incidents',
@@ -158,19 +155,19 @@ function grant_incident_caps_to_core_roles(): void
 		'delete_private_incidents',
 	);
 
-	foreach (array('administrator', 'editor') as $role_name) {
-		$role = get_role($role_name);
+	foreach ( array( 'administrator', 'editor' ) as $role_name ) {
+		$role = get_role( $role_name );
 
-		if (!$role instanceof \WP_Role) {
+		if ( ! $role instanceof \WP_Role ) {
 			continue;
 		}
 
-		foreach ($caps as $cap) {
+		foreach ( $caps as $cap ) {
 			// add_cap() writes the whole wp_user_roles option, so only write
 			// when something actually changes. This is the idempotency rule
 			// from Lesson 03.1 §7 applied to roles.
-			if (!$role->has_cap($cap)) {
-				$role->add_cap($cap);
+			if ( ! $role->has_cap( $cap ) ) {
+				$role->add_cap( $cap );
 			}
 		}
 	}
@@ -182,12 +179,11 @@ function grant_incident_caps_to_core_roles(): void
  * set_permalink_structure() writes the option AND flushes the rule set, so the
  * early return is what keeps activation cheap on a redeploy.
  */
-function ensure_permalink_structure(): void
-{
-	if (get_option('permalink_structure') === BLOG_PERMALINK_STRUCTURE) {
+function ensure_permalink_structure(): void {
+	if ( get_option( 'permalink_structure' ) === BLOG_PERMALINK_STRUCTURE ) {
 		return;
 	}
 
 	global $wp_rewrite;
-	$wp_rewrite->set_permalink_structure(BLOG_PERMALINK_STRUCTURE);
+	$wp_rewrite->set_permalink_structure( BLOG_PERMALINK_STRUCTURE );
 }

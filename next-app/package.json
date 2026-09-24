@@ -11,16 +11,24 @@
   },
   "scripts": {
     "blame": "tsx scripts/blame.ts",
+    "blame:mjs": "node scripts/blame.mjs",
     "type-check": "tsc --noEmit",
     "typecheck": "npm run type-check",
-    "lint": "echo 'Lesson 07.5 adds eslint.config.mjs and wires this script.' && exit 1",
-    "format": "echo 'Lesson 07.5 adds .prettierrc and wires this script.' && exit 1",
-    "format:check": "echo 'Lesson 07.5 adds .prettierrc and wires this script.' && exit 1",
-    "blame:mjs": "node scripts/blame.mjs"
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "npm run type-check && npm run lint && npm run format:check"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "^22.20.4",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "tsx": "^4.23.15",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1"
   }
 }

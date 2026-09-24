@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Runs when the plugin is DELETED from the plugins screen or by
  * `wp plugin delete`. Never on deactivation.
@@ -13,14 +12,14 @@
 declare(strict_types=1);
 
 // Without this guard the file is directly requestable over HTTP.
-defined('WP_UNINSTALL_PLUGIN') || exit;
+defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 // Our own bookkeeping. Safe to delete.
-delete_option('btt_core_version');
-delete_option('btt_db_version');
+delete_option( 'btt_core_version' );
+delete_option( 'btt_db_version' );
 
 // Rules that mention post types nothing will register any more.
-delete_option('rewrite_rules');
+delete_option( 'rewrite_rules' );
 
 // Lesson 03.5 adds `remove_role( 'incident_reporter' );` here.
 

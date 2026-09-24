@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Registered GraphQL enums.
  *
@@ -15,8 +14,7 @@ declare(strict_types=1);
 
 namespace Blame\Core;
 
-defined('ABSPATH') || exit;
-
+defined( 'ABSPATH' ) || exit;
 /**
  * enum type name => config accepted verbatim by register_graphql_enum_type().
  *
@@ -117,22 +115,20 @@ const GRAPHQL_ENUMS = array(
  * registered before anything uses it — `LeadSource` has no field until
  * Lesson 06.2 — and that is fine.
  */
-function register_graphql_enums(): void
-{
-	foreach (GRAPHQL_ENUMS as $type_name => $config) {
-		register_graphql_enum_type($type_name, $config);
+function register_graphql_enums(): void {
+	foreach ( GRAPHQL_ENUMS as $type_name => $config ) {
+		register_graphql_enum_type( $type_name, $config );
 	}
 }
-add_action('graphql_register_types', __NAMESPACE__ . '\\register_graphql_enums');
+add_action( 'graphql_register_types', __NAMESPACE__ . '\\register_graphql_enums' );
 
 /**
  * The stored (kebab-case) values of one enum.
  *
  * @return string[]
  */
-function enum_stored_values(string $enum): array
-{
-	return array_column(GRAPHQL_ENUMS[$enum]['values'] ?? array(), 'value');
+function enum_stored_values( string $enum ): array {
+	return array_column( GRAPHQL_ENUMS[ $enum ]['values'] ?? array(), 'value' );
 }
 
 /**
@@ -143,23 +139,21 @@ function enum_stored_values(string $enum): array
  * guess: wp_postmeta predates this enum, and serialising an illegal value
  * throws for the whole field.
  */
-function normalize_stored_value(string $enum, mixed $raw): ?string
-{
-	$value = sanitize_key((string) $raw);
+function normalize_stored_value( string $enum, mixed $raw ): ?string {
+	$value = sanitize_key( (string) $raw );
 
-	return in_array($value, enum_stored_values($enum), true) ? $value : null;
+	return in_array( $value, enum_stored_values( $enum ), true ) ? $value : null;
 }
 
 /**
  * Reverse map, for the boundaries that are NOT GraphQL — a CSV export, an
  * admin column, a log line. Inside GraphQL you never need this.
  */
-function stored_to_enum_name(string $enum, mixed $raw): ?string
-{
-	$value = sanitize_key((string) $raw);
+function stored_to_enum_name( string $enum, mixed $raw ): ?string {
+	$value = sanitize_key( (string) $raw );
 
-	foreach (GRAPHQL_ENUMS[$enum]['values'] ?? array() as $name => $spec) {
-		if ($spec['value'] === $value) {
+	foreach ( GRAPHQL_ENUMS[ $enum ]['values'] ?? array() as $name => $spec ) {
+		if ( $spec['value'] === $value ) {
 			return $name;
 		}
 	}

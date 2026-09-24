@@ -1,5 +1,4 @@
 <?php
-
 /**
  * SCF integration: Local JSON paths, admin visibility, and field-level rules.
  *
@@ -13,7 +12,7 @@ declare(strict_types=1);
 
 namespace Blame\Core;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * The one directory SCF writes field groups to, and the one this plugin reads
@@ -22,14 +21,14 @@ defined('ABSPATH') || exit;
 const SCF_JSON_DIR = PLUGIN_DIR . '/includes/acf-json';
 
 
-add_filter('acf/settings/save_json', __NAMESPACE__ . '\\acf_json_save_path');
-add_filter('acf/settings/load_json', __NAMESPACE__ . '\\acf_json_load_paths');
-add_filter('acf/json/save_file_name', __NAMESPACE__ . '\\acf_json_file_name', 10, 3);
-add_filter('acf/settings/show_admin', __NAMESPACE__ . '\\acf_show_admin');
-add_filter('acf/prepare_field/name=is_verified', __NAMESPACE__ . '\\hide_verified_from_reporters');
-add_action('admin_notices', __NAMESPACE__ . '\\acf_json_writability_notice');
-add_filter('acf/settings/autoload', '__return_false');
-add_action('acf/init', __NAMESPACE__ . '\\register_options_pages');
+add_filter( 'acf/settings/save_json', __NAMESPACE__ . '\\acf_json_save_path' );
+add_filter( 'acf/settings/load_json', __NAMESPACE__ . '\\acf_json_load_paths' );
+add_filter( 'acf/json/save_file_name', __NAMESPACE__ . '\\acf_json_file_name', 10, 3 );
+add_filter( 'acf/settings/show_admin', __NAMESPACE__ . '\\acf_show_admin' );
+add_filter( 'acf/prepare_field/name=is_verified', __NAMESPACE__ . '\\hide_verified_from_reporters' );
+add_action( 'admin_notices', __NAMESPACE__ . '\\acf_json_writability_notice' );
+add_filter( 'acf/settings/autoload', '__return_false' );
+add_action( 'acf/init', __NAMESPACE__ . '\\register_options_pages' );
 
 
 /**
@@ -40,9 +39,8 @@ add_action('acf/init', __NAMESPACE__ . '\\register_options_pages');
  *
  * @param string $path SCF's default — the active theme's acf-json directory.
  */
-function acf_json_save_path(string $path): string
-{
-	return is_dir(SCF_JSON_DIR) ? SCF_JSON_DIR : $path;
+function acf_json_save_path( string $path ): string {
+	return is_dir( SCF_JSON_DIR ) ? SCF_JSON_DIR : $path;
 }
 
 /**
@@ -53,17 +51,16 @@ function acf_json_save_path(string $path): string
  * Concept 1), so it is removed by value rather than by index: another plugin
  * may legitimately have added a path before us.
  *
- * @param string[] $paths Directories SCF will scan for *.json.
+ * @param  string[] $paths Directories SCF will scan for *.json.
  * @return string[]
  */
-function acf_json_load_paths(array $paths): array
-{
+function acf_json_load_paths( array $paths ): array {
 	$theme_dir = get_stylesheet_directory() . '/acf-json';
 
 	$paths = array_values(
 		array_filter(
 			$paths,
-			static fn(string $path): bool => $path !== $theme_dir
+			static fn( string $path ): bool => $path !== $theme_dir
 		)
 	);
 
@@ -86,9 +83,8 @@ function acf_json_load_paths(array $paths): array
  * @param array<string, mixed> $post      The field group being saved.
  * @param string               $load_path The directory it is being written to.
  */
-function acf_json_file_name(string $filename, array $post, string $load_path): string
-{
-	$slug = str_replace('-', '_', sanitize_title((string) ($post['title'] ?? '')));
+function acf_json_file_name( string $filename, array $post, string $load_path ): string {
+	$slug = str_replace( '-', '_', sanitize_title( (string) ( $post['title'] ?? '' ) ) );
 
 	return '' === $slug ? $filename : 'group_' . $slug . '.json';
 }
@@ -101,8 +97,7 @@ function acf_json_file_name(string $filename, array $post, string $load_path): s
  *
  * @param bool $show SCF's default, true.
  */
-function acf_show_admin(bool $show): bool
-{
+function acf_show_admin( bool $show ): bool {
 	return $show && 'production' !== wp_get_environment_type();
 }
 
@@ -114,12 +109,11 @@ function acf_show_admin(bool $show): bool
  * the True/False field's hidden `0` input post anyway, and pressing Update
  * would silently un-verify the incident. See Key Concept 7.
  *
- * @param array<string, mixed>|false $field The prepared field, or false.
+ * @param  array<string, mixed>|false $field The prepared field, or false.
  * @return array<string, mixed>|false
  */
-function hide_verified_from_reporters(array|false $field): array|false
-{
-	return current_user_can('edit_others_incidents') ? $field : false;
+function hide_verified_from_reporters( array|false $field ): array|false {
+	return current_user_can( 'edit_others_incidents' ) ? $field : false;
 }
 
 /**
@@ -129,21 +123,20 @@ function hide_verified_from_reporters(array|false $field): array|false
  * container runs as www-data. On Docker Desktop that is papered over. On Linux
  * it is not, and SCF silently stops emitting JSON.
  */
-function acf_json_writability_notice(): void
-{
-	if (! current_user_can('manage_options') || ! function_exists('acf_get_setting')) {
+function acf_json_writability_notice(): void {
+	if ( ! current_user_can( 'manage_options' ) || ! function_exists( 'acf_get_setting' ) ) {
 		return;
 	}
 
-	if (is_dir(SCF_JSON_DIR) && wp_is_writable(SCF_JSON_DIR)) {
+	if ( is_dir( SCF_JSON_DIR ) && wp_is_writable( SCF_JSON_DIR ) ) {
 		return;
 	}
 
 	printf(
 		'<div class="notice notice-warning"><p><strong>%s</strong> %s <code>%s</code></p></div>',
-		esc_html__('SCF Local JSON is not writable.', 'blame-the-tech-core'),
-		esc_html__('Field group saves will go to the database instead. Fix the directory, then run:', 'blame-the-tech-core'),
-		esc_html('sudo chown -R 33:33 includes/acf-json')
+		esc_html__( 'SCF Local JSON is not writable.', 'blame-the-tech-core' ),
+		esc_html__( 'Field group saves will go to the database instead. Fix the directory, then run:', 'blame-the-tech-core' ),
+		esc_html( 'sudo chown -R 33:33 includes/acf-json' )
 	);
 }
 
@@ -157,28 +150,27 @@ function acf_json_writability_notice(): void
  * but a plugin that registers a screen on a function it never checked for is a
  * fatal waiting for the one install that lacks it — see Lesson 04.1 Key Concept 8.
  */
-function register_options_pages(): void
-{
-	if (!function_exists('acf_add_options_page')) {
+function register_options_pages(): void {
+	if ( ! function_exists( 'acf_add_options_page' ) ) {
 		return;
 	}
 
 	acf_add_options_page(
 		array(
-			'page_title' => __('Site Settings', 'blame-the-tech-core'),
-			'menu-title' => __('Site Settings', 'blame-the-tech-core'),
+			'page_title'         => __( 'Site Settings', 'blame-the-tech-core' ),
+			'menu-title'         => __( 'Site Settings', 'blame-the-tech-core' ),
 			// The slug the field group's location rule matches on. Changing it
 			// orphans the field group, which then appears nowhere.
-			'menu_slug' => 'btt-site-settings',
-			'capability' => 'manage_options',
-			'position' => '59.5',
-			'icon_url' => 'dashicons-admin-settings',
-			'redirect' => false,
-			'update_button' => __('Save settings', 'blame-the-tech-core'),
-			'updated_message' => __('Site settings saved.', 'blame-the-tech-core'),
+			'menu_slug'          => 'btt-site-settings',
+			'capability'         => 'manage_options',
+			'position'           => '59.5',
+			'icon_url'           => 'dashicons-admin-settings',
+			'redirect'           => false,
+			'update_button'      => __( 'Save settings', 'blame-the-tech-core' ),
+			'updated_message'    => __( 'Site settings saved.', 'blame-the-tech-core' ),
 			// Read by WPGraphQL for SCF: puts this page on the ROOT query, so the
 			// Next root layout can fetch it without a node. Key Concept 5.
-			'show_in_graphql' => true,
+			'show_in_graphql'    => true,
 			'graphql_field_name' => 'siteSettings',
 		)
 	);

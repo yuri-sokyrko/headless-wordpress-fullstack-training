@@ -181,7 +181,7 @@
   //  WordPress-standard PHP produces a diff PHPCS then complains about.
   "[php]": {
     "editor.defaultFormatter": "bmewburn.vscode-intelephense-client",
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": false,
     // WordPress Coding Standards mandates TABS. The repo-wide 2-space default
     // above would fail Generic.WhiteSpace.DisallowSpaceIndent on every line.
     "editor.insertSpaces": false,

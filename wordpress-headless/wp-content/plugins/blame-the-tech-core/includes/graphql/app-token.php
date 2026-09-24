@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Application-token authentication for server-to-server mutations.
  *
@@ -16,7 +15,7 @@ namespace Blame\Core;
 
 use GraphQL\Error\UserError;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 const APP_TOKEN_HEADER = 'X-BTT-App-Token';
 
@@ -24,11 +23,10 @@ const APP_TOKEN_HEADER = 'X-BTT-App-Token';
  * The expected token, from the environment. Never a literal, never an option,
  * never committed — appendix 04 §1.
  */
-function expected_app_token(): string
-{
-	$token = getenv('BTT_APP_TOKEN');
+function expected_app_token(): string {
+	$token = getenv( 'BTT_APP_TOKEN' );
 
-	return is_string($token) ? trim($token) : '';
+	return is_string( $token ) ? trim( $token ) : '';
 }
 
 /**
@@ -38,11 +36,10 @@ function expected_app_token(): string
  * with sanitize_text_field(), because it is never stored or printed — it is
  * only ever compared, and trimming is all the normalisation it may safely get.
  */
-function presented_app_token(): string
-{
+function presented_app_token(): string {
 	$raw = $_SERVER['HTTP_X_BTT_APP_TOKEN'] ?? '';
 
-	return is_string($raw) ? trim($raw) : '';
+	return is_string( $raw ) ? trim( $raw ) : '';
 }
 
 /**
@@ -57,21 +54,20 @@ function presented_app_token(): string
  *
  * @throws \GraphQL\Error\UserError If the token is missing, empty or wrong.
  */
-function require_app_token(): void
-{
+function require_app_token(): void {
 	$expected = expected_app_token();
 
 	// A misconfigured server must never authenticate everyone. If the
 	// environment variable is absent, every call fails closed.
-	if ('' === $expected) {
-		graphql_debug('BTT_APP_TOKEN is not set in the WordPress environment.');
+	if ( '' === $expected ) {
+		graphql_debug( 'BTT_APP_TOKEN is not set in the WordPress environment.' );
 
-		throw new UserError(__('Not authorized.', 'blame-the-tech-core'));
+		throw new UserError( __( 'Not authorized.', 'blame-the-tech-core' ) );
 	}
 
-	if (! hash_equals($expected, presented_app_token())) {
+	if ( ! hash_equals( $expected, presented_app_token() ) ) {
 		// Same message for missing, empty, short, long and wrong. A caller
 		// entitled to this mutation already holds the token.
-		throw new UserError(__('Not authorized.', 'blame-the-tech-core'));
+		throw new UserError( __( 'Not authorized.', 'blame-the-tech-core' ) );
 	}
 }

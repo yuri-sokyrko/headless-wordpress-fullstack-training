@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 // The blame leaderboard, straight out of WPGraphQL. Plain ESM, zero dependencies.
 //   export export WP_GRAPHQL_ENDPOINT=http://localhost:8080/graphql && npm run blame
 // The endpoint is never hard-coded: it differs per environment, and a URL frozen into a

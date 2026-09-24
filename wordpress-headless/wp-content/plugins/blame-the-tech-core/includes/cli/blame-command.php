@@ -1,5 +1,4 @@
 <?php
-
 /**
  * The `wp blame` command namespace.
  *
@@ -14,7 +13,7 @@ namespace Blame\Core\CLI;
 
 use WP_CLI;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 /*
  * Second lock. Plugin::boot() already gates CLI_INCLUDES on this condition, but
@@ -24,7 +23,7 @@ defined('ABSPATH') || exit;
  *
  * Truthiness as well as existence: some tooling defines WP_CLI as false.
  */
-if (!defined('WP_CLI') || !WP_CLI) {
+if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	return;
 }
 
@@ -34,8 +33,8 @@ if (!defined('WP_CLI') || !WP_CLI) {
  * Every subcommand here is designed to be safe to run twice. The Fly.io
  * release_command in Module 24 runs some of them on every single deploy.
  */
-final class Blame_Command
-{
+final class Blame_Command {
+
 	/**
 	 * Report content counts and the current schema version.
 	 *
@@ -77,20 +76,19 @@ final class Blame_Command
 	 * @param string[]             $args       Positional arguments (none).
 	 * @param array<string, mixed> $assoc_args Associative arguments.
 	 */
-	public function status(array $args, array $assoc_args): void
-	{
+	public function status( array $args, array $assoc_args ): void {
 		$counts = self::counts();
 
-		if (\WP_CLI\Utils\get_flag_value($assoc_args, 'porcelain', false)) {
+		if ( \WP_CLI\Utils\get_flag_value( $assoc_args, 'porcelain', false ) ) {
 			// Values only, in the documented order. array_values() is safe here
 			// because self::counts() builds the array in a fixed order.
-			WP_CLI::line(implode("\t", array_values($counts)));
+			WP_CLI::line( implode( "\t", array_values( $counts ) ) );
 
 			return;
 		}
 
 		$rows = array();
-		foreach ($counts as $item => $count) {
+		foreach ( $counts as $item => $count ) {
 			$rows[] = array(
 				'item'  => $item,
 				'count' => $count,
@@ -98,9 +96,9 @@ final class Blame_Command
 		}
 
 		\WP_CLI\Utils\format_items(
-			(string) \WP_CLI\Utils\get_flag_value($assoc_args, 'format', 'table'),
+			(string) \WP_CLI\Utils\get_flag_value( $assoc_args, 'format', 'table' ),
 			$rows,
-			array('item', 'count')
+			array( 'item', 'count' )
 		);
 	}
 
@@ -129,10 +127,9 @@ final class Blame_Command
 	 * @param string[]             $args       Positional arguments (none).
 	 * @param array<string, mixed> $assoc_args Associative arguments.
 	 */
-	public function seed(array $args, array $assoc_args): void
-	{
+	public function seed( array $args, array $assoc_args ): void {
 		// Same namespace, so the function resolves without a `use`.
-		seed_all($assoc_args);
+		seed_all( $assoc_args );
 	}
 
 	/**
@@ -153,14 +150,13 @@ final class Blame_Command
 	 * @param string[]             $args       Positional arguments (none).
 	 * @param array<string, mixed> $assoc_args Associative arguments.
 	 */
-	public function reset(array $args, array $assoc_args): void
-	{
+	public function reset( array $args, array $assoc_args ): void {
 		WP_CLI::confirm(
 			'This force-deletes every seeded incident, review, post, page and media item. Continue?',
 			$assoc_args
 		);
 
-		WP_CLI::success(sprintf('removed %d items', reset_seeded()));
+		WP_CLI::success( sprintf( 'removed %d items', reset_seeded() ) );
 	}
 
 	/**
@@ -175,19 +171,18 @@ final class Blame_Command
 	 *     wp blame ensure-languages
 	 *
 	 * @subcommand ensure-languages
-	 * @when after_wp_load
+	 * @when       after_wp_load
 	 *
 	 * @param string[]             $args       Positional arguments (none).
 	 * @param array<string, mixed> $assoc_args Associative arguments.
 	 */
-	public function ensure_languages(array $args, array $assoc_args): void
-	{
-		if (! function_exists('pll_languages_list')) {
+	public function ensure_languages( array $args, array $assoc_args ): void {
+		if ( ! function_exists( 'pll_languages_list' ) ) {
 			// Exits 1. This is the line that stops a deploy.
-			WP_CLI::error('Polylang is not active. Language setup arrives in Module 20.');
+			WP_CLI::error( 'Polylang is not active. Language setup arrives in Module 20.' );
 		}
 
-		WP_CLI::warning('wp blame ensure-languages is a stub. Module 20 implements it.');
+		WP_CLI::warning( 'wp blame ensure-languages is a stub. Module 20 implements it.' );
 	}
 
 	/**
@@ -210,40 +205,39 @@ final class Blame_Command
 	 * @param string[]             $args       Positional arguments (none).
 	 * @param array<string, mixed> $assoc_args Associative arguments.
 	 */
-	public function migrate(array $args, array $assoc_args): void
-	{
-		$dry_run = (bool) \WP_CLI\Utils\get_flag_value($assoc_args, 'dry-run', false);
-		$from    = (int) get_option('btt_db_version', 0);
+	public function migrate( array $args, array $assoc_args ): void {
+		$dry_run = (bool) \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
+		$from    = (int) get_option( 'btt_db_version', 0 );
 
-		if ($from > DB_VERSION) {
+		if ( $from > DB_VERSION ) {
 			// The database has seen a newer deploy than this code. Rolling the
 			// code back does not roll the data back — say so rather than
 			// pretending everything is fine.
 			WP_CLI::warning(
-				sprintf('Database is at version %d but this code expects %d.', $from, DB_VERSION)
+				sprintf( 'Database is at version %d but this code expects %d.', $from, DB_VERSION )
 			);
 		}
 
-		$applied = run_migrations($dry_run);
+		$applied = run_migrations( $dry_run );
 
-		if (array() === $applied) {
-			WP_CLI::success(sprintf('Database is at version %d. Nothing to do.', $from));
+		if ( array() === $applied ) {
+			WP_CLI::success( sprintf( 'Database is at version %d. Nothing to do.', $from ) );
 
 			return;
 		}
 
-		foreach ($applied as $version => $changed) {
+		foreach ( $applied as $version => $changed ) {
 			WP_CLI::log(
 				$dry_run
-					? sprintf('pending: migration %d', $version)
-					: sprintf('migration %d: %d row(s) changed', $version, (int) $changed)
+				? sprintf( 'pending: migration %d', $version )
+				: sprintf( 'migration %d: %d row(s) changed', $version, (int) $changed )
 			);
 		}
 
 		WP_CLI::success(
 			$dry_run
-				? sprintf('%d migration(s) pending.', count($applied))
-				: sprintf('Database is now at version %d.', DB_VERSION)
+			? sprintf( '%d migration(s) pending.', count( $applied ) )
+			: sprintf( 'Database is now at version %d.', DB_VERSION )
 		);
 	}
 
@@ -254,15 +248,14 @@ final class Blame_Command
 	 *
 	 * @return array<string, int>
 	 */
-	private static function counts(): array
-	{
-		$published = static function (string $post_type): int {
-			$counts = wp_count_posts($post_type);
+	private static function counts(): array {
+		$published = static function ( string $post_type ): int {
+			$counts = wp_count_posts( $post_type );
 
-			return (int) ($counts->publish ?? 0);
+			return (int) ( $counts->publish ?? 0 );
 		};
 
-		$terms = static function (string $taxonomy): int {
+		$terms = static function ( string $taxonomy ): int {
 			$total = wp_count_terms(
 				array(
 					'taxonomy'   => $taxonomy,
@@ -270,22 +263,22 @@ final class Blame_Command
 				)
 			);
 
-			return is_wp_error($total) ? 0 : (int) $total;
+			return is_wp_error( $total ) ? 0 : (int) $total;
 		};
 
 		// Attachments live under the `inherit` status, not `publish`.
-		$media = wp_count_posts('attachment');
+		$media = wp_count_posts( 'attachment' );
 
 		return array(
-			'incidents'       => $published('incident'),
-			'tech_reviews'    => $published('tech_review'),
-			'posts'           => $published('post'),
-			'pages'           => $published('page'),
-			'media'           => (int) ($media->inherit ?? 0),
+			'incidents'       => $published( 'incident' ),
+			'tech_reviews'    => $published( 'tech_review' ),
+			'posts'           => $published( 'post' ),
+			'pages'           => $published( 'page' ),
+			'media'           => (int) ( $media->inherit ?? 0 ),
 			'users'           => (int) count_users()['total_users'],
-			'scapegoat_terms' => $terms('scapegoat'),
-			'severity_terms'  => $terms('severity'),
-			'db_version'      => (int) get_option('btt_db_version', 0),
+			'scapegoat_terms' => $terms( 'scapegoat' ),
+			'severity_terms'  => $terms( 'severity' ),
+			'db_version'      => (int) get_option( 'btt_db_version', 0 ),
 		);
 	}
 }
@@ -293,5 +286,5 @@ final class Blame_Command
 WP_CLI::add_command(
 	'blame',
 	Blame_Command::class,
-	array('shortdesc' => 'Manage Blame The Tech fixture content and schema migrations.')
+	array( 'shortdesc' => 'Manage Blame The Tech fixture content and schema migrations.' )
 );

@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<ruleset name="Blame The Tech Core">
+  <description>WordPress Coding Standards for the blame-the-tech-core plugin.</description>
+
+  <!-- What to scan -->
+  <file>.</file>
+  <exclude-pattern>*/vendor/*</exclude-pattern>
+  <exclude-pattern>*/node_modules/*</exclude-pattern>
+  <exclude-pattern>*/build/*</exclude-pattern>
+
+  <arg name="basepath" value="."/>
+  <arg name="extensions" value="php"/>
+  <arg name="parallel" value="8"/>
+  <arg name="colors"/>
+  <!-- s = show sniff names, so an exclusion can be written accurately -->
+  <arg value="sp"/>
+
+  <config name="minimum_wp_version" value="7.1"/>
+  <config name="testVersion" value="8.4-"/>
+
+  <rule ref="WordPress">
+    <!-- WPCS wants class-plugin.php; PSR-4 (Lesson 03.1) requires Plugin.php.
+         The autoloader is not negotiable, so this sniff loses. -->
+    <exclude name="WordPress.Files.FileName"/>
+  </rule>
+
+  <!-- Procedural includes/ files document the function, not the file. Excluding
+       one sniff beats forty boilerplate file headers. -->
+  <rule ref="Squiz.Commenting.FileComment">
+    <exclude-pattern>*/includes/*.php</exclude-pattern>
+  </rule>
+
+  <rule ref="PHPCompatibilityWP"/>
+
+  <rule ref="WordPress.WP.I18n">
+    <properties>
+      <property name="text_domain" type="array">
+        <element value="blame-the-tech"/>
+      </property>
+    </properties>
+  </rule>
+
+  <!-- Every global must be prefixed. `btt_` for functions and options,
+       `Blame\Core` for the namespaced code. The trailing underscore is not
+       cosmetic: WPCS 3.2.0 raised PrefixAllGlobals' minimum prefix length to
+       FOUR characters, so a bare `btt` is rejected as too short and every file
+       with a global-scope declaration fails. The whole course writes `btt_`. -->
+  <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+    <properties>
+      <property name="prefixes" type="array">
+        <element value="btt_"/>
+        <element value="Blame\Core"/>
+      </property>
+    </properties>
+  </rule>
+</ruleset>

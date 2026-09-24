@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Forward-only, version-gated schema migrations.
  *
@@ -15,16 +14,20 @@ namespace Blame\Core\CLI;
 
 use WP_CLI;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
-if (!defined('WP_CLI') || !WP_CLI) {
+if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	return;
 }
 
-/** The version this CODE expects the database to be at. Bump when you add a step. */
+/**
+ * The version this CODE expects the database to be at. Bump when you add a step.
+*/
 const DB_VERSION = 3;
 
-/** Legacy `environment` values migration 2 normalises. */
+/**
+ * Legacy `environment` values migration 2 normalises.
+*/
 const LEGACY_ENVIRONMENTS = array(
 	'prod'  => 'production',
 	'stage' => 'staging',
@@ -40,8 +43,7 @@ const LEGACY_ENVIRONMENTS = array(
  *
  * @return array<int, callable-string>
  */
-function migrations(): array
-{
+function migrations(): array {
 	return array(
 		1 => __NAMESPACE__ . '\\migration_1_backfill_blame_confidence',
 		2 => __NAMESPACE__ . '\\migration_2_normalise_environment',
@@ -52,38 +54,37 @@ function migrations(): array
 /**
  * Apply every migration newer than the recorded version.
  *
- * @param bool $dry_run List what would run and change nothing.
+ * @param  bool $dry_run List what would run and change nothing.
  * @return array<int, int|null> version => rows changed, or null when dry.
  */
-function run_migrations(bool $dry_run = false): array
-{
-	$current = (int) get_option('btt_db_version', 0);
-	$steps = migrations();
+function run_migrations( bool $dry_run = false ): array {
+	$current = (int) get_option( 'btt_db_version', 0 );
+	$steps   = migrations();
 	$applied = array();
 
 	// Never trust the literal order of the array.
-	ksort($steps, SORT_NUMERIC);
+	ksort( $steps, SORT_NUMERIC );
 
-	foreach ($steps as $version => $callback) {
-		if ($version <= $current) {
+	foreach ( $steps as $version => $callback ) {
+		if ( $version <= $current ) {
 			continue;
 		}
 
-		if ($dry_run) {
-			$applied[$version] = null;
+		if ( $dry_run ) {
+			$applied[ $version ] = null;
 			continue;
 		}
 
-		if (!is_callable($callback)) {
-			WP_CLI::error(sprintf('Migration %d names a missing callable: %s', $version, $callback));
+		if ( ! is_callable( $callback ) ) {
+			WP_CLI::error( sprintf( 'Migration %d names a missing callable: %s', $version, $callback ) );
 		}
 
-		$applied[$version] = (int) call_user_func($callback);
+		$applied[ $version ] = (int) call_user_func( $callback );
 
 		// After EACH step, not once at the end. A failure in step 3 must not
 		// make steps 1 and 2 run a second time on the retry.
 		// autoload = false: read once per deploy, never on the request path.
-		update_option('btt_db_version', $version, false);
+		update_option( 'btt_db_version', $version, false );
 	}
 
 	return $applied;
@@ -95,8 +96,7 @@ function run_migrations(bool $dry_run = false): array
  * Idempotent by construction: the query only matches rows where the key is
  * absent, so the second run finds nothing.
  */
-function migration_1_backfill_blame_confidence(): int
-{
+function migration_1_backfill_blame_confidence(): int {
 	$ids = get_posts(
 		array(
 			'post_type'      => 'incident',
@@ -114,11 +114,11 @@ function migration_1_backfill_blame_confidence(): int
 		),
 	);
 
-	foreach ($ids as $id) {
-		update_post_meta((int) $id, 'blame_confidence', 74);
+	foreach ( $ids as $id ) {
+		update_post_meta( (int) $id, 'blame_confidence', 74 );
 	}
 
-	return count($ids);
+	return count( $ids );
 }
 
 /**
@@ -128,13 +128,12 @@ function migration_1_backfill_blame_confidence(): int
  * is no way to distinguish a migrated database from one that never had legacy
  * values. Hence the version gate.
  */
-function migration_2_normalise_environment(): int
-{
+function migration_2_normalise_environment(): int {
 	global $wpdb;
 
 	$changed = 0;
 
-	foreach (LEGACY_ENVIRONMENTS as $old => $new) {
+	foreach ( LEGACY_ENVIRONMENTS as $old => $new ) {
 		// Table name from $wpdb, values through placeholders. Never string
 		// interpolation into SQL. See Lesson 02.3 for why, and Module 16 for the
 		$ids = $wpdb->get_col(
@@ -145,10 +144,10 @@ function migration_2_normalise_environment(): int
 			)
 		);
 
-		foreach ($ids as $id) {
+		foreach ( $ids as $id ) {
 			// update_post_meta(), not a raw UPDATE: it invalidates the object
 			// cache and fires the hooks other code listens to.
-			update_post_meta((int) $id, 'environment', $new);
+			update_post_meta( (int) $id, 'environment', $new );
 			++$changed;
 		}
 	}
@@ -162,9 +161,8 @@ function migration_2_normalise_environment(): int
  * A missing SCF option reads as falsy, which would mean "submissions closed" —
  * the wrong direction to fail for a fresh install.
  */
-function migration_3_default_submission_switch(): int
-{
-	if (!function_exists('update_field')) {
+function migration_3_default_submission_switch(): int {
+	if ( ! function_exists( 'update_field' ) ) {
 		// SCF absent. Nothing to do, and not an error: this step is about a
 		// default value, not about a structural change.
 		return 0;
@@ -173,11 +171,11 @@ function migration_3_default_submission_switch(): int
 	// get_option() rather than get_field(), because get_field() would return the
 	// field's own default for a missing row and we need to know whether the row
 	// exists at all. SCF names options-page rows `options_<field_name>`.
-	if (false !== get_option('options_incident_submission_open', false)) {
+	if ( false !== get_option( 'options_incident_submission_open', false ) ) {
 		return 0;
 	}
 
-	update_field('incident_submission_open', true, 'option');
+	update_field( 'incident_submission_open', true, 'option' );
 
 	return 1;
 }

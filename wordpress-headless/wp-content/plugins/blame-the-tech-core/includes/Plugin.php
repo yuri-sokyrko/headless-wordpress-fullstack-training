@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Plugin bootstrap and lifecycle.
  *
@@ -10,7 +9,7 @@ declare(strict_types=1);
 
 namespace Blame\Core;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Loads every registration file and owns the three lifecycle hooks.
@@ -18,8 +17,8 @@ defined('ABSPATH') || exit;
  * Deliberately not a singleton. There is no instance state to protect, so
  * `get_instance()` would be ceremony. Static methods are honest about that.
  */
-final class Plugin
-{
+final class Plugin {
+
 	/**
 	 * Procedural registration files, required on every request in this order.
 	 *
@@ -57,16 +56,14 @@ final class Plugin
 	/**
 	 * Wire the plugin up. Called at plugin-load time, before `init`.
 	 */
-
-	public static function boot(): void
-	{
-		foreach (self::INCLUDES as $file) {
-			require_once PLUGIN_DIR . '/' . $file;
+	public static function boot(): void {
+		foreach ( self::INCLUDES as $file ) {
+			include_once PLUGIN_DIR . '/' . $file;
 		}
 
-		if (defined('WP_CLI') && WP_CLI) {
-			foreach (self::CLI_INCLUDES as $file) {
-				require_once PLUGIN_DIR . '/' . $file;
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			foreach ( self::CLI_INCLUDES as $file ) {
+				include_once PLUGIN_DIR . '/' . $file;
 			}
 		}
 	}
@@ -78,8 +75,7 @@ final class Plugin
 	 * depends on a registration has to trigger that registration itself.
 	 * Every statement here must be safe to run again.
 	 */
-	public static function activate(): void
-	{
+	public static function activate(): void {
 		register_post_types();
 
 		register_taxonomies();
@@ -97,15 +93,14 @@ final class Plugin
 
 		// autoload = false: this is read by the migration runner, not on the
 		// request path. Lesson 02.3 explains why that third argument matters.
-		update_option('btt_core_version', VERSION, false);
+		update_option( 'btt_core_version', VERSION, false );
 	}
 
 	/**
 	 * Runs on deactivation. Deactivation is not deletion — remove nothing a
 	 * user would miss.
 	 */
-	public static function deactivate(): void
-	{
+	public static function deactivate(): void {
 		// Our capabilities on core roles are ours to clean up.
 		revoke_incident_caps_from_core_roles();
 
@@ -116,6 +111,6 @@ final class Plugin
 		// flush_rewrite_rules() would rebuild the rule set *including* our own
 		// rules. Deleting the option lets WordPress rebuild it on the next
 		// request from whatever is actually registered then.
-		delete_option('rewrite_rules');
+		delete_option( 'rewrite_rules' );
 	}
 }

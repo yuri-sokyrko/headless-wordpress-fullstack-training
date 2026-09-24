@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Taxonomies, their closed term sets, and the severity single-select rule.
  *
@@ -12,23 +11,27 @@ declare(strict_types=1);
 
 namespace Blame\Core;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
-/** Seeded on activation. Free-form afterwards — editors may add more. */
+/**
+ * Seeded on activation. Free-form afterwards — editors may add more.
+*/
 const SCAPEGOAT_TERMS = array(
-	'the-intern'               => 'The Intern',
-	'mercury-retrograde'       => 'Mercury Retrograde',
-	'legacy-jquery'            => 'Legacy jQuery',
-	'dns'                      => 'DNS',
-	'solar-flares'             => 'Solar Flares',
-	'the-cache'                => 'The Cache',
-	'daylight-saving-time'     => 'Daylight Saving Time',
-	'that-one-regex'           => 'That One Regex',
-	'kubernetes'               => 'Kubernetes',
-	'the-previous-contractor'  => 'The Previous Contractor',
+	'the-intern'              => 'The Intern',
+	'mercury-retrograde'      => 'Mercury Retrograde',
+	'legacy-jquery'           => 'Legacy jQuery',
+	'dns'                     => 'DNS',
+	'solar-flares'            => 'Solar Flares',
+	'the-cache'               => 'The Cache',
+	'daylight-saving-time'    => 'Daylight Saving Time',
+	'that-one-regex'          => 'That One Regex',
+	'kubernetes'              => 'Kubernetes',
+	'the-previous-contractor' => 'The Previous Contractor',
 );
 
-/** CLOSED SET. Four terms, forever. The front end filters on these slugs. */
+/**
+ * CLOSED SET. Four terms, forever. The front end filters on these slugs.
+*/
 const SEVERITY_TERMS = array(
 	's1-catastrophic' => 'S1 — Catastrophic',
 	's2-major'        => 'S2 — Major',
@@ -36,7 +39,9 @@ const SEVERITY_TERMS = array(
 	's4-cosmetic'     => 'S4 — Cosmetic',
 );
 
-/** Seeded, free-form, and shared across three post types. */
+/**
+ * Seeded, free-form, and shared across three post types.
+*/
 const TECH_STACK_TERMS = array(
 	'react'      => 'React',
 	'nextjs'     => 'Next.js',
@@ -54,20 +59,18 @@ const TECH_STACK_TERMS = array(
 
 // Registered after post-types.php, because Plugin::boot() requires that file
 // first and callbacks on the same hook run in registration order.
-add_action('init', __NAMESPACE__ . '\\register_taxonomies');
+add_action( 'init', __NAMESPACE__ . '\\register_taxonomies' );
 
 /**
  * Arguments every taxonomy here shares. Each call below overrides only what
  * differs — and the override list is the interesting part.
  *
- * @param string $single       graphql_single_name.
- * @param string $plural       graphql_plural_name.
- * @param string $rewrite_slug URL segment for the term archive.
+ * @param  string $single       graphql_single_name.
+ * @param  string $plural       graphql_plural_name.
+ * @param  string $rewrite_slug URL segment for the term archive.
  * @return array<string, mixed>
  */
-
-function taxonomy_defaults(string $single, string $plural, string $rewrite_slug): array
-{
+function taxonomy_defaults( string $single, string $plural, string $rewrite_slug ): array {
 	return array(
 		'public'              => true,
 		'publicly_queryable'  => true,
@@ -93,18 +96,16 @@ function taxonomy_defaults(string $single, string $plural, string $rewrite_slug)
  * Runs on `init`, and is called directly by Plugin::activate() before terms are
  * seeded, because `wp_insert_term()` rejects an unregistered taxonomy.
  */
-
-function register_taxonomies(): void
-{
+function register_taxonomies(): void {
 	register_taxonomy(
 		'scapegoat',
-		array('incident'),
+		array( 'incident' ),
 		array_merge(
-			taxonomy_defaults('Scapegoat', 'Scapegoats', 'scapegoats'),
+			taxonomy_defaults( 'Scapegoat', 'Scapegoats', 'scapegoats' ),
 			array(
 				'labels'       => array(
-					'name'          => __('Scapegoats', 'blame-the-tech-core'),
-					'singular_name' => __('Scapegoat', 'blame-the-tech-core'),
+					'name'          => __( 'Scapegoats', 'blame-the-tech-core' ),
+					'singular_name' => __( 'Scapegoat', 'blame-the-tech-core' ),
 				),
 				'rest_base'    => 'scapegoats',
 				'capabilities' => array(
@@ -119,13 +120,13 @@ function register_taxonomies(): void
 
 	register_taxonomy(
 		'severity',
-		array('incident'),
+		array( 'incident' ),
 		array_merge(
-			taxonomy_defaults('Severity', 'Severities', 'severity'),
+			taxonomy_defaults( 'Severity', 'Severities', 'severity' ),
 			array(
 				'labels'             => array(
-					'name'          => __('Severities', 'blame-the-tech-core'),
-					'singular_name' => __('Severity', 'blame-the-tech-core'),
+					'name'          => __( 'Severities', 'blame-the-tech-core' ),
+					'singular_name' => __( 'Severity', 'blame-the-tech-core' ),
 				),
 
 				// There is nothing to manage: the set is closed.
@@ -182,13 +183,13 @@ function register_taxonomies(): void
 
 	register_taxonomy(
 		'tech_stack',
-		array('incident', 'tech_review', 'post'), // three object types on purpose
+		array( 'incident', 'tech_review', 'post' ), // three object types on purpose
 		array_merge(
-			taxonomy_defaults('TechStack', 'TechStacks', 'stack'),
+			taxonomy_defaults( 'TechStack', 'TechStacks', 'stack' ),
 			array(
 				'labels'    => array(
-					'name'          => __('Tech Stack', 'blame-the-tech-core'),
-					'singular_name' => __('Technology', 'blame-the-tech-core'),
+					'name'          => __( 'Tech Stack', 'blame-the-tech-core' ),
+					'singular_name' => __( 'Technology', 'blame-the-tech-core' ),
 				),
 				'rest_base' => 'tech-stack',
 			)
@@ -196,7 +197,7 @@ function register_taxonomies(): void
 	);
 }
 
-add_action('set_object_terms', __NAMESPACE__ . '\\enforce_single_severity', 10, 6);
+add_action( 'set_object_terms', __NAMESPACE__ . '\\enforce_single_severity', 10, 6 );
 
 /**
  * Collapse a multi-term severity assignment back to one.
@@ -214,12 +215,12 @@ add_action('set_object_terms', __NAMESPACE__ . '\\enforce_single_severity', 10, 
  * what "click S1 while S2 is set" should obviously do. `$old_tt_ids` is what
  * makes that distinguishable from the set that was already there.
  *
- * @param int      $object_id  Object ID.
- * @param mixed    $terms      Terms as passed to wp_set_object_terms().
- * @param int[]    $tt_ids     Term taxonomy IDs now assigned.
- * @param string   $taxonomy   Taxonomy slug.
- * @param bool     $append     Whether terms were appended.
- * @param int[]    $old_tt_ids Term taxonomy IDs assigned before this write.
+ * @param int    $object_id  Object ID.
+ * @param mixed  $terms      Terms as passed to wp_set_object_terms().
+ * @param int[]  $tt_ids     Term taxonomy IDs now assigned.
+ * @param string $taxonomy   Taxonomy slug.
+ * @param bool   $append     Whether terms were appended.
+ * @param int[]  $old_tt_ids Term taxonomy IDs assigned before this write.
  */
 function enforce_single_severity(
 	int $object_id,
@@ -232,28 +233,28 @@ function enforce_single_severity(
 	// Re-entrancy guard: the corrective write below fires this hook again.
 	static $collapsing = false;
 
-	if ('severity' !== $taxonomy || $collapsing) {
+	if ( 'severity' !== $taxonomy || $collapsing ) {
 		return;
 	}
 
 	// Read the RESULT, never `count($tt_ids)`. On an append core passes only the
 	// tt_ids this call added, so a second term arriving next to an existing one
 	// shows up here as a single-element $tt_ids while the object now has two.
-	$current = wp_get_object_terms($object_id, 'severity');
+	$current = wp_get_object_terms( $object_id, 'severity' );
 
-	if (is_wp_error($current) || count($current) <= 1) {
+	if ( is_wp_error( $current ) || count( $current ) <= 1 ) {
 		return;
 	}
 
 	// tt_ids introduced by THIS write: on an append that is exactly the new set,
 	// otherwise whatever was not already assigned.
-	$added   = array_values(array_diff($tt_ids, $old_tt_ids));
-	$keep_tt = (int) ($added[0] ?? ($tt_ids[0] ?? 0));
+	$added   = array_values( array_diff( $tt_ids, $old_tt_ids ) );
+	$keep_tt = (int) ( $added[0] ?? ( $tt_ids[0] ?? 0 ) );
 
 	$keep = null;
 
-	foreach ($current as $term) {
-		if ((int) $term->term_taxonomy_id === $keep_tt) {
+	foreach ( $current as $term ) {
+		if ( (int) $term->term_taxonomy_id === $keep_tt ) {
 			$keep = $term;
 			break;
 		}
@@ -262,12 +263,12 @@ function enforce_single_severity(
 	$keep = $keep ?? $current[0];
 
 	$collapsing = true;
-	wp_set_object_terms($object_id, array($keep->term_id), 'severity', false);
+	wp_set_object_terms( $object_id, array( $keep->term_id ), 'severity', false );
 	$collapsing = false;
 
 	// Observable, so Module 23 can assert on it and the CLI can report it,
 	// rather than a silent correction the editor never learns about.
-	do_action('btt_severity_collapsed', $object_id, (int) $keep->term_id, $current);
+	do_action( 'btt_severity_collapsed', $object_id, (int) $keep->term_id, $current );
 }
 
 /**
@@ -275,29 +276,28 @@ function enforce_single_severity(
  *
  * @return int Number of terms created by this call.
  */
-function seed_default_terms(): int
-{
+function seed_default_terms(): int {
 	$created = 0;
-	$seed = array(
-		'scapegoat' => SCAPEGOAT_TERMS,
-		'severity' => SEVERITY_TERMS,
+	$seed    = array(
+		'scapegoat'  => SCAPEGOAT_TERMS,
+		'severity'   => SEVERITY_TERMS,
 		'tech_stack' => TECH_STACK_TERMS,
 	);
 
-	foreach ($seed as $taxonomy => $terms) {
-		foreach ($terms as $slug => $name) {
+	foreach ( $seed as $taxonomy => $terms ) {
+		foreach ( $terms as $slug => $name ) {
 			// Idempotency keyed on the SLUG. Not the name (editors rename), not
 			// the ID (IDs differ between your machine, CI and production).
-			if (null !== term_exists($slug, $taxonomy)) {
+			if ( null !== term_exists( $slug, $taxonomy ) ) {
 				continue;
 			}
 
-			$result = wp_insert_term($name, $taxonomy, array('slug' => $slug));
+			$result = wp_insert_term( $name, $taxonomy, array( 'slug' => $slug ) );
 
-			if (is_wp_error($result)) {
+			if ( is_wp_error( $result ) ) {
 				// An action rather than error_log(), so the CLI can report it
 				// and Module 23's tests can assert on it.
-				do_action('btt_term_seed_failed', $taxonomy, $slug, $result);
+				do_action( 'btt_term_seed_failed', $taxonomy, $slug, $result );
 				continue;
 			}
 
