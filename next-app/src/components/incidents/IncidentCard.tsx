@@ -1,43 +1,62 @@
-// One incident, hard-coded, so this lesson is about JSX and nothing else.
-// Lesson 08.2 gives it a typed `incident` prop and narrows its field set to
-// match one GraphQL fragment, at which point the <pre> below moves out.
+// One incident, from props.
 //
-// Content: incident-01 from `wp blame seed` — see appendix 03 §9.
-export function IncidentCard() {
+// The field set is deliberate and narrow: title, date, the severity term, the
+// first scapegoat term, and downtimeMinutes + environment from incidentDetails.
+// That is exactly the selection set of the `IncidentCardFields` GraphQL fragment
+// from Lesson 05.3, and Lesson 10.2 narrows this component's props to the type
+// codegen produces from it. A field rendered here that the fragment does not
+// select compiles today and breaks then.
+//
+// So: no blameScore (computed, detail page), no stackTrace (detail page), no
+// reporterDisplayName. Lesson 09.3 renders those on /incidents/[slug].
+import type { Incident } from '@/types/content';
+import { SEVERITY_LABEL } from '@/types/content';
+
+export function IncidentCard({ incident }: { readonly incident: Incident }) {
+  // Pull the nullable and possibly-absent values out once, at the top, so the
+  // JSX below is about layout rather than about narrowing.
+  const severity = incident.severities.nodes[0];
+  const scapegoat = incident.scapegoats.nodes[0];
+  const details = incident.incidentDetails;
+  const downtime = details?.downtimeMinutes;
+  const cost = details?.estimatedCostUsd;
+
   return (
     <article className="incident-card">
-      <h2>Deployed on a Friday (#1)</h2>
+      <h2>{incident.title}</h2>
 
-      {/* A machine-readable timestamp plus a human one. dateTime, not datetime:
-          the compiler emits an object literal, so the property is camelCase. */}
-      <p>
-        Reported <time dateTime="2024-09-02T11:00:00">2 September 2024</time>
+      {incident.date === null ? null : (
+        <p>
+          Reported <time dateTime={incident.date}>{incident.date.slice(0, 10)}</time>
+        </p>
+      )}
+
+      <p className="incident-cart_severity">
+        {/* SEVERITY_LABEL is a Record over the closed four-term set, so there is
+            no missing-label case. There IS a missing-TERM case. */}
+        {severity === undefined ? 'Unclassified' : SEVERITY_LABEL[severity.slug]}
       </p>
-
-      <p className="incident-card__severity">S1 — Catastrophic</p>
 
       <dl>
         <dt>Blamed on</dt>
-        <dd>The Intern</dd>
+        <dd>{scapegoat?.name ?? 'Nobody yet'}</dd>
 
         <dt>Downtime</dt>
-        <dd>5 min</dd>
+        {/* WRONG ON PURPOSE. Step 4 observes what this does to incident-01,
+            whose downtimeMinutes is 0, and then fixes it. */}
+        <dd>{downtime != null ? `${downtime} min` : 'Not recorded'}</dd>
 
+        {/* A DEBT, named and dated. `estimatedCostUsd` is NOT in the
+            IncidentCardFields fragment, so this row is one field of
+            overfetching. It is here because the null-versus-zero branch is
+            worth writing twice, and Lesson 10.5's overfetching audit is where
+            it comes out. */}
         <dt>Estimated cost</dt>
-        <dd>$0</dd>
+        <dd>{cost != null ? `$${cost.toLocaleString('en-US')}` : 'No cost recorded'}</dd>
 
         <dt>Environment</dt>
-        <dd>PRODUCTION</dd>
+        <dd>{details?.environment ?? 'Unknown'}</dd>
       </dl>
-
-      {/* Escaped, per appendix 03 §4.1. A stack trace is attacker-supplied text
-          from Module 16 onward, and there is no escaper to remember here: the
-          braces make it text. Never dangerouslySetInnerHTML on this field. */}
-      <pre>
-        {`Traceback (most recent call last):
-  File "app/handler.php", line 40
-  RuntimeException: Deployed on a Friday`}
-      </pre>
     </article>
   );
 }
