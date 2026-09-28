@@ -162,3 +162,23 @@ hydrates only the interactive islands — nav, filters, dialogs
 ## Where I disagree
 
 Nothing, cause I'm the course creator. See step 4 with potential variants.
+
+## Effects removed from the incident UI (Lesson 08.4)
+
+An effect synchronises React with something outside it. If both sides of the
+synchronisation are inside React, the effect buys a second render and a chance for two
+values to disagree.
+
+| Removed                                                          | Why it was wrong                                                                              | Replaced by                                                                    |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| effect deriving `visible` into state in `IncidentList`           | both inputs were already in React; it produced a frame where the count and the list disagreed | `incidents.filter(...)` during render                                          |
+| effect deriving `count` from `visible`                           | derived from derived, and lagging by one more render                                          | `visible.length` during render                                                 |
+| effect resetting `query` when `severity` changed, in the harness | indistinguishable from a mount, and it fought the user mid-word                               | nothing. If a reset is ever required, a changing `key` remounts the component. |
+
+The only effect left in the incident UI is the `setTimeout` inside `useDebouncedValue`,
+which is legitimate because a browser timer keeps running whether React renders or not
+and therefore has to be cancelled.
+
+**Data fetching will never be an effect in this project.** Server Components fetch before
+they render (Lesson 09.3), so there is no browser request, no public endpoint, no CORS
+policy, and no spinner over content the server already had.
