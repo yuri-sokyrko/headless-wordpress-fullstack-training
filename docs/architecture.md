@@ -182,3 +182,42 @@ and therefore has to be cancelled.
 **Data fetching will never be an effect in this project.** Server Components fetch before
 they render (Lesson 09.3), so there is no browser request, no public endpoint, no CORS
 policy, and no spinner over content the server already had.
+
+## State inventory: the incident UI (Lesson 08.5)
+
+Fourteen values on screen. Four are state. Eight are derived during render, one is a
+prop, and one belongs to the DOM.
+
+| Value                                 | Kind                 | Lives in                                             |
+| ------------------------------------- | -------------------- | ---------------------------------------------------- |
+| selected severity                     | state                | `IncidentFilterProvider`                             |
+| selected scapegoat                    | state                | `IncidentFilterProvider`                             |
+| search text                           | state                | `IncidentFilterProvider`                             |
+| debounced search text                 | state                | inside `useDebouncedValue`, called by `IncidentList` |
+| whether any filter is active          | derived              | one line in `FilterBar`                              |
+| the filtered incident array           | derived              | `IncidentList`                                       |
+| "N of 40 incidents"                   | derived              | `IncidentList`                                       |
+| whether the empty state shows         | derived              | `IncidentList`                                       |
+| the forty incidents                   | prop                 | `App` to `IncidentList`                              |
+| an incident's severity label          | derived              | `IncidentCard`                                       |
+| "Nobody yet" for an unblamed incident | derived              | `IncidentCard`                                       |
+| whether the stack-trace block appears | derived              | `IncidentCard`                                       |
+| whether "Clear search" is disabled    | derived              | `IncidentSearch`                                     |
+| the input's focus                     | the DOM's, via a ref | `IncidentSearch`                                     |
+
+Rules I am applying from here on:
+
+1. If two values on screen could ever disagree, one of them is derived. Compute it.
+2. State goes to the lowest component that needs it, and is lifted only when two
+   siblings must agree.
+3. Context is for shared UI state, props are for data. `incidents` is a prop precisely
+   so that Lesson 09.3 can swap fixtures for a live query without touching a component.
+4. A context with no sensible default gets `undefined` and a consumer hook that throws.
+5. A context publishes facts, not conclusions. `IncidentFilterValue` has seven members:
+   three values, three setters and `clear`. Anything derivable is derived by whichever
+   component shows it or pays for it.
+
+Known debt, taken on deliberately: the search filters client-side over an array that is
+already in memory. That is correct for 40 fixtures and wrong for 4,000 incidents —
+Module 10 moves the work behind a cached query and Lesson 18.1 moves the filter state into
+`searchParams` so the server does the filtering.
