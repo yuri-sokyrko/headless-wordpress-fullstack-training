@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
  * Generic on purpose: nothing in here knows or cares that the value is a search
  * string. Module 16 debounces a different type with the same hook.
  */
-export function useDebounceValue<T>(value: T, delayMs: number): T {
+export function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState<T>(value);
 
   useEffect(() => {
