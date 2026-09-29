@@ -130,3 +130,18 @@ Fixed cost before any resolver runs: `wp_options` autoload — <your bytes> byte
   the other side of the relationship before reaching for a cache.
 - Every list in a saved operation passes an explicit `first`. `@graphql-eslint` fails the build
   otherwise.
+
+## Hand-written GraphQL response types (Module 09 debt)
+
+Every type below is an assertion about WPGraphQL's output that nothing verifies. Lesson 10.2
+deletes the file and regenerates the equivalents from wordpress-headless/schema.graphql.
+
+| Type                          | Operation        | Known to disagree with the schema                                         |
+| ----------------------------- | ---------------- | ------------------------------------------------------------------------- |
+| `IncidentNodeResponse`        | `IncidentsList`  | all nine `incidentDetails` fields declared non-null; schema says nullable |
+| `IncidentBySlugQueryResponse` | `IncidentBySlug` | inherits the above, plus `content` guessed                                |
+| …                             | …                | Lesson 09.4 adds five more rows                                           |
+
+### Why we are keeping them for one module
+
+(Your own two sentences. If you cannot write them, re-read Key Concept 5.)
