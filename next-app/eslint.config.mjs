@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
+import nextPlugin from '@next/eslint-plugin-next';
 
 export default [
   // ── Never linted ────────────────────────────────────────────────────
@@ -100,14 +101,15 @@ export default [
     },
   },
 
-  // The throwaway harness from Step 4 is outside tsconfig.json's `include`, so
-  // the type-aware rules have no program to consult for it. Turn those off here
-  // rather than adding a disposable directory to the type-check surface. The
-  // syntactic rules, including rules-of-hooks, still apply. Lesson 09.1 deletes
-  // the directory and this block with it.
   {
-    files: ['scratch/**/*.{ts,tsx}'],
-    ...tseslint.configs.disableTypeChecked,
+    files: ['**/*.{ts,tsx}'],
+    plugins: { '@next/next': nextPlugin },
+    rules: {
+      // Registering the rules explicitly rather than spreading a preset export: this
+      // form works on every version of the plugin, and you can read what you enabled.
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+    },
   },
 
   // LAST. eslint-config-prettier only DISABLES rules, so anything after it
