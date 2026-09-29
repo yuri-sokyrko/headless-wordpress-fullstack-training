@@ -1,3 +1,4 @@
+'use client';
 // A controlled search box. Holds no state: the query lives with the other
 // filters, further up the tree. The only thing it owns is a ref to its own input.
 import { useRef } from 'react';

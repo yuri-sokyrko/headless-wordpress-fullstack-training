@@ -1,3 +1,4 @@
+'use client';
 // Two controlled selects and a clear button. Fully CONTROLLED: this component
 // holds no state at all. In this lesson the state lives in the harness App,
 // which is uncomfortable by design — Lesson 08.5 pays that discomfort off.

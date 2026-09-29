@@ -1,8 +1,5 @@
+'use client';
 // The incident board's filter state, published to a subtree.
-//
-// Lesson 09.2 adds 'use client' to the top of this file and mounts it as far
-// down the page as it will go — a provider at the top of a layout drags
-// everything inside it into the browser bundle.
 import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 
