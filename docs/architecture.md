@@ -221,3 +221,31 @@ Known debt, taken on deliberately: the search filters client-side over an array 
 already in memory. That is correct for 40 fixtures and wrong for 4,000 incidents —
 Module 10 moves the work behind a cached query and Lesson 18.1 moves the filter state into
 `searchParams` so the server does the filtering.
+
+## Proxy: what it is for, and what it must never be
+
+`src/proxy.ts` runs before the router, on every request its `matcher` selects, in the
+Node.js runtime. Next 16 renamed this file from `middleware.ts` and pinned it to Node; the
+runtime is not configurable. Node APIs being reachable is not permission to use them —
+everything here is on the hot path of every request.
+
+**It is for:** normalising URLs (the locale prefix), cheap redirects for the common case, and
+setting request-scoped headers.
+
+**It must never be:** an authorisation check.
+
+Proxy cannot verify a session, because Next.js never holds
+GRAPHQL_JWT_AUTH_SECRET_KEY — see appendix 04 §5. It can see that a cookie exists. It cannot
+know whether the cookie is valid, unexpired, or belongs to a user with the capability being
+exercised. Only WordPress can answer that.
+
+So the auth gate Module 15 adds here is **half a check**: it saves a logged-out visitor from
+a broken page. Every route that reads user-specific data re-verifies the session where the
+data is fetched. If the proxy were deleted tomorrow, no data would become accessible
+that was not accessible before — and if that statement ever stops being true, the security
+model has been broken.
+
+A missing-cookie redirect stops a logged-out human from seeing a broken page. It stops nothing else.
+An attacker sends any cookie value they like, or requests the RSC payload directly,
+or crafts a request the matcher does not cover — and the page
+renders, because nothing else ever checked.

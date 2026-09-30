@@ -57,8 +57,11 @@
   // `generateStaticParams` return value a compile error.
   "include": [
     "next-env.d.ts",
-    "**/*.{ts,tsx}",
     ".next/types/**/*.ts",
+    "**/*.{ts,tsx}",
+    "src/*.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     "scripts/**/*.ts",
     ".next/dev/types/**/*.ts",
     "next.config.ts",
