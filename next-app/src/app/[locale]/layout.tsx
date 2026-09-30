@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { NavLink } from '@/components/layout/NavLink';
 
 export const metadata: Metadata = {
   title: 'Blame The Tech',
@@ -33,7 +34,32 @@ export default async function LocaleLayout({
   return (
     <html lang={locale}>
       {/* No className, no font import, no globals.css. Module 11 owns all three. */}
-      <body>{children}</body>
+      <body>
+        {/* HARD-CODED, deliberately. Lesson 11.3 replaces this with <Header /> reading
+            WordPress menus via `menuItems(where: { location: PRIMARY })`. Five labels in
+            a layout is the right amount of wrong for one module. */}
+        <nav aria-label="Primary">
+          <ul>
+            <li>
+              <NavLink href={`/${locale}`}>Home</NavLink>
+            </li>
+            <li>
+              <NavLink href={`/${locale}/incidents`}>Incidents</NavLink>
+            </li>
+            <li>
+              <NavLink href={`/${locale}/blog`}>Blog</NavLink>
+            </li>
+            <li>
+              <NavLink href={`/${locale}/reviews`}>Reviews</NavLink>
+            </li>
+            <li>
+              <NavLink href={`/${locale}/scapegoats`}>Scapegoats</NavLink>
+            </li>
+          </ul>
+        </nav>
+
+        {children}
+      </body>
     </html>
   );
 }

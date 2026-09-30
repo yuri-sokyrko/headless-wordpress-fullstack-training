@@ -11,6 +11,7 @@ import type {
   IncidentResolutionStatus,
   PageInfo,
   SeverityLevel,
+  TechReviewVerdict,
 } from './content';
 
 /** A `severity` term as selected by the incident queries. */
@@ -79,4 +80,90 @@ export interface IncidentBySlugQueryResponse {
 export interface GraphQLPayload<TData> {
   readonly data?: TData;
   readonly errors?: readonly { readonly message: string }[];
+}
+
+/* ── Blog ─────────────────────────────────────────────────────────────── */
+
+export interface PostNodeResponse {
+  readonly id: string;
+  readonly title: string;
+  readonly slug: string;
+  readonly date: string;
+}
+
+/** `query PostsList($first: Int!, $after: String)` */
+export interface PostsQueryResponse {
+  readonly posts: {
+    readonly pageInfo: PageInfo;
+    readonly nodes: readonly PostNodeResponse[];
+  };
+}
+
+/** `query PostBySlug($slug: ID!)` */
+export interface PostBySlugQueryResponse {
+  readonly post: (PostNodeResponse & { readonly content: string | null }) | null;
+}
+
+/* ── Tech reviews ─────────────────────────────────────────────────────── */
+
+/**
+ * One row of an SCF repeater. NOT a string — appendix 03 §4.3.
+ * All three levels are nullable: the list, the row, and the sub-field.
+ */
+export interface RepeaterItemResponse {
+  readonly item: string | null;
+}
+
+export interface TechReviewFieldsResponse {
+  readonly companyName: string;
+  readonly ratingOverall: number;
+  readonly ratingDx: number;
+  readonly ratingDocs: number;
+  readonly ratingIncidentResponse: number;
+  readonly verdict: TechReviewVerdict;
+  readonly pros: readonly RepeaterItemResponse[];
+  readonly cons: readonly RepeaterItemResponse[];
+  readonly reviewedAt: string;
+}
+
+export interface ReviewNodeResponse {
+  readonly id: string;
+  readonly title: string;
+  readonly slug: string;
+  readonly date: string;
+  readonly techReviewFields: TechReviewFieldsResponse;
+}
+
+/** `query ReviewsList($first: Int!, $after: String)` */
+export interface ReviewsQueryResponse {
+  readonly techReviews: {
+    readonly pageInfo: PageInfo;
+    readonly nodes: readonly ReviewNodeResponse[];
+  };
+}
+
+/** `query ReviewBySlug($slug: ID!)` */
+export interface ReviewBySlugQueryResponse {
+  readonly techReview: (ReviewNodeResponse & { readonly content: string | null }) | null;
+}
+
+/* ── Scapegoats ───────────────────────────────────────────────────────── */
+export interface ScapegoatNodeResponse {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  // ⚠️ Same lie as downtimeMinutes: the schema says `count` is nullable, and this
+  // whole page is an ORDER BY on it. Lesson 10.2 removes the possibility.
+  readonly count: number;
+  readonly scapegoatProfile: {
+    readonly tagline: string | null;
+    readonly defensiveness: number | null;
+  } | null;
+}
+
+/** `query ScapegoatLeaderboard($first: Int!)` */
+export interface ScapegoatLeaderboardQueryResponse {
+  readonly scapegoats: {
+    readonly nodes: readonly ScapegoatNodeResponse[];
+  };
 }

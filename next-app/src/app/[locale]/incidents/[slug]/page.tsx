@@ -50,6 +50,20 @@ const INCIDENT_BY_SLUG = /* GraphQL */ `
   }
 `;
 
+interface IncidentSlugsResponse {
+  readonly incidents: { readonly nodes: readonly { readonly slug: string }[] };
+}
+
+const INCIDENT_SLUGS = /* GraphQL */ `
+  query IncidentSlugs($first: Int!) {
+    incidents(first: $first, where: { status: PUBLISH }) {
+      nodes {
+        slug
+      }
+    }
+  }
+`;
+
 async function fetchIncident(slug: string): Promise<IncidentBySlugQueryResponse> {
   const endpoint = process.env.WP_GRAPHQL_ENDPOINT;
 
@@ -75,6 +89,28 @@ async function fetchIncident(slug: string): Promise<IncidentBySlugQueryResponse>
   if (!payload.data) throw new Error('WPGraphQL returned no data for IncidentBySlug');
 
   return payload.data;
+}
+
+export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
+  const endpoint = process.env.WP_GRAPHQL_ENDPOINT;
+  if (!endpoint)
+    throw new Error('WP_GRAPHQL_ENDPOINT is not set. Copy .env.example to .env.local.');
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    // 40 seeded incidents (appendix 03 §9). `first: 100` leaves room for the ones
+    // Module 16 lets visitors submit, without another edit here — but note that
+    // Lesson 06.4 caps every connection at 50 nodes, so this is a CEILING and
+    // not a page size. Lesson 18.1 adds the cursor loop that makes it reachable.
+    body: JSON.stringify({ query: INCIDENT_SLUGS, variables: { first: 100 } }),
+  });
+  if (!res.ok) throw new Error(`WPGraphQL transport failure: HTTP ${res.status}`);
+
+  const payload = (await res.json()) as GraphQLPayload<IncidentSlugsResponse>;
+  if (!payload.data) throw new Error('WPGraphQL returned no data for IncidentSlugs');
+
+  return payload.data.incidents.nodes.map((incident) => ({ locale: 'en', slug: incident.slug }));
 }
 
 export default async function IncidentPage({
