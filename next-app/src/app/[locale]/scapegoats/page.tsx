@@ -1,7 +1,11 @@
 // next-app/src/app/[locale]/scapegoats/page.tsx
-import type { GraphQLPayload, ScapegoatLeaderboardQueryResponse } from '@/types/graphql-responses';
+import { fetchGraphQL, untypedDocument } from '@/lib/graphql/client';
+import type { ScapegoatLeaderboardQueryResponse } from '@/types/graphql-responses';
 
-const SCAPEGOAT_LEADERBOARD = /* GraphQL */ `
+const ScapegoatLeaderboardDocument = untypedDocument<
+  ScapegoatLeaderboardQueryResponse,
+  { first: number }
+>(/* GraphQL */ `
   query ScapegoatLeaderboard($first: Int!) {
     scapegoats(first: $first, where: { orderby: COUNT, order: DESC, hideEmpty: false }) {
       nodes {
@@ -16,34 +20,11 @@ const SCAPEGOAT_LEADERBOARD = /* GraphQL */ `
       }
     }
   }
-`;
-
-async function fetchLeaderboard(first: number): Promise<ScapegoatLeaderboardQueryResponse> {
-  const endpoint = process.env.WP_GRAPHQL_ENDPOINT;
-  if (!endpoint)
-    throw new Error('WP_GRAPHQL_ENDPOINT is not set. Copy .env.example to .env.local.');
-
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: SCAPEGOAT_LEADERBOARD, variables: { first } }),
-  });
-  if (!res.ok) throw new Error(`WPGraphQL transport failure: HTTP ${res.status}`);
-
-  const payload = (await res.json()) as GraphQLPayload<ScapegoatLeaderboardQueryResponse>;
-  if (payload.errors?.length) {
-    console.error(
-      '[btt] ScapegoatLeaderboard errors:',
-      payload.errors.map((e) => e.message).join('; ')
-    );
-  }
-  if (!payload.data) throw new Error('WPGraphQL returned no data for ScapegoatLeaderboard');
-  return payload.data;
-}
+`);
 
 export default async function ScapegoatsPage() {
   // The ten seeded terms from appendix 03 §2, ordered by wp_term_taxonomy.count.
-  const { scapegoats } = await fetchLeaderboard(10);
+  const { scapegoats } = await fetchGraphQL(ScapegoatLeaderboardDocument, { first: 10 });
 
   return (
     <main>

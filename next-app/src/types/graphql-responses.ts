@@ -71,6 +71,12 @@ export interface IncidentsQueryResponse {
   };
 }
 
+/** `query HomepageFeeds($featuredCount: Int!, $recentCount: Int!)` — two aliases, one request. */
+export interface HomepageFeedsQueryResponse {
+  readonly catastrophic: { readonly nodes: readonly IncidentNodeResponse[] };
+  readonly recent: { readonly nodes: readonly IncidentNodeResponse[] };
+}
+
 /** `query IncidentBySlug($slug: ID!)` — `incident` is null for an unknown slug. */
 export interface IncidentBySlugQueryResponse {
   readonly incident: (IncidentNodeResponse & { readonly content: string | null }) | null;

@@ -1,38 +1,37 @@
 import { notFound } from 'next/navigation';
-import type {
-  GraphQLPayload,
-  ReviewBySlugQueryResponse,
-  ReviewsQueryResponse,
-} from '@/types/graphql-responses';
+import { fetchGraphQL, untypedDocument } from '@/lib/graphql/client';
+import type { ReviewBySlugQueryResponse, ReviewsQueryResponse } from '@/types/graphql-responses';
 
-const REVIEW_BY_SLUG = /* GraphQL */ `
-  query ReviewBySlug($slug: ID!) {
-    techReview(id: $slug, idType: SLUG) {
-      id
-      title
-      slug
-      date
-      content
-      techReviewFields {
-        companyName
-        ratingOverall
-        ratingDx
-        ratingDocs
-        ratingIncidentResponse
-        verdict
-        reviewedAt
-        pros {
-          item
-        }
-        cons {
-          item
+const ReviewBySlugDocument = untypedDocument<ReviewBySlugQueryResponse, { slug: string }>(
+  /* GraphQL */ `
+    query ReviewBySlug($slug: ID!) {
+      techReview(id: $slug, idType: SLUG) {
+        id
+        title
+        slug
+        date
+        content
+        techReviewFields {
+          companyName
+          ratingOverall
+          ratingDx
+          ratingDocs
+          ratingIncidentResponse
+          verdict
+          reviewedAt
+          pros {
+            item
+          }
+          cons {
+            item
+          }
         }
       }
     }
-  }
-`;
+  `
+);
 
-const REVIEW_SLUGS = /* GraphQL */ `
+const ReviewSlugsDocument = untypedDocument<ReviewsQueryResponse, { first: number }>(/* GraphQL */ `
   query ReviewSlugs($first: Int!) {
     techReviews(first: $first, where: { status: PUBLISH }) {
       pageInfo {
@@ -56,30 +55,10 @@ const REVIEW_SLUGS = /* GraphQL */ `
       }
     }
   }
-`;
-
-async function query<TData>(document: string, variables: Record<string, unknown>): Promise<TData> {
-  const endpoint = process.env.WP_GRAPHQL_ENDPOINT;
-  if (!endpoint)
-    throw new Error('WP_GRAPHQL_ENDPOINT is not set. Copy .env.example to .env.local.');
-
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: document, variables }),
-  });
-  if (!res.ok) throw new Error(`WPGraphQL transport failure: HTTP ${res.status}`);
-
-  const payload = (await res.json()) as GraphQLPayload<TData>;
-  if (payload.errors?.length) {
-    console.error('[btt] GraphQL errors:', payload.errors.map((e) => e.message).join('; '));
-  }
-  if (!payload.data) throw new Error('WPGraphQL returned no data');
-  return payload.data;
-}
+`);
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
-  const data = await query<ReviewsQueryResponse>(REVIEW_SLUGS, { first: 20 });
+  const data = await fetchGraphQL(ReviewSlugsDocument, { first: 20 });
   return data.techReviews.nodes.map((review) => ({ locale: 'en', slug: review.slug }));
 }
 
@@ -89,7 +68,7 @@ export default async function ReviewsPage({
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
   const { slug } = await params;
-  const { techReview } = await query<ReviewBySlugQueryResponse>(REVIEW_BY_SLUG, { slug });
+  const { techReview } = await fetchGraphQL(ReviewBySlugDocument, { slug });
 
   if (!techReview) notFound();
 
