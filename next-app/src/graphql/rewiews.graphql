@@ -1,0 +1,56 @@
+query ReviewsList($first: Int!, $after: String) {
+  techReviews(first: $first, after: $after, where: { status: PUBLISH }) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      title
+      slug
+      date
+      techReviewFields {
+        companyName
+        ratingOverall
+        ratingDx
+        ratingDocs
+        ratingIncidentResponse
+        verdict
+        reviewedAt
+      }
+    }
+  }
+}
+
+query ReviewBySlug($slug: ID!) {
+  techReview(id: $slug, idType: SLUG) {
+    id
+    title
+    slug
+    date
+    content
+    techReviewFields {
+      companyName
+      ratingOverall
+      ratingDx
+      ratingDocs
+      ratingIncidentResponse
+      verdict
+      reviewedAt
+      pros {
+        item
+      }
+      cons {
+        item
+      }
+    }
+  }
+}
+
+query ReviewSlugs($first: Int!) {
+  techReviews(first: $first, where: { status: PUBLISH }) {
+    nodes {
+      slug
+    }
+  }
+}

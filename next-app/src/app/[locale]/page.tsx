@@ -1,51 +1,6 @@
 import { IncidentCard } from '@/components/incidents/IncidentCard';
-import { fetchGraphQL, untypedDocument } from '@/lib/graphql/client';
-import type { HomepageFeedsQueryResponse } from '@/types/graphql-responses';
-
-// One request, two aliases: the home page stops paying for two round trips.
-const HomepageFeedsDocument = untypedDocument<
-  HomepageFeedsQueryResponse,
-  { featuredCount: number; recentCount: number }
->(/* GraphQL */ `
-  query HomepageFeeds($featuredCount: Int!, $recentCount: Int!) {
-    catastrophic: incidents(first: $featuredCount, where: { status: PUBLISH }) {
-      nodes {
-        ...IncidentCardFields
-      }
-    }
-    recent: incidents(
-      first: $recentCount
-      where: { status: PUBLISH, orderby: { field: DATE, order: DESC } }
-    ) {
-      nodes {
-        ...IncidentCardFields
-      }
-    }
-  }
-
-  fragment IncidentCardFields on Incident {
-    id
-    title
-    slug
-    date
-    severities(first: 1) {
-      nodes {
-        name
-        slug
-      }
-    }
-    scapegoats(first: 1) {
-      nodes {
-        name
-        slug
-      }
-    }
-    incidentDetails {
-      downtimeMinutes
-      environment
-    }
-  }
-`);
+import { fetchGraphQL } from '@/lib/graphql/client';
+import { HomepageFeedsDocument } from '@/gql/graphql';
 
 export default async function HomePage({
   params,
@@ -58,6 +13,9 @@ export default async function HomePage({
     recentCount: 6,
   });
 
+  const catastrophicNodes = catastrophic?.nodes ?? [];
+  const recentNodes = recent?.nodes ?? [];
+
   return (
     <main>
       <h1>Blame The Tech</h1>
@@ -65,7 +23,7 @@ export default async function HomePage({
 
       <h2>Most catastrophic</h2>
       <ul>
-        {catastrophic.nodes.map((incident) => (
+        {catastrophicNodes.map((incident) => (
           <li key={incident.id}>
             <IncidentCard incident={incident} />
           </li>
@@ -74,7 +32,7 @@ export default async function HomePage({
 
       <h2>Most recent</h2>
       <ul>
-        {recent.nodes.map((incident) => (
+        {recentNodes.map((incident) => (
           <li key={incident.id}>
             <IncidentCard incident={incident} />
           </li>

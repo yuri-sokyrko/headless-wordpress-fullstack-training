@@ -5,7 +5,7 @@
 // Lesson 10.4 replaces the plain `Error` throws with `GraphQLRequestError`.
 import 'server-only';
 
-import { Kind, parse, print } from 'graphql';
+import { Kind, print } from 'graphql';
 import type { DocumentNode } from 'graphql';
 
 /** Longer than any query in this app needs; shorter than a reader will wait. */
@@ -179,18 +179,4 @@ export function fetchGraphQLAuthed<TResult, TVariables extends Record<string, un
       },
     }
   );
-}
-
-/**
- * TEMPORARY. Lesson 10.2 deletes this export and every call to it.
- *
- * Turns a query string into a document whose result and variable types you supplied by
- * hand. No cast is needed, and that is the point: `__apiType` is optional, so a plain
- * `DocumentNode` satisfies `TypedDocumentNode<Anything, Anything>`. The type argument is
- * a promise with no evidence behind it — exactly the Lesson 09.3 problem, relocated.
- */
-export function untypedDocument<TResult, TVariables extends Record<string, unknown>>(
-  source: string
-): TypedDocumentNode<TResult, TVariables> {
-  return parse(source);
 }

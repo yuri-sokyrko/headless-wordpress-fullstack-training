@@ -1,0 +1,84 @@
+# next-app/src/graphql/incidents.graphql
+# The /[locale]/incidents routes. Lesson 10.5 factors the repeated field set into
+# a fragment and moves the detail query's extra fields with it.
+
+query IncidentsList($first: Int!, $after: String, $search: String) {
+  incidents(
+    first: $first
+    after: $after
+    where: { status: PUBLISH, search: $search, orderby: { field: DATE, order: DESC } }
+  ) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      databaseId
+      title
+      slug
+      date
+      blameScore
+      severities(first: 1) {
+        nodes {
+          name
+          slug
+        }
+      }
+      scapegoats(first: 1) {
+        nodes {
+          name
+          slug
+        }
+      }
+      incidentDetails {
+        downtimeMinutes
+        environment
+      }
+    }
+  }
+}
+
+# `id: $slug, idType: SLUG`. A bare `id:` carrying a slug returns null — Lesson 05.3.
+query IncidentBySlug($slug: ID!) {
+  incident(id: $slug, idType: SLUG) {
+    id
+    databaseId
+    title
+    slug
+    date
+    blameScore
+    content
+    severities(first: 1) {
+      nodes {
+        name
+        slug
+      }
+    }
+    scapegoats(first: 1) {
+      nodes {
+        name
+        slug
+      }
+    }
+    incidentDetails {
+      occurredAt
+      downtimeMinutes
+      estimatedCostUsd
+      environment
+      resolutionStatus
+      blameConfidence
+      stackTrace
+      reporterDisplayName
+      isVerified
+    }
+  }
+}
+
+query IncidentSlugs($first: Int!) {
+  incidents(first: $first, where: { status: PUBLISH }) {
+    nodes {
+      slug
+    }
+  }
+}

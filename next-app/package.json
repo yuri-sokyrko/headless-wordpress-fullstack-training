@@ -21,10 +21,14 @@
     "verify": "npm run type-check && npm run lint && npm run format:check",
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "codegen": "graphql-codegen --config codegen.ts",
+    "codegen:check": "graphql-codegen --config codegen.ts && git diff --exit-code -- src/gql/"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@graphql-codegen/cli": "^7.4.3",
+    "@graphql-codegen/client-preset": "^6.2.0",
     "@next/eslint-plugin-next": "^16.3.6",
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",

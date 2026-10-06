@@ -1,48 +1,7 @@
 import { IncidentBrowser } from '@/components/incidents/IncidentBrowser';
 import { IncidentFilterProvider } from '@/components/incidents/IncidentFilterProvider';
-import { fetchGraphQL, untypedDocument } from '@/lib/graphql/client';
-import type { IncidentsQueryResponse } from '@/types/graphql-responses';
-
-const IncidentsListDocument = untypedDocument<
-  IncidentsQueryResponse,
-  { first: number; after?: string; search?: string }
->(/* GraphQL */ `
-  query IncidentsList($first: Int!, $after: String, $search: String) {
-    incidents(
-      first: $first
-      after: $after
-      where: { status: PUBLISH, search: $search, orderby: { field: DATE, order: DESC } }
-    ) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      nodes {
-        id
-        databaseId
-        title
-        slug
-        date
-        severities(first: 1) {
-          nodes {
-            name
-            slug
-          }
-        }
-        scapegoats(first: 1) {
-          nodes {
-            name
-            slug
-          }
-        }
-        incidentDetails {
-          downtimeMinutes
-          environment
-        }
-      }
-    }
-  }
-`);
+import { fetchGraphQL } from '@/lib/graphql/client';
+import { IncidentsListDocument } from '@/gql/graphql';
 
 export default async function IncidentsPage({
   params,
@@ -51,7 +10,7 @@ export default async function IncidentsPage({
 }) {
   const { locale } = await params;
   const data = await fetchGraphQL(IncidentsListDocument, { first: 12 });
-  const incidents = data.incidents.nodes;
+  const incidents = data.incidents?.nodes ?? [];
 
   console.log(`[btt] /${locale}/incidents rendered on the server`);
 

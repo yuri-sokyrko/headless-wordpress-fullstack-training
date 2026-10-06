@@ -1,0 +1,14 @@
+query ScapegoatLeaderboard($first: Int!) {
+  scapegoats(first: $first, where: { orderby: COUNT, order: DESC, hideEmpty: false }) {
+    nodes {
+      id
+      name
+      slug
+      count
+      scapegoatProfile {
+        tagline
+        defensiveness
+      }
+    }
+  }
+}

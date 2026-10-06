@@ -1,6 +1,32 @@
 // The typed blame board. Same behaviour as blame.mjs, judged before it runs.
 //   export WP_GRAPHQL_ENDPOINT=http://localhost:8080/graphql && npm run blame
-import type { BlameBoardData, Block, Incident } from '../src/types/content.ts';
+import type { IncidentsListQuery } from '../src/gql/graphql.ts';
+import type { SeverityLevel } from '../src/types/content.ts';
+
+// The response shape comes from codegen now, not from a hand-written type. This script
+// keeps its own QUERY and fetch (it runs under tsx, outside Next, so it cannot import the
+// `server-only` client), so the type is still a claim about THIS query — but it is
+// a claim about a generated shape, and it selects a superset of what is printed.
+type BlameBoardData = IncidentsListQuery;
+type Incident = NonNullable<IncidentsListQuery['incidents']>['nodes'][number];
+
+// The Module 14 rehearsal. Not derivable from the schema (it models a block renderer that
+// does not exist yet), so it lives with its only user instead of in content.ts.
+type BlockOf<TName extends string, TAttributes> = {
+  readonly __typename: TName; // the DISCRIMINANT. Never `name` - that is typed `string`.
+  readonly clientId: string;
+  readonly parentClientId: string | null;
+  readonly attributes: TAttributes | null;
+};
+
+type Block =
+  | BlockOf<'CoreParagraph', { readonly content: string | null }>
+  | BlockOf<'BttIncidentCallout', { readonly severity: SeverityLevel | null }>
+  | BlockOf<'BttBlameQuote', { readonly attribution: string | null }>
+  | BlockOf<'BttScapegoatPicker', { readonly termId: number | null }>
+  | BlockOf<'BttIncidentTicker', { readonly count: number | null }>
+  | BlockOf<'BttHobtCta', { readonly label: string | null }>
+  | BlockOf<'BttTechVerdictCard', { readonly reviewSlug: string | null }>;
 
 const TIMEOUT_MS = 8_000;
 
@@ -130,8 +156,9 @@ function assertNever(value: never): never {
 
 function renderIncident(incident: Incident): string {
   // noUncheckedIndexedAccess: [0] is possibly undefined, so it has to be guarded.
-  const severity = incident.severities.nodes[0]?.slug ?? 'unclassified';
-  const scapegoat = incident.scapegoats.nodes[0]?.name ?? 'nobody yet';
+  // Both connections are nullable in the schema, so `?.` before `.nodes`.
+  const severity = incident.severities?.nodes[0]?.slug ?? 'unclassified';
+  const scapegoat = incident.scapegoats?.nodes[0]?.name ?? 'nobody yet';
   const blame = String(Math.round(incident.blameScore ?? 0)).padStart(5);
   const minutes = String(incident.incidentDetails?.downtimeMinutes ?? 0).padStart(5);
 

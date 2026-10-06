@@ -5,7 +5,7 @@
 import type { ChangeEvent } from 'react';
 
 import type { SeverityLevel } from '@/types/content';
-import { SEVERITY_LABEL } from '@/types/content';
+import { SEVERITY_LABEL, isSeverityLevel } from '@/types/content';
 
 import { SCAPEGOAT_TERMS } from './fixtures';
 
@@ -19,10 +19,6 @@ export type SeverityFilter = SeverityLevel | 'all';
  * model showing through, not sloppiness.
  */
 export type ScapegoatFilter = string;
-
-function isSeverityLevel(value: string): value is SeverityLevel {
-  return value in SEVERITY_LABEL;
-}
 
 /** Narrow a <select> value back into the union. A real check, never an `as` cast. */
 export function isSeverityFilter(value: string): value is SeverityFilter {

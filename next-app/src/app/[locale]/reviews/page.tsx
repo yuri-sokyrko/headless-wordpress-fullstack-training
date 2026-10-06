@@ -1,35 +1,6 @@
 import Link from 'next/link';
-import { fetchGraphQL, untypedDocument } from '@/lib/graphql/client';
-import type { ReviewsQueryResponse } from '@/types/graphql-responses';
-
-const ReviewsListDocument = untypedDocument<
-  ReviewsQueryResponse,
-  { first: number; after?: string }
->(/* GraphQL */ `
-  query ReviewsList($first: Int!, $after: String) {
-    techReviews(first: $first, after: $after, where: { status: PUBLISH }) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      nodes {
-        id
-        title
-        slug
-        date
-        techReviewFields {
-          companyName
-          ratingOverall
-          ratingDx
-          ratingDocs
-          ratingIncidentResponse
-          verdict
-          reviewedAt
-        }
-      }
-    }
-  }
-`);
+import { ReviewsListDocument } from '@/gql/graphql';
+import { fetchGraphQL } from '@/lib/graphql/client';
 
 export default async function ReviewsPage({
   params,
@@ -43,15 +14,17 @@ export default async function ReviewsPage({
     <main>
       <h1>Tech Reviews</h1>
       <ul>
-        {techReviews.nodes.map((review) => {
+        {(techReviews?.nodes ?? []).map((review) => {
+          if (review.slug === null) return null;
           const f = review.techReviewFields;
           return (
             <li key={review.id}>
-              <Link href={`/${locale}/reviews/${review.slug}`}>{review.title}</Link>
+              <Link href={`/${locale}/reviews/${review.slug}`}>{review.title ?? review.slug}</Link>
               <p>
-                {f.companyName} — verdict <strong>{f.verdict}</strong>, overall {f.ratingOverall}
-                /10 (DX {f.ratingDx}, docs {f.ratingDocs}, incident response{' '}
-                {f.ratingIncidentResponse})
+                {f?.companyName ?? 'Unknown company'} — verdict{' '}
+                <strong>{f?.verdict ?? 'unrated'}</strong>, overall {f?.ratingOverall ?? '-'}/10 (DX{' '}
+                {f?.ratingDx ?? '-'}, docs {f?.ratingDocs ?? '-'}, incident response{' '}
+                {f?.ratingIncidentResponse ?? '-'})
               </p>
             </li>
           );

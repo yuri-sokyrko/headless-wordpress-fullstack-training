@@ -1,0 +1,36 @@
+query PostsList($first: Int!, $after: String) {
+  posts(
+    first: $first
+    after: $after
+    where: { status: PUBLISH, orderby: { field: DATE, order: DESC } }
+  ) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      title
+      slug
+      date
+    }
+  }
+}
+
+query PostBySlug($slug: ID!) {
+  post(id: $slug, idType: SLUG) {
+    id
+    title
+    slug
+    date
+    content
+  }
+}
+
+query PostsSlug($first: Int!) {
+  posts(first: $first, where: { status: PUBLISH }) {
+    nodes {
+      slug
+    }
+  }
+}

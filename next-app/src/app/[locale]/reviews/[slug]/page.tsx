@@ -1,65 +1,13 @@
 import { notFound } from 'next/navigation';
-import { fetchGraphQL, untypedDocument } from '@/lib/graphql/client';
-import type { ReviewBySlugQueryResponse, ReviewsQueryResponse } from '@/types/graphql-responses';
-
-const ReviewBySlugDocument = untypedDocument<ReviewBySlugQueryResponse, { slug: string }>(
-  /* GraphQL */ `
-    query ReviewBySlug($slug: ID!) {
-      techReview(id: $slug, idType: SLUG) {
-        id
-        title
-        slug
-        date
-        content
-        techReviewFields {
-          companyName
-          ratingOverall
-          ratingDx
-          ratingDocs
-          ratingIncidentResponse
-          verdict
-          reviewedAt
-          pros {
-            item
-          }
-          cons {
-            item
-          }
-        }
-      }
-    }
-  `
-);
-
-const ReviewSlugsDocument = untypedDocument<ReviewsQueryResponse, { first: number }>(/* GraphQL */ `
-  query ReviewSlugs($first: Int!) {
-    techReviews(first: $first, where: { status: PUBLISH }) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      nodes {
-        id
-        title
-        slug
-        date
-        techReviewFields {
-          companyName
-          ratingOverall
-          ratingDx
-          ratingDocs
-          ratingIncidentResponse
-          verdict
-          reviewedAt
-        }
-      }
-    }
-  }
-`);
+import { ReviewBySlugDocument, ReviewSlugsDocument } from '@/gql/graphql';
+import { fetchGraphQL } from '@/lib/graphql/client';
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
   const data = await fetchGraphQL(ReviewSlugsDocument, { first: 20 });
-  return data.techReviews.nodes.map((review) => ({ locale: 'en', slug: review.slug }));
+
+  return (data.techReviews?.nodes ?? []).flatMap((review) =>
+    review.slug === null ? [] : [{ locale: 'en', slug: review.slug }]
+  );
 }
 
 export default async function ReviewsPage({
@@ -76,28 +24,29 @@ export default async function ReviewsPage({
 
   return (
     <main>
-      <h1>{techReview.title}</h1>
+      <h1>{techReview.title ?? 'Untitled review'}</h1>
       <p>
-        {f.companyName} · reviewed {f.reviewedAt} · verdict <strong>{f.verdict}</strong>
+        {f?.companyName ?? 'Unknown company'} · reviewed {f?.reviewedAt ?? 'date unknown'} · verdict{' '}
+        <strong>{f?.verdict ?? 'unrated'}</strong>
       </p>
       {/* STRUCTURED: four numbers this page can sort, badge, chart or hide. */}
       <dl>
         <dt>Overall</dt>
-        <dd>{f.ratingOverall}/10</dd>
+        <dd>{f?.ratingOverall ?? '-'}/10</dd>
         <dt>Developer experience</dt>
-        <dd>{f.ratingDx}/10</dd>
+        <dd>{f?.ratingDx ?? '-'}/10</dd>
         <dt>Documentation</dt>
-        <dd>{f.ratingDocs}/10</dd>
+        <dd>{f?.ratingDocs ?? '-'}/10</dd>
         <dt>Incident response</dt>
-        <dd>{f.ratingIncidentResponse}/10</dd>
+        <dd>{f?.ratingIncidentResponse ?? '-'}/10</dd>
       </dl>
 
       {/* STRUCTURED: the repeaters. Every level nullable — Key Concept 7. */}
       <h2>Pros</h2>
-      <ul>{f.pros?.map((row) => (row.item ? <li key={row.item}>{row.item}</li> : null))}</ul>
+      <ul>{f?.pros?.map((row) => (row?.item ? <li key={row.item}>{row.item}</li> : null))}</ul>
 
       <h2>Cons</h2>
-      <ul>{f.cons?.map((row) => (row.item ? <li key={row.item}>{row.item}</li> : null))}</ul>
+      <ul>{f?.cons?.map((row) => (row?.item ? <li key={row.item}>{row.item}</li> : null))}</ul>
 
       {/* DEBT (Module 09 → Module 14): and here is the same content model's other half —
           the review body as one opaque HTML string. Everything above this line is data.

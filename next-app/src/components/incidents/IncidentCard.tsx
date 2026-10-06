@@ -9,21 +9,26 @@
 //
 // So: no blameScore (computed, detail page), no stackTrace (detail page), no
 // reporterDisplayName. Lesson 09.3 renders those on /incidents/[slug].
-import type { Incident } from '@/types/content';
-import { SEVERITY_LABEL } from '@/types/content';
+import type { IncidentCardFieldsFragment } from '@/gql/graphql';
+import { SEVERITY_LABEL, isSeverityLevel } from '@/types/content';
 
-export function IncidentCard({ incident }: { readonly incident: Incident }) {
+export function IncidentCard({ incident }: { readonly incident: IncidentCardFieldsFragment }) {
   // Pull the nullable and possibly-absent values out once, at the top, so the
   // JSX below is about layout rather than about narrowing.
-  const severity = incident.severities.nodes[0];
-  const scapegoat = incident.scapegoats.nodes[0];
+  const severity = incident.severities?.nodes[0];
+  const scapegoat = incident.scapegoats?.nodes[0];
   const details = incident.incidentDetails;
   const downtime = details?.downtimeMinutes;
-  const cost = details?.estimatedCostUsd;
+
+  const severitySlug = severity?.slug;
+  const severityLabel =
+    severitySlug != null && isSeverityLevel(severitySlug)
+      ? SEVERITY_LABEL[severitySlug]
+      : 'Unclassified';
 
   return (
     <article className="incident-card">
-      <h2>{incident.title}</h2>
+      <h2>{incident.title ?? 'Untitled incident'}</h2>
 
       {incident.date === null ? null : (
         <p>
@@ -31,28 +36,14 @@ export function IncidentCard({ incident }: { readonly incident: Incident }) {
         </p>
       )}
 
-      <p className="incident-cart_severity">
-        {/* SEVERITY_LABEL is a Record over the closed four-term set, so there is
-            no missing-label case. There IS a missing-TERM case. */}
-        {severity === undefined ? 'Unclassified' : SEVERITY_LABEL[severity.slug]}
-      </p>
+      <p className="incident-cart_severity">{severityLabel}</p>
 
       <dl>
         <dt>Blamed on</dt>
         <dd>{scapegoat?.name ?? 'Nobody yet'}</dd>
 
         <dt>Downtime</dt>
-        {/* WRONG ON PURPOSE. Step 4 observes what this does to incident-01,
-            whose downtimeMinutes is 0, and then fixes it. */}
         <dd>{downtime != null ? `${downtime} min` : 'Not recorded'}</dd>
-
-        {/* A DEBT, named and dated. `estimatedCostUsd` is NOT in the
-            IncidentCardFields fragment, so this row is one field of
-            overfetching. It is here because the null-versus-zero branch is
-            worth writing twice, and Lesson 10.5's overfetching audit is where
-            it comes out. */}
-        <dt>Estimated cost</dt>
-        <dd>{cost != null ? `$${cost.toLocaleString('en-US')}` : 'No cost recorded'}</dd>
 
         <dt>Environment</dt>
         <dd>{details?.environment ?? 'Unknown'}</dd>

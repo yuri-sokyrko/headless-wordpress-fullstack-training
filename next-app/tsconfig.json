@@ -65,7 +65,7 @@
     "scripts/**/*.ts",
     ".next/dev/types/**/*.ts",
     "next.config.ts",
-    "next.config.ts"
+    "codegen.ts"
   ],
   "exclude": ["node_modules"]
 }

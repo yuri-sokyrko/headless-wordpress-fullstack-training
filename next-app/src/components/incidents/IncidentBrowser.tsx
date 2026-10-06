@@ -4,7 +4,7 @@ import { IncidentFilters } from './IncidentFilters';
 import { useIncidentFilters } from './IncidentFilterProvider';
 import { IncidentList } from './IncidentList';
 import { IncidentSearch } from './IncidentSearch';
-import type { Incident } from '@/types/content';
+import type { IncidentCardFieldsFragment } from '@/gql/graphql';
 
 /**
  * The client boundary for the incident browser.
@@ -12,7 +12,11 @@ import type { Incident } from '@/types/content';
  * Everything interactive on /[locale]/incidents lives under this file. The page above
  * it stays a Server Component; the data arrives as a plain serializable array.
  */
-export function IncidentBrowser({ incidents }: { readonly incidents: readonly Incident[] }) {
+export function IncidentBrowser({
+  incidents,
+}: {
+  readonly incidents: readonly IncidentCardFieldsFragment[];
+}) {
   // The one call that forces this file to be a Client Component. Hooks need a browser
   // runtime, so a hook call is a boundary requirement, not a style choice.
   const { severity, scapegoat, query, setSeverity, setScapegoat, setQuery, clear } =
