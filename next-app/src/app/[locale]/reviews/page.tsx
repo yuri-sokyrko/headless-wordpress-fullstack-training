@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ReviewsListDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
+import { listTag } from '@/lib/graphql/tags';
 
 export default async function ReviewsPage({
   params,
@@ -8,7 +9,11 @@ export default async function ReviewsPage({
   readonly params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const { techReviews } = await fetchGraphQL(ReviewsListDocument, { first: 8 });
+  const { techReviews } = await fetchGraphQL(
+    ReviewsListDocument,
+    { first: 8 },
+    { revalidate: 3600, tags: [listTag('review')] }
+  );
 
   return (
     <main>

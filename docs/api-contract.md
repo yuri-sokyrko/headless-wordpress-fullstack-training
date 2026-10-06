@@ -145,3 +145,36 @@ deletes the file and regenerates the equivalents from wordpress-headless/schema.
 ### Why we are keeping them for one module
 
 (Your own two sentences. If you cannot write them, re-read Key Concept 5.)
+
+## Cache policy (Lesson 10.3)
+
+Tags are built by `src/lib/graphql/tags.ts`. Never write a tag string by hand — Module 18's
+WordPress webhook constructs the same strings in PHP, and a mismatch fails silently.
+
+| Route                                                | `revalidate` | Tags                           |
+| ---------------------------------------------------- | ------------ | ------------------------------ |
+| `/[locale]`                                          | 300          | `incidents`, `site-settings`   |
+| `/[locale]/incidents`                                | 300          | `incidents`                    |
+| `/[locale]/incidents/[slug]`                         | 3600         | `incident:<slug>`, `incidents` |
+| `/[locale]/blog`                                     | 3600         | `posts`                        |
+| `/[locale]/blog/[slug]`                              | 3600         | `post:<slug>`, `posts`         |
+| `/[locale]/reviews`                                  | 3600         | `reviews`                      |
+| `/[locale]/reviews/[slug]`                           | 3600         | `review:<slug>`, `reviews`     |
+| `/[locale]/scapegoats`                               | 600          | `scapegoats`, `incidents`      |
+| `/[locale]/hobt`                                     | **60**       | `page:hobt`                    |
+| root layout — `SiteChrome`                           | 3600         | `site-settings`                |
+| root layout — `PrimaryMenu` (arrives in Lesson 11.3) | 3600         | `menu:primary`                 |
+| `/api/health`                                        | `no-store`   | none                           |
+
+Why the outliers:
+
+- `/scapegoats` is 600, not 3600, because the leaderboard reads `count`, which WordPress
+  updates whenever an incident is published. It carries `incidents` for the same reason.
+- `/hobt` is 60 because `seats_left` drives a live urgency badge — see the content model
+  contract, HOBT Promo. The route itself arrives in Lesson 11.5; the policy row exists now
+  so the route is built against it rather than retrofitted.
+- `/api/health` is `no-store` because a cached health check is not a health check.
+- The root layout has **two** rows because Lesson 10.5 splits Lesson 05.4's `SiteChrome`
+  into a settings document and a menu document. Two documents means two tags, so an editor
+  reordering the menu does not expire the footer.
+- Authenticated reads have no row. `fetchGraphQLAuthed` cannot be cached at all.

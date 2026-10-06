@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { ReviewBySlugDocument, ReviewSlugsDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
+import { reviewTag, listTag } from '@/lib/graphql/tags';
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
   const data = await fetchGraphQL(ReviewSlugsDocument, { first: 20 });
@@ -16,7 +17,11 @@ export default async function ReviewsPage({
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
   const { slug } = await params;
-  const { techReview } = await fetchGraphQL(ReviewBySlugDocument, { slug });
+  const { techReview } = await fetchGraphQL(
+    ReviewBySlugDocument,
+    { slug },
+    { revalidate: 3600, tags: [reviewTag(slug), listTag('review')] }
+  );
 
   if (!techReview) notFound();
 

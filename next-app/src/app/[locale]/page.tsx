@@ -1,6 +1,7 @@
 import { IncidentCard } from '@/components/incidents/IncidentCard';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { HomepageFeedsDocument } from '@/gql/graphql';
+import { listTag, siteTag } from '@/lib/graphql/tags';
 
 export default async function HomePage({
   params,
@@ -8,10 +9,14 @@ export default async function HomePage({
   readonly params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const { catastrophic, recent } = await fetchGraphQL(HomepageFeedsDocument, {
-    featuredCount: 3,
-    recentCount: 6,
-  });
+  const { catastrophic, recent } = await fetchGraphQL(
+    HomepageFeedsDocument,
+    {
+      featuredCount: 3,
+      recentCount: 6,
+    },
+    { revalidate: 300, tags: [listTag('incident'), siteTag()] }
+  );
 
   const catastrophicNodes = catastrophic?.nodes ?? [];
   const recentNodes = recent?.nodes ?? [];

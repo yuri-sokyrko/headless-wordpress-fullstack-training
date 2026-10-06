@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { IncidentBySlugDocument, IncidentSlugsDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
+import { incidentTag, listTag } from '@/lib/graphql/tags';
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
   // 40 seeded incidents (appendix 03 §9). `first: 100` is a CEILING, not a page size:
@@ -20,7 +21,11 @@ export default async function IncidentPage({
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
   const { slug } = await params;
-  const { incident } = await fetchGraphQL(IncidentBySlugDocument, { slug });
+  const { incident } = await fetchGraphQL(
+    IncidentBySlugDocument,
+    { slug },
+    { revalidate: 3600, tags: [incidentTag(slug), listTag('incident')] }
+  );
 
   // Throws. Nothing below runs, and TypeScript narrows `incident` for the rest of the file.
   if (!incident) notFound();

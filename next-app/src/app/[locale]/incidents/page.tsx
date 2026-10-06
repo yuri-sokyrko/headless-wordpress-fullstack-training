@@ -1,6 +1,7 @@
 import { IncidentBrowser } from '@/components/incidents/IncidentBrowser';
 import { IncidentFilterProvider } from '@/components/incidents/IncidentFilterProvider';
 import { fetchGraphQL } from '@/lib/graphql/client';
+import { listTag } from '@/lib/graphql/tags';
 import { IncidentsListDocument } from '@/gql/graphql';
 
 export default async function IncidentsPage({
@@ -9,7 +10,11 @@ export default async function IncidentsPage({
   readonly params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const data = await fetchGraphQL(IncidentsListDocument, { first: 12 });
+  const data = await fetchGraphQL(
+    IncidentsListDocument,
+    { first: 12 },
+    { revalidate: 300, tags: [listTag('incident')] }
+  );
   const incidents = data.incidents?.nodes ?? [];
 
   console.log(`[btt] /${locale}/incidents rendered on the server`);

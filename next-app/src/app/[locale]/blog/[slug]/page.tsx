@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { PostBySlugDocument, PostsSlugDocument } from '@/gql/graphql';
+import { postTag, listTag } from '@/lib/graphql/tags';
 
 // Runs at build time. Both params, because [locale] is dynamic too.
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
@@ -17,7 +18,11 @@ export default async function PostPage({
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
   const { slug } = await params;
-  const { post } = await fetchGraphQL(PostBySlugDocument, { slug });
+  const { post } = await fetchGraphQL(
+    PostBySlugDocument,
+    { slug },
+    { revalidate: 3600, tags: [postTag(slug), listTag('post')] }
+  );
 
   if (!post) notFound();
 

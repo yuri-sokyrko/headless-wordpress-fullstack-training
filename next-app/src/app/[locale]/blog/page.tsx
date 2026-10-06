@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { PostsListDocument } from '@/gql/graphql';
+import { listTag } from '@/lib/graphql/tags';
 
 export default async function BlogPage({
   params,
@@ -8,7 +9,11 @@ export default async function BlogPage({
   readonly params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const { posts } = await fetchGraphQL(PostsListDocument, { first: 10 });
+  const { posts } = await fetchGraphQL(
+    PostsListDocument,
+    { first: 10 },
+    { revalidate: 3600, tags: [listTag('post')] }
+  );
 
   return (
     <main>

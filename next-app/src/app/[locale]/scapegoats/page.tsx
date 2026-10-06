@@ -1,10 +1,15 @@
 // next-app/src/app/[locale]/scapegoats/page.tsx
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { ScapegoatLeaderboardDocument } from '@/gql/graphql';
+import { listTag, taxonomyListTag } from '@/lib/graphql/tags';
 
 export default async function ScapegoatsPage() {
   // The ten seeded terms from appendix 03 §2, ordered by wp_term_taxonomy.count.
-  const { scapegoats } = await fetchGraphQL(ScapegoatLeaderboardDocument, { first: 10 });
+  const { scapegoats } = await fetchGraphQL(
+    ScapegoatLeaderboardDocument,
+    { first: 10 },
+    { revalidate: 600, tags: [taxonomyListTag('scapegoat'), listTag('incident')] }
+  );
 
   return (
     <main>
