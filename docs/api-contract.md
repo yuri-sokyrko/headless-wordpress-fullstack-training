@@ -178,3 +178,19 @@ Why the outliers:
   into a settings document and a menu document. Two documents means two tags, so an editor
   reordering the menu does not expire the footer.
 - Authenticated reads have no row. `fetchGraphQLAuthed` cannot be cached at all.
+
+## GraphQL error policy (Lesson 10.4)
+
+| Response                                | Client behaviour                                               |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `data` present, no `errors`             | return `data`                                                  |
+| `data` present, `errors` present        | **log `GraphQLRequestError.toString()`, return `data`**        |
+| `data` null or absent, `errors` present | throw `GraphQLRequestError`                                    |
+| Neither                                 | throw `GraphQLRequestError`                                    |
+| Non-2xx, or no response at all          | throw `GraphQLRequestError` with `status` 0 or the real status |
+
+Accepted cost: a partial response degrades the page silently until somebody reads the log.
+Module 24 sends that log line to Sentry, which is what makes the policy honest.
+
+Never shown to a browser: `error.message` in production, `locations` anywhere, the query
+text, a file path, or a stack. The error page shows our own copy plus `error.digest`.

@@ -1,14 +1,16 @@
-import { IncidentCard } from '@/components/incidents/IncidentCard';
+import { Suspense } from 'react';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { HomepageFeedsDocument } from '@/gql/graphql';
 import { listTag, siteTag } from '@/lib/graphql/tags';
+import { IncidentCard } from '@/components/incidents/IncidentCard';
 
-export default async function HomePage({
-  params,
-}: {
-  readonly params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await params;
+// Deliberately ugly and deliberately temporary. Lesson 11.2 replaces this with the
+// shadcn `skeleton` component, at the same box dimensions as the real list.
+function FeedSkeleton() {
+  return <div aria-hidden="true">░░░░░░░░ ░░░░░ ░░░░░░░░░</div>;
+}
+
+async function HomepageFeeds() {
   const { catastrophic, recent } = await fetchGraphQL(
     HomepageFeedsDocument,
     {
@@ -22,10 +24,7 @@ export default async function HomePage({
   const recentNodes = recent?.nodes ?? [];
 
   return (
-    <main>
-      <h1>Blame The Tech</h1>
-      <p>Live from WordPress. Locale: {locale}.</p>
-
+    <>
       <h2>Most catastrophic</h2>
       <ul>
         {catastrophicNodes.map((incident) => (
@@ -43,6 +42,25 @@ export default async function HomePage({
           </li>
         ))}
       </ul>
+    </>
+  );
+}
+
+export default async function HomePage({
+  params,
+}: {
+  readonly params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  return (
+    <main>
+      <h1>Blame The Tech</h1>
+      <p>Live from WordPress. Locale: {locale}.</p>
+
+      <Suspense fallback={<FeedSkeleton />}>
+        <HomepageFeeds />
+      </Suspense>
     </main>
   );
 }

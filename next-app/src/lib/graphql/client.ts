@@ -7,6 +7,8 @@ import 'server-only';
 
 import { Kind, print } from 'graphql';
 import type { DocumentNode } from 'graphql';
+import { GraphQLRequestError } from './errors';
+import type { GraphQLErrorEntry } from './errors';
 
 /** Longer than any query in this app needs; shorter than a reader will wait. */
 const TIMEOUT_MS = 8_000;
@@ -30,8 +32,6 @@ export type FetchGraphQLOptions = {
   /** Built by `src/lib/graphql/tags.ts` from Lesson 10.3 — never hand-typed at a call site. */
   readonly tags?: readonly string[];
 };
-
-type GraphQLErrorEntry = { readonly message: string };
 
 type GraphQLResponseBody<TData> = {
   readonly data?: TData | null;
@@ -108,31 +108,50 @@ async function execute<TResult>(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (cause) {
-    // TRANSPORT: connection refused, DNS, TLS, or our own deadline. `cause` keeps the
-    // original for the server log without putting it in the message a page might show.
-    throw new Error(`${operationName}: no response from WordPress within ${TIMEOUT_MS} ms`, {
-      cause,
-    });
+    throw new GraphQLRequestError(
+      operationName,
+      0, // no response, so no status
+      [{ message: `no response from WordPress within ${TIMEOUT_MS} ms` }],
+      { cause }
+    );
   }
 
   if (!response.ok) {
     // Also TRANSPORT, and never a GraphQL error: a proxy 502, or Apache on fire.
-    throw new Error(`${operationName}: HTTP ${response.status} ${response.statusText}`);
+    throw new GraphQLRequestError(operationName, response.status, [
+      { message: `HTTP ${response.status} ${response.statusText}` },
+    ]);
   }
 
   const parsed: unknown = await response.json();
 
   if (!isGraphQLResponseBody<TResult>(parsed)) {
-    throw new Error(`${operationName}: the response was not a GraphQL envelope`);
+    throw new GraphQLRequestError(operationName, response.status, [
+      { message: 'the response was not a GraphQL envelope' },
+    ]);
   }
 
-  // PROTOCOL: HTTP 200 carrying an `errors` array. This is the branch that fires.
-  if (parsed.errors !== undefined && parsed.errors.length > 0) {
-    throw new Error(`${operationName}: ${parsed.errors.map((e) => e.message).join('; ')}`);
+  const hasErrors = parsed.errors !== undefined && parsed.errors.length > 0;
+  const hasData = parsed.data !== undefined && parsed.data !== null;
+
+  if (hasErrors && !hasData) {
+    // Nothing usable came back. Throw; the nearest error.tsx renders.
+    throw new GraphQLRequestError(operationName, response.status, parsed.errors ?? []);
   }
 
-  if (parsed.data === undefined || parsed.data === null) {
-    throw new Error(`${operationName}: neither data nor errors came back`);
+  if (hasErrors) {
+    // PARTIAL: data AND errors. Policy B — log it, render what arrived. The accepted
+    // cost is a silent degradation until someone reads this line; Module 24 ships it
+    // to Sentry. Written up in docs/api-contract.md by Step 8.
+    console.error(
+      new GraphQLRequestError(operationName, response.status, parsed.errors ?? []).toString()
+    );
+  }
+
+  if (!hasData) {
+    throw new GraphQLRequestError(operationName, response.status, [
+      { message: 'the response container neither data nor errors' },
+    ]);
   }
 
   return parsed.data;
