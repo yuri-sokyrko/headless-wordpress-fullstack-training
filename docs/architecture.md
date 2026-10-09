@@ -249,3 +249,41 @@ A missing-cookie redirect stops a logged-out human from seeing a broken page. It
 An attacker sends any cookie value they like, or requests the RSC payload directly,
 or crafts a request the matcher does not cover — and the page
 renders, because nothing else ever checked.
+
+## Design tokens (Lesson 11.1)
+
+Tailwind 4, CSS-first. `src/app/[locale]/globals.css` is the single entry point, imported
+once from the root layout.
+
+| Token group                           | Form                      | Emitted?                       | Why                                                           |
+| ------------------------------------- | ------------------------- | ------------------------------ | ------------------------------------------------------------- |
+| `--background` … `--ring`, `--radius` | `:root` + `@theme inline` | value in `:root`, no duplicate | shadcn's canonical names, so the CLI's output needs no edits  |
+| `--color-severity-s1` … `-s4`         | plain `@theme`            | yes                            | Module 13's `theme.json` declares the same four to the editor |
+
+Dark mode is class-driven (`@custom-variant dark`). Nothing sets `.dark` on `<html>` yet;
+that is deliberate and is not a Module 21 task.
+
+`tailwind.config.ts` exists only for `@tailwindcss/typography`'s `typography` theme key.
+If the plugin goes, the file goes.
+
+<!-- docs/architecture.md — append -->
+
+## The `'use client'` inventory (Lesson 11.2)
+
+`'use client'` marks a **bundle boundary**, not a feature. A file gets it only when it needs
+state, an event handler, a ref or a browser API.
+
+| File                                              | Why                                           |
+| ------------------------------------------------- | --------------------------------------------- |
+| `components/incidents/IncidentFilters.tsx`        | `onChange` handlers                           |
+| `components/incidents/IncidentSearch.tsx`         | controlled input + `useRef` focus move        |
+| `components/incidents/IncidentFilterProvider.tsx` | `useState` + context                          |
+| `components/ui/dialog.tsx`                        | Radix dialog                                  |
+| `components/ui/select.tsx`                        | Radix select                                  |
+| `components/ui/sheet.tsx`                         | Radix dialog primitive                        |
+| `components/ui/label.tsx`                         | `@radix-ui/react-label` is a Client Component |
+| `app/[locale]/error.tsx`, `app/global-error.tsx`  | error boundaries are client-only in React     |
+
+Everything else is a Server Component, including every `ui/` primitive above that is not in
+this list. Lesson 11.3 adds `layout/NavLink.tsx` and `layout/MobileNav.tsx`; nothing after
+that should join the list in this module.

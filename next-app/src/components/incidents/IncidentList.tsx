@@ -52,7 +52,7 @@ export function IncidentList({ incidents }: IncidentListProps) {
   return (
     <>
       <p>{`${visible.length} of ${incidents.length} incidents`}</p>
-      <ul className="incident-list">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:gap-6">
         {visible.map((incident) => (
           <li key={incident.slug}>
             <IncidentCard incident={incident} />
