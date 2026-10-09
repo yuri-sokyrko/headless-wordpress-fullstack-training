@@ -1,0 +1,15 @@
+# Composition: spreads the card's field set, so the detail page cannot drift from it.
+# `author { node { name } }` DELETED in this lesson — see the audit in Step 6.
+fragment IncidentDetailFields on Incident {
+  ...IncidentCardFields
+  content
+  incidentDetails {
+    occurredAt
+    estimatedCostUsd
+    resolutionStatus
+    blameConfidence
+    stackTrace
+    reporterDisplayName
+    isVerified
+  }
+}

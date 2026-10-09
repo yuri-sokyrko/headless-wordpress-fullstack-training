@@ -1,0 +1,12 @@
+fragment PostCardFields on Post {
+  id
+  title
+  slug
+  date
+  excerpt
+  featuredImage {
+    node {
+      ...MediaFields
+    }
+  }
+}

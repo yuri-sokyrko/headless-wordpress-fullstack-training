@@ -194,3 +194,12 @@ Module 24 sends that log line to Sentry, which is what makes the policy honest.
 
 Never shown to a browser: `error.message` in production, `locations` anywhere, the query
 text, a file path, or a stack. The error page shows our own copy plus `error.digest`.
+
+## GraphQL naming conventions (Lesson 10.5)
+
+- Operation and fragment names are a single global namespace. Two operations with the same
+  name in two files is a codegen error, not a scoping win.
+- A fragment file is named exactly for the fragment it contains, so a spread site can be
+  traced with one `grep`.
+- A field goes in a query when a component renders it, and comes out the moment one stops.
+  The compiler will not tell you; the audit in Lesson 10.5 Step 6 is how you find out.

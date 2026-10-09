@@ -9,20 +9,14 @@ query PostsList($first: Int!, $after: String) {
       endCursor
     }
     nodes {
-      id
-      title
-      slug
-      date
+      ...PostCardFields
     }
   }
 }
 
 query PostBySlug($slug: ID!) {
   post(id: $slug, idType: SLUG) {
-    id
-    title
-    slug
-    date
+    ...PostCardFields
     content
   }
 }

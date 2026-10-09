@@ -23,7 +23,8 @@
     "build": "next build",
     "start": "next start",
     "codegen": "graphql-codegen --config codegen.ts",
-    "codegen:check": "graphql-codegen --config codegen.ts && git diff --exit-code -- src/gql/"
+    "codegen:check": "graphql-codegen --config codegen.ts && git diff --exit-code -- src/gql/",
+    "schema:pull": "cd ../wordpress-headless && docker compose run --rm wpcli wp graphql generate-static-schema --output=/var/www/html/wp-content/plugins/blame-the-tech-core/schema.graphql && mv wp-content/plugins/blame-the-tech-core/schema.graphql schema.graphql"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

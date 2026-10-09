@@ -1,0 +1,24 @@
+# Consumed by src/components/incidents/IncidentCard.tsx. Its props type is
+# IncidentCardFieldsFragment — add a field to the card, add it here.
+fragment IncidentCardFields on Incident {
+  id
+  title
+  slug
+  date
+  severities(first: 1) {
+    nodes {
+      name
+      slug
+    }
+  }
+  scapegoats(first: 1) {
+    nodes {
+      name
+      slug
+    }
+  }
+  incidentDetails {
+    downtimeMinutes
+    environment
+  }
+}

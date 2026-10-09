@@ -27,9 +27,8 @@ export default async function ReviewsPage({
               <Link href={`/${locale}/reviews/${review.slug}`}>{review.title ?? review.slug}</Link>
               <p>
                 {f?.companyName ?? 'Unknown company'} — verdict{' '}
-                <strong>{f?.verdict ?? 'unrated'}</strong>, overall {f?.ratingOverall ?? '-'}/10 (DX{' '}
-                {f?.ratingDx ?? '-'}, docs {f?.ratingDocs ?? '-'}, incident response{' '}
-                {f?.ratingIncidentResponse ?? '-'})
+                <strong>{f?.verdict ?? 'unrated'}</strong>, overall {f?.ratingOverall ?? '-'}/10
+                (DX{' '}
               </p>
             </li>
           );

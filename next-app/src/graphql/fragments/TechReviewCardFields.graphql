@@ -1,0 +1,15 @@
+fragment TechReviewCardFields on TechReview {
+  id
+  title
+  slug
+  featuredImage {
+    node {
+      ...MediaFields
+    }
+  }
+  techReviewFields {
+    companyName
+    ratingOverall
+    verdict
+  }
+}

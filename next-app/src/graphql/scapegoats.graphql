@@ -1,3 +1,6 @@
+# /[locale]/scapegoats. `count` is maintained by WordPress in wp_term_taxonomy, so the
+# leaderboard is one indexed read rather than a grouped COUNT(*) — Lesson 05.4 proved it
+# with EXPLAIN, and it is why `scapegoat` is a taxonomy and not a CPT.
 query ScapegoatLeaderboard($first: Int!) {
   scapegoats(first: $first, where: { orderby: COUNT, order: DESC, hideEmpty: false }) {
     nodes {

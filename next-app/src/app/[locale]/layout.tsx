@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+// import { fetchGraphQL } from '@/lib/graphql/client';
+// import { siteTag } from '@/lib/graphql/tags';
+// import { SiteChromeDocument } from '@/gql/graphql';
 import { NavLink } from '@/components/layout/NavLink';
 
 export const metadata: Metadata = {
@@ -30,6 +33,10 @@ export default async function LocaleLayout({
   readonly params: Promise<{ locale: string }>; // Next 16: params is a Promise. See Key Concept 4.
 }) {
   const { locale } = await params;
+  // const chrome = await fetchGraphQL(SiteChromeDocument, undefined, {
+  //   revalidate: 3600,
+  //   tags: [siteTag()],
+  // });
 
   return (
     <html lang={locale}>

@@ -159,10 +159,9 @@ function renderIncident(incident: Incident): string {
   // Both connections are nullable in the schema, so `?.` before `.nodes`.
   const severity = incident.severities?.nodes[0]?.slug ?? 'unclassified';
   const scapegoat = incident.scapegoats?.nodes[0]?.name ?? 'nobody yet';
-  const blame = String(Math.round(incident.blameScore ?? 0)).padStart(5);
   const minutes = String(incident.incidentDetails?.downtimeMinutes ?? 0).padStart(5);
 
-  return `${blame} ${severity.padEnd(17)} ${minutes} ${scapegoat.padEnd(22)} ${incident.title}`;
+  return `${severity.padEnd(17)} ${minutes} ${scapegoat.padEnd(22)} ${incident.title}`;
 }
 
 // The Module 14 rehearsal: switch on __typename and let the compiler prove coverage.
@@ -214,9 +213,7 @@ async function main(): Promise<void> {
   const data = await fetchGraphQL<BlameBoardData, { first: number }>(QUERY, { first: limit });
 
   // `readonly` forbids sorting in place, so copy first. The compiler insisted.
-  const incidents = [...(data.incidents?.nodes ?? [])].sort(
-    (a, b) => (b.blameScore ?? 0) - (a.blameScore ?? 0)
-  );
+  const incidents = [...(data.incidents?.nodes ?? [])];
   const minutes = incidents.reduce(
     (sum, incident) => sum + (incident.incidentDetails?.downtimeMinutes ?? 0),
     0

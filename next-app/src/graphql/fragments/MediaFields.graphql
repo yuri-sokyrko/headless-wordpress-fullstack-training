@@ -1,0 +1,10 @@
+# width/height stay: Module 21 needs them for next/image and its CLS work.
+fragment MediaFields on MediaItem {
+  id
+  altText
+  sourceUrl
+  mediaDetails {
+    width
+    height
+  }
+}

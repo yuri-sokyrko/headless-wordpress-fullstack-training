@@ -1,0 +1,22 @@
+# Fetched once in the root layout and memoized, so every component that needs it may ask.
+# The menuItems half of Lesson 05.4's SiteChrome moves to src/graphql/menu.graphql as
+# `query PrimaryMenu` in Lesson 11.3 — see the note below for why they are two documents.
+query SiteChrome {
+  generalSettings {
+    title
+    description
+  }
+  siteSettings {
+    siteChrome {
+      siteTagline
+      primaryCtaLabel
+      primaryCtaUrl
+      incidentSubmissionOpen
+      footerBlurb
+      socialLinks {
+        network
+        url
+      }
+    }
+  }
+}

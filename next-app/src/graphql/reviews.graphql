@@ -1,3 +1,5 @@
+# /[locale]/reviews and /[locale]/reviews/[slug]. `pros` and `cons` are SCF repeaters,
+# so they arrive as object lists with an `item` field — not string arrays. Appendix 03.
 query ReviewsList($first: Int!, $after: String) {
   techReviews(first: $first, after: $after, where: { status: PUBLISH }) {
     pageInfo {
@@ -5,37 +7,19 @@ query ReviewsList($first: Int!, $after: String) {
       endCursor
     }
     nodes {
-      id
-      title
-      slug
-      date
-      techReviewFields {
-        companyName
-        ratingOverall
-        ratingDx
-        ratingDocs
-        ratingIncidentResponse
-        verdict
-        reviewedAt
-      }
+      ...TechReviewCardFields
     }
   }
 }
 
 query ReviewBySlug($slug: ID!) {
   techReview(id: $slug, idType: SLUG) {
-    id
-    title
-    slug
-    date
+    ...TechReviewCardFields
     content
     techReviewFields {
-      companyName
-      ratingOverall
       ratingDx
       ratingDocs
       ratingIncidentResponse
-      verdict
       reviewedAt
       pros {
         item

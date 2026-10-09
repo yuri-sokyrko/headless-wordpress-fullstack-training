@@ -1,6 +1,7 @@
 # next-app/src/graphql/incidents.graphql
-# The /[locale]/incidents routes. Lesson 10.5 factors the repeated field set into
-# a fragment and moves the detail query's extra fields with it.
+# /[locale]/incidents, /[locale]/incidents/[slug], and the homepage feeds.
+# Fields deleted in Lesson 10.5's audit: databaseId (nothing renders a WP integer id),
+# blameScore (a computed field the card does not display).
 
 query IncidentsList($first: Int!, $after: String, $search: String) {
   incidents(
@@ -13,28 +14,7 @@ query IncidentsList($first: Int!, $after: String, $search: String) {
       endCursor
     }
     nodes {
-      id
-      databaseId
-      title
-      slug
-      date
-      blameScore
-      severities(first: 1) {
-        nodes {
-          name
-          slug
-        }
-      }
-      scapegoats(first: 1) {
-        nodes {
-          name
-          slug
-        }
-      }
-      incidentDetails {
-        downtimeMinutes
-        environment
-      }
+      ...IncidentCardFields
     }
   }
 }
@@ -42,36 +22,7 @@ query IncidentsList($first: Int!, $after: String, $search: String) {
 # `id: $slug, idType: SLUG`. A bare `id:` carrying a slug returns null — Lesson 05.3.
 query IncidentBySlug($slug: ID!) {
   incident(id: $slug, idType: SLUG) {
-    id
-    databaseId
-    title
-    slug
-    date
-    blameScore
-    content
-    severities(first: 1) {
-      nodes {
-        name
-        slug
-      }
-    }
-    scapegoats(first: 1) {
-      nodes {
-        name
-        slug
-      }
-    }
-    incidentDetails {
-      occurredAt
-      downtimeMinutes
-      estimatedCostUsd
-      environment
-      resolutionStatus
-      blameConfidence
-      stackTrace
-      reporterDisplayName
-      isVerified
-    }
+    ...IncidentDetailFields
   }
 }
 
@@ -79,6 +30,22 @@ query IncidentSlugs($first: Int!) {
   incidents(first: $first, where: { status: PUBLISH }) {
     nodes {
       slug
+    }
+  }
+}
+
+query HomepageFeeds($featuredCount: Int!, $recentCount: Int!) {
+  catastrophic: incidents(
+    first: $featuredCount
+    where: { status: PUBLISH, severityIn: ["s1-catastrophic"] }
+  ) {
+    nodes {
+      ...IncidentCardFields
+    }
+  }
+  recent: incidents(first: $recentCount, where: { status: PUBLISH }) {
+    nodes {
+      ...IncidentCardFields
     }
   }
 }
