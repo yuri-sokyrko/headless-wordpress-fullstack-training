@@ -151,20 +151,20 @@ deletes the file and regenerates the equivalents from wordpress-headless/schema.
 Tags are built by `src/lib/graphql/tags.ts`. Never write a tag string by hand — Module 18's
 WordPress webhook constructs the same strings in PHP, and a mismatch fails silently.
 
-| Route                                                | `revalidate` | Tags                           |
-| ---------------------------------------------------- | ------------ | ------------------------------ |
-| `/[locale]`                                          | 300          | `incidents`, `site-settings`   |
-| `/[locale]/incidents`                                | 300          | `incidents`                    |
-| `/[locale]/incidents/[slug]`                         | 3600         | `incident:<slug>`, `incidents` |
-| `/[locale]/blog`                                     | 3600         | `posts`                        |
-| `/[locale]/blog/[slug]`                              | 3600         | `post:<slug>`, `posts`         |
-| `/[locale]/reviews`                                  | 3600         | `reviews`                      |
-| `/[locale]/reviews/[slug]`                           | 3600         | `review:<slug>`, `reviews`     |
-| `/[locale]/scapegoats`                               | 600          | `scapegoats`, `incidents`      |
-| `/[locale]/hobt`                                     | **60**       | `page:hobt`                    |
-| root layout — `SiteChrome`                           | 3600         | `site-settings`                |
-| root layout — `PrimaryMenu` (arrives in Lesson 11.3) | 3600         | `menu:primary`                 |
-| `/api/health`                                        | `no-store`   | none                           |
+| Route                        | `revalidate` | Tags                           |
+| ---------------------------- | ------------ | ------------------------------ |
+| `/[locale]`                  | 300          | `incidents`, `site-settings`   |
+| `/[locale]/incidents`        | 300          | `incidents`                    |
+| `/[locale]/incidents/[slug]` | 3600         | `incident:<slug>`, `incidents` |
+| `/[locale]/blog`             | 3600         | `posts`                        |
+| `/[locale]/blog/[slug]`      | 3600         | `post:<slug>`, `posts`         |
+| `/[locale]/reviews`          | 3600         | `reviews`                      |
+| `/[locale]/reviews/[slug]`   | 3600         | `review:<slug>`, `reviews`     |
+| `/[locale]/scapegoats`       | 600          | `scapegoats`, `incidents`      |
+| `/[locale]/hobt`             | **60**       | `page:hobt`                    |
+| root layout — `SiteChrome`   | 3600         | `site-settings`                |
+| root layout — `PrimaryMenu`  | 3600         | `menu:primary`                 |
+| `/api/health`                | `no-store`   | none                           |
 
 Why the outliers:
 

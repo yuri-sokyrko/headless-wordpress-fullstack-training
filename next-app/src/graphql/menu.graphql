@@ -1,0 +1,20 @@
+# The other half of Lesson 05.4's SiteChrome query. Lesson 10.5 kept
+# generalSettings + siteSettings in siteSettings.graphql under the `site-settings`
+# tag; the menu lives here under `menu:primary` so Module 18 can invalidate a menu
+# reorder without expiring the footer.
+#
+# `first: 50` is a deliberate ceiling, not pagination. A primary menu with more
+# than fifty items is a content problem, and an unbounded connection in a layout
+# is how one bad menu takes down every page.
+query PrimaryMenu {
+  menuItems(where: { location: PRIMARY }, first: 50) {
+    nodes {
+      id
+      parentId # null for a top-level item — you build the tree
+      order # per level, not global
+      label
+      uri
+      target # "_blank" or null
+    }
+  }
+}

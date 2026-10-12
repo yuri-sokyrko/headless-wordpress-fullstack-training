@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+import { cn } from '@/lib/utils';
+
 /**
  * A <Link> that knows whether it points at the current page.
  *
@@ -19,10 +21,21 @@ export function NavLink({
   readonly children: ReactNode;
 }) {
   const pathname = usePathname();
+  // `startsWith(href + '/')` so /en/incidents/dns marks "Incidents" active too.
   const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <Link href={href} aria-current={isActive ? 'page' : undefined}>
+    <Link
+      href={href}
+      // The accessibility half of "active". A colour change announces nothing;
+      // aria-current="page" is what a screen reader reports. Lesson 11.4 audits
+      // every aria-* in the codebase and this one earns its place.
+      aria-current={isActive ? 'page' : undefined}
+      className={cn(
+        'hover:text-foreground focus-visible:ring-ring rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none',
+        isActive ? 'text-foreground' : 'text-muted-foreground'
+      )}
+    >
       {children}
     </Link>
   );
