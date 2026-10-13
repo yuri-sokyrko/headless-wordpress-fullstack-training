@@ -4,6 +4,7 @@ import prettier from 'eslint-config-prettier';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import nextPlugin from '@next/eslint-plugin-next';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default [
   // ── Never linted ────────────────────────────────────────────────────
@@ -109,6 +110,22 @@ export default [
       // form works on every version of the plugin, and you can read what you enabled.
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
+    },
+  },
+
+  {
+    files: ['src/**/*.tsx'],
+    // `flatConfigs` (plural) is the flat-config export; the older `configs`
+    // key is the eslintrc shape and will not work in eslint.config.mjs.
+    ...jsxA11y.flatConfigs.recommended,
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      // Three upgrades over `recommended`, each because this app has the pattern:
+      // an icon-only trigger (MobileNav), next/link everywhere, and headings
+      // whose content comes from WordPress and can be empty.
+      'jsx-a11y/no-autofocus': 'error',
+      'jsx-a11y/heading-has-content': 'error',
+      'jsx-a11y/anchor-is-valid': ['error', { components: ['Link'], aspects: ['invalidHref'] }],
     },
   },
 

@@ -27,13 +27,13 @@ export default async function PostPage({
   if (!post) notFound();
 
   return (
-    <main>
+    <>
       <h1>{post.title ?? 'Untitled post'}</h1>
       {post.date ? <time dateTime={post.date}>{post.date.slice(0, 10)}</time> : null}
 
       {/* DEBT (Module 09 → Module 14): the post body as one opaque HTML string. The same
           debt Lesson 09.3 took on the incident route, taken again here on purpose. */}
       <div dangerouslySetInnerHTML={{ __html: post.content ?? '' }} />
-    </main>
+    </>
   );
 }

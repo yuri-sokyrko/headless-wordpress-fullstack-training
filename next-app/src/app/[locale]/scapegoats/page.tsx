@@ -12,7 +12,7 @@ export default async function ScapegoatsPage() {
   );
 
   return (
-    <main>
+    <>
       <h1>The Blame Leaderboard</h1>
       <ol>
         {(scapegoats?.nodes ?? []).map((scapegoat) => (
@@ -31,6 +31,6 @@ export default async function ScapegoatsPage() {
         There is no per-scapegoat page yet — <code>scapegoats/[slug]</code> arrives with the
         rendering-strategy pass in Module 18, together with the pagination this list does not need.
       </p>
-    </main>
+    </>
   );
 }

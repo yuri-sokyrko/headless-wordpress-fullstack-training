@@ -14,7 +14,7 @@ export default function RouteError({ error, reset }: Props) {
   }, [error]);
 
   return (
-    <main>
+    <>
       <h1>Something broke on our side.</h1>
       <p>
         The incident log is having an incident. Appropriate, and still annoying. Tyr again - if it
@@ -28,6 +28,6 @@ export default function RouteError({ error, reset }: Props) {
       <button type="button" onClick={reset}>
         Try again
       </button>
-    </main>
+    </>
   );
 }

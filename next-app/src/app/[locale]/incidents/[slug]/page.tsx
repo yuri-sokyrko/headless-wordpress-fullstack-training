@@ -37,7 +37,7 @@ export default async function IncidentPage({
   const confidence = details?.blameConfidence;
 
   return (
-    <main>
+    <>
       <h1>{incident.title}</h1>
 
       <dl>
@@ -63,6 +63,6 @@ export default async function IncidentPage({
           Module 14 replaces this with BlockRenderer over structured block data. Never
           render `renderedHtml`, and never put a user-supplied string in here. */}
       <div dangerouslySetInnerHTML={{ __html: incident.content ?? '' }} />
-    </main>
+    </>
   );
 }

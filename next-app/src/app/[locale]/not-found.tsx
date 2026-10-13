@@ -5,10 +5,10 @@ const LOCALE = process.env.NEXT_PUBLIC_LOCALE ?? 'en';
 
 export default function NotFound() {
   return (
-    <main>
+    <>
       <h1>No such incident.</h1>
       <p>Nobody has been blamed for this URL yer. You could be the first.</p>
       <Link href={`/${LOCALE}/incidents`}>Back to the incident log</Link>
-    </main>
+    </>
   );
 }

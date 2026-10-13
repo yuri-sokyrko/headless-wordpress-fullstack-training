@@ -34,7 +34,7 @@ export async function Header({
 
   return (
     <header className="border-border bg-background/95 sticky top-0 z-40 border-b backdrop-blur">
-      <div className="gap-w mx-auto flex h-16 max-w-6xl items-center px-4">
+      <div className="mx-auto flex h-16 max-w-6xl items-center px-4">
         <Link
           href={`/${locale}`}
           className="focus-visible:ring-ring font-semibold tracking-tight focus-visible:ring-2 focus-visible:outline-none"

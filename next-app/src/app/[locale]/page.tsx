@@ -54,13 +54,13 @@ export default async function HomePage({
   const { locale } = await params;
 
   return (
-    <main>
+    <>
       <h1>Blame The Tech</h1>
       <p>Live from WordPress. Locale: {locale}.</p>
 
       <Suspense fallback={<FeedSkeleton />}>
         <HomepageFeeds />
       </Suspense>
-    </main>
+    </>
   );
 }

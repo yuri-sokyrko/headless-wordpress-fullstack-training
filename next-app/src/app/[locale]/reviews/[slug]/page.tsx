@@ -28,7 +28,7 @@ export default async function ReviewsPage({
   const f = techReview.techReviewFields;
 
   return (
-    <main>
+    <>
       <h1>{techReview.title ?? 'Untitled review'}</h1>
       <p>
         {f?.companyName ?? 'Unknown company'} · reviewed {f?.reviewedAt ?? 'date unknown'} · verdict{' '}
@@ -57,6 +57,6 @@ export default async function ReviewsPage({
           the review body as one opaque HTML string. Everything above this line is data.
           This line is a blob. That contrast is the argument for Module 14. */}
       <div dangerouslySetInnerHTML={{ __html: techReview.content ?? '' }} />
-    </main>
+    </>
   );
 }

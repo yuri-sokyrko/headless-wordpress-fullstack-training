@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import type { NavItem } from './nav';
 
 export function MobileNav({ items }: { readonly items: readonly NavItem[] }) {
@@ -18,11 +19,13 @@ export function MobileNav({ items }: { readonly items: readonly NavItem[] }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon">
+          {/* aria-hidden on the icon: it is decoration, and without this the
+              accessibility tree may announce the SVG's title as well. */}
           <Menu aria-hidden="true" />
           {/* An icon-only button with no accessible name announces as "button".
             Lesson 11.4 turns this span into <VisuallyHidden>; `sr-only` is the
             same clip-rect rule. */}
-          <span className="sr-only">Open main menu</span>
+          <VisuallyHidden>Open main menu</VisuallyHidden>
         </Button>
       </SheetTrigger>
 
@@ -34,7 +37,7 @@ export function MobileNav({ items }: { readonly items: readonly NavItem[] }) {
         </SheetHeader>
 
         <nav aria-label="Mobile" className="mt-4 px-2">
-          <ul className="fkex flex-col gap-1">
+          <ul className="flex flex-col gap-1">
             {items.map((item) => (
               <li key={item.id}>
                 <Link

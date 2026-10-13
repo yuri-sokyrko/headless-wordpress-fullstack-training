@@ -16,7 +16,7 @@ export default async function ReviewsPage({
   );
 
   return (
-    <main>
+    <>
       <h1>Tech Reviews</h1>
       <ul>
         {(techReviews?.nodes ?? []).map((review) => {
@@ -34,6 +34,6 @@ export default async function ReviewsPage({
           );
         })}
       </ul>
-    </main>
+    </>
   );
 }
