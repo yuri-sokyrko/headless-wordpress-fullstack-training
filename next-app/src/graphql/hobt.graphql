@@ -1,0 +1,32 @@
+# One document per route, per Lesson 10.5's convention. The URI is a VARIABLE so
+# the page owns the value and the document stays reusable.
+#
+# `heroImage` and each testimonial's `avatar` are deliberately NOT selected.
+# Rendering them properly needs `next/image`, `remotePatterns` in next.config.ts
+# and `mediaDetails { width height }` — all of which land in Lesson 14.5. A field
+# you select and do not render is a resolver call you pay for and waste, which is
+# exactly what Lesson 10.5 taught you to delete.
+query HobtPromo($uri: ID!) {
+  page(id: $uri, idType: URI) {
+    id
+    title
+    hobtPromo {
+      headline
+      subheadline
+      priceUsd
+      seatsLeft
+      demoBookingUrl
+      startNowUrl
+      modules {
+        title
+        summary
+        durationMinutes
+      }
+      testimonials {
+        quote
+        author
+        role
+      }
+    }
+  }
+}
