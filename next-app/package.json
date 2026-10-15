@@ -24,7 +24,11 @@
     "start": "next start",
     "codegen": "graphql-codegen --config codegen.ts",
     "codegen:check": "graphql-codegen --config codegen.ts && git diff --exit-code -- src/gql/",
-    "schema:pull": "cd ../wordpress-headless && docker compose run --rm wpcli wp graphql generate-static-schema --output=/var/www/html/wp-content/plugins/blame-the-tech-core/schema.graphql && mv wp-content/plugins/blame-the-tech-core/schema.graphql schema.graphql"
+    "schema:pull": "cd ../wordpress-headless && docker compose run --rm wpcli wp graphql generate-static-schema --output=/var/www/html/wp-content/plugins/blame-the-tech-core/schema.graphql && mv wp-content/plugins/blame-the-tech-core/schema.graphql schema.graphql",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -36,6 +40,7 @@
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vitest/coverage-v8": "^3.2.7",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -46,7 +51,8 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.70.1"
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

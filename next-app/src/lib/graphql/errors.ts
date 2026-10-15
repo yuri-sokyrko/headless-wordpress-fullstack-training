@@ -9,7 +9,7 @@
 /** One entry from a GraphQL `errors` array. Only `message` is guaranteed by the spec. */
 export type GraphQLErrorEntry = {
   readonly message: string;
-  readonly location?: readonly { readonly line: number; readonly column: number }[];
+  readonly locations?: readonly { readonly line: number; readonly column: number }[];
   readonly path?: readonly (string | number)[];
   readonly extensions?: Readonly<Record<string, unknown>>;
 };
