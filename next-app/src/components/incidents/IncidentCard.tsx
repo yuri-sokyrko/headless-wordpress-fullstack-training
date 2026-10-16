@@ -30,7 +30,7 @@ export function IncidentCard({ incident }: { readonly incident: IncidentCardFiel
     // `group` lets the title react to a hover anywhere on the card (Key Concept 6).
     // `transition-colors motion-reduce:transition-none` is the reduced-motion habit
     // Lesson 11.4 audits — start it here rather than retrofitting it there.
-    <Card>
+    <Card className="h-full">
       <article className="group text-card-foreground hover:border-ring transition-colors motion-reduce:transition-none">
         <CardHeader>
           <div className="flex items-center gap-2">

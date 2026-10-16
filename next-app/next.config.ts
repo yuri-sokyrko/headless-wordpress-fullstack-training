@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   // Lesson 08.4's "why did my effect run twice?" answer lives here.
   reactStrictMode: true,
 
+  // Playwright's baseURL is 127.0.0.1 (not localhost — see playwright.config.ts), and
+  // Next 16 blocks dev-resource requests from origins it was not told about. Dev-only:
+  // this option has no effect in production builds.
+  allowedDevOrigins: ['127.0.0.1'],
+
   images: {
     // next/image refuses remote hosts it was not told about, on purpose: without an
     // allowlist your optimiser is an open image proxy anyone can bill you for.
