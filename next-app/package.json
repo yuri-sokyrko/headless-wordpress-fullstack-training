@@ -28,7 +28,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:watch": "vitest --watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "e2e:reset": "cd ../wordpress-headless && test \"$(head -1 ../fixtures/seeded.sql)\" = \"$(docker compose run --rm -T wpcli wp blame fixture status | tr -d '\\r')\" || { echo 'fixtures/seeded.sql is stale — re-export it (Lesson 12.4 Step 5)'; exit 1; } && docker compose run --rm -T wpcli wp blame fixture load < ../fixtures/seeded.sql && { curl -sf -o /dev/null http://127.0.0.1:3000/en || echo 'cache warm skipped: nothing on :3000'; }"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

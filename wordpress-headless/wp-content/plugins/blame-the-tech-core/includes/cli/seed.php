@@ -129,6 +129,26 @@ const SEED_REPORTERS = array(
 	'Radia P.',
 );
 
+/** The menu Lesson 05.4 created by hand, and the theme location it is assigned to. */
+const SEED_MENU_NAME = 'Primary';
+const SEED_MENU_LOCATION = 'primary';
+
+/**
+ * The five items, in a FIXED order. `parent` is a TITLE, resolved to an id below —
+ * a hard-coded parent id would be a fixture that works on exactly one machine.
+ */
+const SEED_MENU_ITEMS = array(
+	array('title' => 'Incidents', 'url' => '/incidents/', 'parent' => ''),
+	array('title' => 'Scapegoats', 'url' => '/scapegoats/', 'parent' => ''),
+	array('title' => 'Reviews', 'url' => '/reviews/', 'parent' => ''),
+	array('title' => 'Blog', 'url' => '/blog/', 'parent' => ''),
+	array(
+		'title' => 'Catastrophic only',
+		'url' => '/incidents/?severity=s1-catastrophic',
+		'parent' => 'Incidents',
+	),
+);
+
 /**
  * A fixed date, offset from SEED_EPOCH, as BOTH date columns.
  *
@@ -350,10 +370,11 @@ function seed_media(): array {
 	$dir = \Blame\Core\PLUGIN_DIR . '/includes/cli/fixtures/media';
 	$ids = array();
 
-	// launch => false below means `wp media import` runs IN THIS PROCESS, so
-	// this filter applies to it. With launch => true it would not — that is the
-	// whole reason for the flag. Key Concept 6.
 	add_filter( 'intermediate_image_sizes_advanced', __NAMESPACE__ . '\\no_intermediate_sizes' );
+	// NEW: both filters only apply because `wp media import` runs with
+	// 'launch' => false, i.e. in THIS process. With launch => true it would be a
+	// separate WP-CLI process and neither filter would exist there.
+	add_filter( 'upload_dir', __NAMESPACE__ . '\\seed_upload_dir' );
 
 	foreach ( SEED_MEDIA as $slug => $title ) {
 		$existing = get_page_by_path( $slug, OBJECT, 'attachment' );
@@ -393,6 +414,7 @@ function seed_media(): array {
 	}
 
 	remove_filter( 'intermediate_image_sizes_advanced', __NAMESPACE__ . '\\no_intermediate_sizes' );
+	remove_filter( 'upload_dir', __NAMESPACE__ . '\\seed_upload_dir' );
 
 	return $ids;
 }
@@ -741,6 +763,153 @@ function reset_seeded(): int {
 }
 
 /**
+ * Recreate the primary menu. Idempotent: items are matched by title, so a second
+ * run updates the five that exist rather than adding five more.
+ */
+function seed_menu(): int {
+	// Menu LOCATIONS are theme-scoped — btt-headless registers `primary` in its
+	// after_setup_theme callback (Lesson 02.4). Without it there is nothing to
+	// assign to, and MenuLocationEnum has no PRIMARY value for WPGraphQL either.
+	if(!array_key_exists(SEED_MENU_LOCATION, get_registered_nav_menus())) {
+		WP_CLI::error(
+			'No "primary" menu location is registered. btt-headless is not the active theme, '
+			. 'or its register_nav_menus() call is missing - fix that first (Lesson 02.4)'
+		);
+	}
+
+	$menu = wp_get_nav_menu_object(SEED_MENU_NAME);
+
+	if(!$menu instanceof \WP_Term) {
+		$created = wp_create_nav_menu(SEED_MENU_NAME);
+
+		if(is_wp_error($created)) {
+			WP_CLI::error( 'Could not create the Primary menu: ' . $created->get_error_message() );
+		}
+
+		$menu = wp_get_nav_menu_object((int) $created);
+	}
+
+	if(!$menu instanceof \WP_Term) {
+		WP_CLI::error('The Primary menu could not be resolved after creating it.');
+	}
+
+	$menu_id = (int) $menu->term_id;
+
+	// Existing items, indexed by title. `wp_get_nav_menu_items` returns them in
+	// menu_order, and an empty menu returns an empty array rather than false.
+	$by_title = array();
+
+	foreach((array) wp_get_nav_menu_items($menu_id, array('post_status' => 'any')) as $item) {
+		if($item instanceof \WP_Post) {
+			$by_title[$item->title] = (int) $item->ID;
+		}
+	}
+
+	$ids = array();
+	$position = 0;
+
+	foreach(SEED_MENU_ITEMS as $spec) {
+		++$position;
+
+		// The parent is resolved from the title of an item created EARLIER in this
+		// same fixed list, which is why the order in SEED_MENU_ITEMS is part of
+		// the fixture rather than a formatting choice.
+		$parent = '' === $spec['parent'] ? 0 : ($ids[$spec['parent']] ?? 0);
+
+		$id = wp_update_nav_menu_item(
+			$menu_id,
+			$by_title[$spec['title']] ?? 0,
+			array(
+				'menu-item-title'     => $spec['title'],
+				'menu-item-url'       => $spec['url'],
+				'menu-item-type'      => 'custom',
+				'menu-item-status'    => 'publish',
+				'menu-item-position'  => $position,
+				'menu-item-parent-id' => $parent,
+			)
+		);
+
+		if(is_wp_error($id)) {
+			WP_CLI::error( sprintf( 'Menu item "%s" failed: %s', $spec['title'], $id->get_error_message() ) );
+		}
+
+		$ids[ $spec['title'] ] = (int) $id;
+		update_post_meta( (int) $id, SEED_MARKER, 1 );
+	}
+
+	// Assigning a menu to a location is a THEME MOD, not a property of the menu.
+	// This is the line whose absence produces an empty header nav with a fully
+	// populated menu sitting in wp-admin — the confusing half of the bug.
+	$locations = (array) get_theme_mod( 'nav_menu_locations', array() );
+
+	if ( ( $locations[ SEED_MENU_LOCATION ] ?? 0 ) !== $menu_id ) {
+		$locations[ SEED_MENU_LOCATION ] = $menu_id;
+		set_theme_mod( 'nav_menu_locations', $locations );
+	}
+
+	return count( $ids );
+}
+
+/**
+ * The `Site Settings` SCF options page from appendix 03 section 4.5, which
+ * SiteChrome reads in the root layout on every request.
+ *
+ * The values are exactly the ones Lesson 04.3 asked you to type into a `wp eval`,
+ * so a seeded database now matches a hand-built one instead of approximating it.
+ */
+function seed_site_settings(): int {
+	if(!function_exists('update_field')) {
+		WP_CLI::error( 'SCF is not active, so the Site Settings options page cannot be seeded.' );
+	}
+
+	// `option` is SCF's identifier for an options page — not a post id, not a
+	// term_<id>. Lesson 04.3 Key Concept 3.
+	$fields = array(
+		'site_tagline'             => 'Every outage has a scapegoat.',
+		'primary_cta_label'        => 'Report an incident',
+		// `/incidents/submit`, the route Module 16 builds. Not `/incidents/new`:
+		// that string appears nowhere else in the course.
+		'primary_cta_url'          => '/incidents/submit',
+		'footer_blurb'             => 'Blame The Tech is satire. The outages are real.',
+		'incident_submission_open' => 1,
+		'social_links'             => array(
+			array( 'network' => 'mastodon', 'url' => 'https://example.test/@blamethetech' ),
+			array( 'network' => 'github', 'url' => 'https://example.test/blamethetech' ),
+		),
+	);
+
+	// Written unconditionally, and still idempotent: update_option() compares the
+	// serialized value and returns without touching the row when it is unchanged.
+	foreach ( $fields as $name => $value ) {
+		update_field( $name, $value, 'option' );
+	}
+
+	return count( $fields );
+}
+
+/**
+ * Pin uploads to SEED_EPOCH's month.
+ *
+ * wp_upload_dir() derives `uploads/YYYY/MM` from the CURRENT time, so twelve
+ * attachment URLs — and therefore the whole dump — differ between a September run
+ * and an October one. wp_upload_dir() applies this filter BEFORE it creates the
+ * directory, so the pinned path is the one that gets made.
+ *
+ * @param array<string, string> $dirs From wp_upload_dir().
+ * @return array<string, string>
+ */
+function seed_upload_dir( array $dirs ): array {
+	$epoch  = new \DateTimeImmutable( SEED_EPOCH, new \DateTimeZone( 'UTC' ) );
+	$subdir = '/' . $epoch->format( 'Y/m' );
+
+	$dirs['subdir'] = $subdir;
+	$dirs['path']   = $dirs['basedir'] . $subdir;
+	$dirs['url']    = $dirs['baseurl'] . $subdir;
+
+	return $dirs;
+}
+
+/**
  * The whole seed, in dependency order.
  *
  * @param array<string, mixed> $assoc_args Flags from the CLI command.
@@ -770,12 +939,14 @@ function seed_all( array $assoc_args ): void {
 	$media = seed_media();
 
 	$counts = array(
-		'media'        => count( $media ),
-		'users'        => count( $users ),
-		'incidents'    => seed_incidents( $users ),
-		'tech_reviews' => seed_reviews( $media ),
-		'posts'        => seed_posts( $media ),
-		'pages'        => seed_pages( $media ),
+		'media'         => count( $media ),
+		'users'         => count( $users ),
+		'incidents'     => seed_incidents( $users ),
+		'tech_reviews'  => seed_reviews( $media ),
+		'posts'         => seed_posts( $media ),
+		'pages'         => seed_pages( $media ),
+		'menu_items'    => seed_menu(),
+		'site_settings' => seed_site_settings(),
 	);
 
 	// Term counts are maintained incrementally, so recount once at the end and

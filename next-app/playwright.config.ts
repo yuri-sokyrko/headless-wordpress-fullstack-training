@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
+  // Runs once, before webServer and before any spec. Gated on E2E_MODE.
+  globalSetup: './e2e/global-setup.ts',
+
   // Vitest owns src/**/*.test.ts; Playwright owns e2e/**/*.spec.ts. Two runners,
   // two extensions, no overlap — Lesson 12.2 Key Concept 4.
   testDir: './e2e',

@@ -143,4 +143,51 @@ test.describe('the app shell', () => {
       'true'
     );
   });
+
+  test('the seeded primary menu renders four top-level items', async ({ page }) => {
+    await page.goto('/en');
+
+    // Four roots; `Catastrophic only` is a child and the desktop nav renders one
+    // level. Nobody typed these five items into this database — seed_menu() did.
+    const nav = page.getByRole('navigation', { name: 'Primary' });
+
+    await expect(nav.getByRole('link')).toHaveCount(4);
+    await expect(nav.getByRole('link', { name: 'Incidents' })).toBeVisible();
+  });
+
+  test('the footer renders the seeded site settings', async ({ page }) => {
+    await page.goto('/en');
+
+    // `footer_blurb` from the SCF options page — the second gap seed_site_settings()
+    // closed. On a database nobody hand-built, this was an empty footer.
+    await expect(page.getByRole('contentinfo')).toContainText(
+      'Blame The Tech is satire. The outages are real.'
+    );
+  });
+
+  test('the incident archive shows the newest twelve, newest first', async ({ page }) => {
+    await page.goto('/en/incidents');
+
+    // The list query is `orderby: { field: DATE, order: DESC }` (Lesson 10.5) and
+    // the route asks for `first: 12` (Lesson 10.3), and the seeder dates
+    // incident-NN as seed_date($i, 3) — so incident-40 is newest and incident-01
+    // is off the end of page one. Two assertions: one about ordering, one about
+    // the page size. If your route fetches 40 or more, the second one fails
+    // legitimately: change the number here or there, and say which is right.
+    const main = page.getByRole('main');
+
+    await expect(main).toContainText('A leap second in the log parser (#40)');
+    await expect(main).not.toContainText('Deployed on a Friday (#1)');
+  });
+
+  test('/en/hobt renders the seeded SCF promo values', async ({ page }) => {
+    await page.goto('/en/hobt');
+
+    // seats_left = 12 and price_usd = 499, from seed_pages(). Formatted by
+    // Intl.NumberFormat with maximumFractionDigits: 0 (Lesson 11.5).
+    const main = page.getByRole('main');
+
+    await expect(main).toContainText('12 seats left');
+    await expect(main).toContainText('$499');
+  });
 });
