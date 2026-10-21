@@ -1,7 +1,7 @@
 <?php
 /**
- * Plgun Name: Blame The Tech - Blocks
- * Description: Six Gutenberg blocks for Blame te Tech. Built with @wordpress/scripts; registers from build/.
+ * Plugin Name: Blame The Tech - Blocks
+ * Description: Six Gutenberg blocks for Blame The Tech. Built with @wordpress/scripts; registers from build/.
  * Version: 0.1.0
  * Requires at least: 6.5
  * Requires PHP: 8.1

@@ -287,3 +287,26 @@ state, an event handler, a ref or a browser API.
 Everything else is a Server Component, including every `ui/` primitive above that is not in
 this list. Lesson 11.3 adds `layout/NavLink.tsx` and `layout/MobileNav.tsx`; nothing after
 that should join the list in this module.
+
+## The two JavaScript toolchains (Lesson 13.1)
+
+`blame-the-tech-blocks` and `next-app` are both JavaScript projects in this repository and they
+share **nothing**. Not a dependency, not a config, not a module.
+
+|                          | `blame-the-tech-blocks`                                                                                                        | `next-app`                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| Bundler                  | webpack, via `@wordpress/scripts`                                                                                              | Turbopack, the Next 16 default            |
+| Language                 | JavaScript                                                                                                                     | TypeScript, `strict`                      |
+| React resolution         | `wp.element`, a global enqueued by WordPress core                                                                              | `react` from its own `node_modules`       |
+| React version            | whatever WordPress core ships                                                                                                  | whatever `package.json` pins              |
+| Module resolution        | `@wordpress/*` rewritten to `wp.*` externals                                                                                   | `@/…` alias to `src/`                     |
+| Lint config              | `wp-scripts lint-js` (WordPress ESLint)                                                                                        | `eslint .` against the repo ESLint config |
+| Formatting               | `wp-scripts format` — tabs, WordPress brace style                                                                              | Prettier — spaces                         |
+| Test runner              | Jest (`wp-scripts test-unit-js`, unused here)                                                                                  | Vitest + Playwright                       |
+| Output                   | `build/`, gitignored, one directory per block                                                                                  | `.next/`, gitignored                      |
+| Runs in                  | wp-admin only                                                                                                                  | the Next server and the browser           |
+| **Can they share code?** | **No.** A shared module would have to satisfy two dependency graphs, and anything touching React would run against two Reacts. |                                           |
+
+What crosses the boundary instead: **block attribute names and types**, written down in
+`docs/content-model.md` and fixed by appendix 03. Module 14 reads attributes over GraphQL. It
+never imports from this plugin, and this plugin never imports from `next-app`.
