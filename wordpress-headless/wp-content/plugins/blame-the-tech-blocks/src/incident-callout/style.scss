@@ -1,0 +1,34 @@
+// EDITOR-FACING ONLY, in practice. Next.js renders this block from its attributes
+// with Tailwind and never loads a WordPress stylesheet, so every rule here exists
+// to stop the editor lying to the editor. Keep it small. Effort spent here on
+// front-end fidelity is effort thrown away in Module 14.
+//
+// The `[data-severity]` hooks only ever match in the editor: edit.js adds the
+// attribute, save.js does not. That is deliberate — see Key Concept 4.
+.wp-block-btt-incident-callout {
+  border-left: 4px solid #63748b;
+  padding: 0.75rem 1rem;
+  background: #f9fafc;
+
+  h3 {
+    margin: 0 0 0.24rem;
+    font-size: 1.05rem;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  &[data-severity="s1-catastrophic"] {
+    border-left-color: #dc2626;
+  }
+  &[data-severity="s2-major"] {
+    border-left-color: #ea580c;
+  }
+  &[data-severity="s3-minor"] {
+    border-left-color: #ca8a04;
+  }
+  &[data-severity="s4-cosmetic"] {
+    border-left-color: #475569;
+  }
+}

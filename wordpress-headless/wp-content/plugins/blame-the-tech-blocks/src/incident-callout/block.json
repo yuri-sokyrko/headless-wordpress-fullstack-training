@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "btt/incident-callout",
+  "version": "0.1.0",
+  "title": "Incident Callout",
+  "category": "btt",
+  "description": "Flag a live incident inside a post: a severity, a linked incident, a headline and a short body.",
+  "keywords": ["incident", "callout", "severity", "outage"],
+  "textdomain": "blame-the-tech-blocks",
+  "attributes": {
+    "severity": {
+      "type": "string",
+      "default": "s3-minor"
+    },
+    "incidentSlug": {
+      "type": "string",
+      "default": ""
+    },
+    "headline": {
+      "type": "string",
+      "source": "html",
+      "selector": "h3"
+    },
+    "body": {
+      "type": "string",
+      "source": "html",
+      "selector": "p"
+    }
+  },
+  "supports": {
+    "className": true,
+    "customClassName": false,
+    "html": false,
+    "anchor": false,
+    "align": false,
+    "color": false,
+    "spacing": false,
+    "typography": false,
+    "reusable": true,
+    "multiple": true
+  },
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css"
+}

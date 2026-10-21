@@ -84,3 +84,20 @@ Things I do not understand yet. Each one names the module that should answer it.
   written so that it cannot be forgotten — a filtered input type, or an unconditional
   server-side overwrite? I expect **Module 06** for the mutation and **Module 15** for the
   capability matrix enforced end to end.
+
+## Block attributes (Lesson 13.2)
+
+Module 14 reads these over GraphQL. Attribute names, types and defaults are the contract
+between the two toolchains; nothing is imported across it (`docs/architecture.md`).
+
+### `btt/incident-callout` — GraphQL type `BttIncidentCallout`
+
+| Attribute      | Type     | Default    | `source`              | Lives in          | Notes                                                                          |
+| -------------- | -------- | ---------- | --------------------- | ----------------- | ------------------------------------------------------------------------------ |
+| `severity`     | `string` | `s3-minor` | —                     | the block comment | one of the four `severity` term slugs (appendix 03 §2)                         |
+| `incidentSlug` | `string` | `""`       | —                     | the block comment | slug of an `incident` post. **Not validated.** A dangling slug renders no link |
+| `headline`     | `string` | —          | `html`, selector `h3` | the markup        | plain text; `allowedFormats: []`                                               |
+| `body`         | `string` | —          | `html`, selector `p`  | the markup        | HTML. Bold, italic and link only. **Sanitize before rendering** (Lesson 14.3)  |
+
+An attribute at its default is **omitted** from the serialised comment, so a consumer must
+apply these defaults itself.
