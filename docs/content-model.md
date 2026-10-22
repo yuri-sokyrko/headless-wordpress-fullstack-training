@@ -101,3 +101,53 @@ between the two toolchains; nothing is imported across it (`docs/architecture.md
 
 An attribute at its default is **omitted** from the serialised comment, so a consumer must
 apply these defaults itself.
+
+### `btt/blame-quote` — GraphQL type `BttBlameQuote`
+
+| Attribute     | Type     | Default | `source` | Lives in          | Notes                                                                 |
+| ------------- | -------- | ------- | -------- | ----------------- | --------------------------------------------------------------------- |
+| `attribution` | `string` | `""`    | —        | the block comment | plain text. **The front end renders it** — `save()` emits no `<cite>` |
+
+Content is **inner blocks**, not attributes: `core/paragraph` and `core/list` only
+(`allowedBlocks`). `save()` emits `<blockquote>` + `<InnerBlocks.Content />`, so the children
+serialise themselves and arrive in Module 14 as sibling nodes with a `parentClientId`.
+`templateLock: false`, written explicitly, so the block does not inherit an ancestor's lock.
+
+### `btt/scapegoat-picker` — GraphQL type `BttScapegoatPicker`
+
+| Attribute | Type     | Default | `source` | Lives in          | Notes                                         |
+| --------- | -------- | ------- | -------- | ----------------- | --------------------------------------------- |
+| `termId`  | `number` | `0`     | —        | the block comment | a `scapegoat` term ID. `0` means "not chosen" |
+
+`save()` returns `null`, so the serialised form is the self-closing comment and the block
+contributes **no HTML** to `post_content`. It is not a dynamic block: no `render.php`, no
+`render_callback`, so `the_content()` prints nothing for it.
+
+**No denormalised term data is stored** — no name, no slug, no avatar. Lesson 14.4 resolves
+`termId` to a term through WPGraphQL and pays one extra query for it. Renaming the term is
+therefore correct everywhere immediately; see the walkthrough in Lesson 13.3 Key Concept 8.
+
+### `btt/incident-ticker` — GraphQL type `BttIncidentTicker`
+
+| Attribute    | Type       | Default                          | `source` | Lives in          | Notes                                                               |
+| ------------ | ---------- | -------------------------------- | -------- | ----------------- | ------------------------------------------------------------------- |
+| `count`      | `number`   | `5`                              | —        | the block comment | clamped to 1–20 in `render.php`; Module 14 clamps too               |
+| `severities` | `string[]` | `["s1-catastrophic","s2-major"]` | —        | the block comment | subset of the four `severity` slugs. An empty array renders nothing |
+
+**Dynamic**: `render: file:./render.php`, `save()` absent. The comment is the whole serialised
+form. The selection logic is implemented twice — `render.php` and Lesson 14.4's
+`IncidentTicker.tsx` — and only the second one is consumed by visitors. See Lesson 13.4 Key
+Concept 6 for why the alternatives are worse.
+
+### `btt/hobt-cta` — GraphQL type `BttHobtCta`
+
+| Attribute    | Type     | Default            | `source` | Lives in          | Notes                                                                                                                                                                               |
+| ------------ | -------- | ------------------ | -------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`      | `string` | `"Get Demo"`       | —        | the block comment | plain text                                                                                                                                                                          |
+| `href`       | `string` | `""`               | —        | the block comment | path or absolute URL. **Not validated**                                                                                                                                             |
+| `variant`    | `string` | `"primary"`        | —        | the block comment | `enum`: `primary` \| `outline`. Enforced on the PHP render path only                                                                                                                |
+| `leadSource` | `string` | `"hobt-cta-block"` | —        | the block comment | `enum`, **kebab-case**: `hobt-hero` \| `hobt-cta-block` \| `hobt-footer` \| `incident-sidebar`. Maps to the `LeadSource` GraphQL enum (`HOBT_CTA_BLOCK`) in Module 16, in one place |
+
+`save()` returns `null` and there is **no** renderer, so `the_content()` prints nothing for this
+block. Attributes at their default are omitted from the comment — the seeded fixture is
+`{"label":"Stop blaming the tech","href":"/hobt"}` with no `variant` and no `leadSource`.

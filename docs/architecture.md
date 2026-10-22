@@ -310,3 +310,24 @@ share **nothing**. Not a dependency, not a config, not a module.
 What crosses the boundary instead: **block attribute names and types**, written down in
 `docs/content-model.md` and fixed by appendix 03. Module 14 reads attributes over GraphQL. It
 never imports from this plugin, and this plugin never imports from `next-app`.
+
+## What a dynamic block costs, Classic versus headless (Lesson 13.4)
+
+`btt/incident-ticker` queries incidents at render time. Same block, two architectures:
+
+|                                        | Classic WordPress                                 | This build                                                                          |
+| -------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Implementations of the selection logic | **one** — `render.php`                            | **two** — `render.php` and `IncidentTicker.tsx`                                     |
+| Who consumes `render.php`              | every visitor                                     | the WP-side preview route (Module 17) and `the_content()`. **No visitor**           |
+| Cost of a query per request            | real, and the reason you add a transient          | irrelevant — nobody requests the page                                               |
+| Where caching belongs                  | a WordPress transient, invalidated on `save_post` | Next's data cache, keyed by the tags in `src/lib/graphql/tags.ts`                   |
+| Risk of the two drifting               | n/a                                               | **real and permanent**                                                              |
+| What keeps drift bounded               | n/a                                               | both read the same two attributes, and the attribute contract is written down above |
+| Cost of deleting `render.php`          | the block stops working                           | the editor preview is unaffected; Module 17's preview shows a hole                  |
+
+**Verdict: keep both.** The duplication is a known, bounded, documented cost, and every
+alternative trades it for something worse — rendering `renderedHtml` breaches the front end's
+one `dangerouslySetInnerHTML` boundary, a static block is wrong within a day, and dropping the
+PHP breaks the preview path. Two implementations of a filter over two attributes is the cheapest
+of four bad options, and it is only cheap because the attributes are a contract rather than an
+accident.

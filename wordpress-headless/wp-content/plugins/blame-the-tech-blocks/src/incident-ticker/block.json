@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "btt/incident-ticker",
+  "version": "0.1.0",
+  "title": "Incident Ticker",
+  "category": "btt",
+  "description": "The most recent incidents at the severities you choose. Queried at render time, never frozen in the post.",
+  "keywords": ["incident", "ticker", "recent", "severity"],
+  "textdomain": "blame-the-tech-blocks",
+  "attributes": {
+    "count": {
+      "type": "number",
+      "default": 5
+    },
+    "severities": {
+      "type": "array",
+      "default": ["s1-catastrophic", "s2-major"],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "supports": {
+    "className": true,
+    "customClassName": false,
+    "html": false,
+    "anchor": false,
+    "align": false,
+    "color": false,
+    "spacing": false,
+    "typography": false,
+    "reusable": false,
+    "multiple": true
+  },
+  "editorScript": "file:./index.js",
+  "render": "file:./render.php"
+}

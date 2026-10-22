@@ -89,6 +89,7 @@ media. Your plugin and theme code is a bind mount on your own disk and survives 
 | `wp: command not found`                                       | Ran `wp` on the host or via `exec wordpress`                             | `docker compose run --rm wpcli wp …`                    |
 | White screen, empty 500                                       | PHP syntax error; `WP_DEBUG_DISPLAY` is `false`                          | `docker compose logs --tail=30 wordpress`               |
 | Content vanished                                              | `down -v` was run                                                        | Reinstall; then the Module 04 seeder                    |
+| Incident Ticker gets a 403 from `/wp/v2/severity?context=edit` | Severity is a closed taxonomy; no role has `edit_terms` | Use `context: "view"` in the ticker's term query and rebuild the blocks with `npm run build` in `wp-content/plugins/blame-the-tech-blocks` |
 
 Fuller list: [appendix 06](../.lessons/appendix/06-troubleshooting.md).
 

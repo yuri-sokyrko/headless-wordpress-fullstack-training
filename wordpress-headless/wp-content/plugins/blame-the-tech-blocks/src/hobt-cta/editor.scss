@@ -1,0 +1,19 @@
+// editorStyle → index.css. There is no saved markup, so a `style` sheet would
+// have nothing to select. The two rules exist so the editor can tell the
+// variants apart; the real button is a shadcn <Button> in next-app.
+.wp-block-btt-hobt-cta {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+
+  &[data-variant="primary"] {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  &[data-variant="outline"] {
+    border: 1px solid #0f172a;
+    color: #0f172a;
+  }
+}
