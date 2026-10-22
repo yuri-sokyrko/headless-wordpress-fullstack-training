@@ -1,0 +1,11 @@
+// `editor.scss` compiles to index.css and is enqueued by block.json's
+// `editorStyle`. It is the right file here because there is no saved markup at
+// all — a `style` stylesheet would have nothing to select.
+
+.wp-block-btt-scapegoat-picker {
+  padding: 0.5rem 0.75rem;
+  border: 1px dashed #94a3b8;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: #334155;
+}

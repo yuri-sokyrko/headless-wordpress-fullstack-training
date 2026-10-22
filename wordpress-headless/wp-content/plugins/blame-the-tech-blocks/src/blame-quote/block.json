@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "btt/blame-quote",
+  "version": "0.1.0",
+  "title": "Blame Quote",
+  "category": "btt",
+  "description": "A quote from whoever was closest to the outage, with an attribution",
+  "keywords": ["quote", "blame", "blockquote"],
+  "textdomain": "blame-the-tech-blocks",
+  "attributes": {
+    "attribution": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "allowedBlocks": ["core/paragraph", "core/list"],
+  "supports": {
+    "className": true,
+    "customClassName": false,
+    "html": false,
+    "anchor": false,
+    "align": false,
+    "color": false,
+    "spacing": false,
+    "typography": false,
+    "reusable": true,
+    "multiple": true
+  },
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./style-index.css"
+}

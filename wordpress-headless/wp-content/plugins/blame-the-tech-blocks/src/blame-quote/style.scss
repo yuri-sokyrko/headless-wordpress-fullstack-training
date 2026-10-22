@@ -1,0 +1,23 @@
+// Editor-facing. Next renders this block from `attribution` plus its children.
+// The two BEM-ish class names below exist only in the editor tree, because
+// save() emits neither of them — which is exactly why they are safe to rename.
+
+.wp-block-btt-blame-quote {
+  border-left: 4px solid #0f172a;
+  padding-left: 1rem;
+
+  .btt-blame-quote__quote {
+    margin: 0;
+    font-style: italic;
+  }
+
+  .btt-blame-quote__attribution {
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+    color: #475569;
+
+    &::before {
+      content: "- ";
+    }
+  }
+}
