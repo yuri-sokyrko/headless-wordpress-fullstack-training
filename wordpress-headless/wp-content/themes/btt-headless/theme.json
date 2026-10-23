@@ -1,0 +1,85 @@
+{
+  "$schema": "https://schemas.wp.org/wp/7.1/theme.json",
+  "version": 3,
+  "settings": {
+    "appearanceTools": false,
+    "useRootPaddingAwareAlignments": false,
+    "color": {
+      "custom": false,
+      "customDuotone": false,
+      "customGradient": false,
+      "defaultDuotone": false,
+      "defaultGradients": false,
+      "defaultPalette": false,
+      "palette": [
+        {
+          "slug": "severity-s1",
+          "name": "S1 — Catastrophic",
+          "color": "oklch(0.52 0.19 25)"
+        },
+        {
+          "slug": "severity-s2",
+          "name": "S2 — Major",
+          "color": "oklch(0.66 0.16 55)"
+        },
+        {
+          "slug": "severity-s3",
+          "name": "S3 — Minor",
+          "color": "oklch(0.75 0.13 90)"
+        },
+        {
+          "slug": "severity-s4",
+          "name": "S4 — Cosmetic",
+          "color": "oklch(0.62 0.05 250)"
+        },
+        { "slug": "background", "name": "Background", "color": "oklch(1 0 0)" },
+        {
+          "slug": "foreground",
+          "name": "Foreground",
+          "color": "oklch(0.145 0 0)"
+        }
+      ]
+    },
+    "typography": {
+      "customFontSize": false,
+      "fluid": false,
+      "lineHeight": false,
+      "dropCap": false,
+      "fontSizes": [
+        { "slug": "sm", "name": "Small", "size": "0.875rem" },
+        { "slug": "base", "name": "Base", "size": "1rem" },
+        { "slug": "lg", "name": "Large", "size": "1.125rem" },
+        { "slug": "xl", "name": "Extra large", "size": "1.25rem" },
+        { "slug": "2xl", "name": "2XL", "size": "1.5rem" },
+        { "slug": "3xl", "name": "3XL", "size": "1.875rem" }
+      ]
+    },
+    "spacing": {
+      "customSpacingSize": false,
+      "padding": false,
+      "margin": false,
+      "units": ["rem"],
+      "spacingSizes": [
+        { "slug": "1", "name": "1", "size": "0.25rem" },
+        { "slug": "2", "name": "2", "size": "0.5rem" },
+        { "slug": "3", "name": "3", "size": "0.75rem" },
+        { "slug": "4", "name": "4", "size": "1rem" },
+        { "slug": "6", "name": "6", "size": "1.5rem" },
+        { "slug": "8", "name": "8", "size": "2rem" }
+      ]
+    },
+    "layout": {
+      "contentSize": "48rem",
+      "wideSize": "72rem"
+    }
+  },
+  "styles": {
+    "color": {
+      "background": "var(--wp--preset--color--background)",
+      "text": "var(--wp--preset--color--foreground)"
+    },
+    "typography": {
+      "fontSize": "var(--wp--preset--font-size--base)"
+    }
+  }
+}

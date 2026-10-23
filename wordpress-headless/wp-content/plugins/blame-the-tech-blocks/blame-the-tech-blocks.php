@@ -92,3 +92,59 @@ function register_category(array $categories): array {
 	return $categories;
 }
 add_filter('block_categories_all', __NAMESPACE__ . '\\register_category');
+
+/**
+ * Resolve one allowlisted SCF field on a `tech_review`.
+ *
+ * @param array<string, mixed> $source_args    `args` from the block comment's metadata.bindings.
+ * @param \WP_Block            $block          The block instance.
+ * @param string               $attribute_name The attribute being resolved.
+ * @return string|null The value, or null to leave the attribute alone.
+ */
+function resolve_review_field( array $source_args, \WP_Block $block, string $attribute_name ): ?string {
+	// ALLOWLIST, and it is not optional. Without it this source is a
+	// general-purpose "read any SCF field on any post" primitive, callable by
+	// anyone who can write a block comment — which is every user with
+	// `edit_posts`. Publish the fields you meant to publish.
+	$btt_allowed = array('verdict', 'company_name', 'raring_overall');
+	$btt_key = (string) ($source_args['key'] ?? '');
+
+	if(! in_array($btt_key, $btt_allowed, true)) {
+		return null;
+	}
+
+	// Prefer the review this block points at; fall back to the surrounding post,
+	// which is what usesContext: ['postId'] provides.
+	$btt_slug = (string) ($block->attributes['reviewSlug'] ?? '');
+	$btt_post = ' ' !== $btt_slug ? get_page_by_path($btt_slug, OBJECT, 'tech_review') : null;
+	$btt_id = $btt_post instanceof \WP_Post ? $btt_post->ID : ($block->context['postId'] ?? 0);
+
+	if(0 === $btt_id || ! function_exists('get_field')) {
+		return null;
+	}
+
+	$btt_value = get_field($btt_key, $btt_id);
+
+	// Scalars only. Returning an array or an object here would be substituted
+	// into an attribute declared `string`, and the failure would surface in
+	// Module 14 as a type that does not match the schema.
+	return is_scalar( $btt_value ) ? (string) $btt_value : null;
+}
+
+/**
+ * Register the binding source. `init`, like every other registration here.
+ */
+function register_binding(): void {
+	// Guard: the function is WordPress 6.5+. An older core should degrade to
+	// "no bindings", not to a fatal.
+	if(!function_exists('register_block_type_binding_source')) {
+		return;
+	}
+
+	register_block_bindings_source('btt/review-field', array(
+		'label' => __( 'Tech review field', 'blame-the-tech-blocks' ),
+		'get_value_callback' => __NAMESPACE__ . '\\resolve_review_field',
+		'uses_context' => array('postId'),
+	));
+}
+add_action('init', __NAMESPACE__ . '\\register_binding');

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "btt/tech-verdict-card",
+  "version": "0.1.0",
+  "title": "Tech Verdict Card",
+  "category": "btt",
+  "description": "A tech review's verdict, bound to the review's SCF field rather than copied from it.",
+  "keywords": ["review", "verdict", "adopt", "hold"],
+  "textdomain": "blame-the-tech-blocks",
+  "attributes": {
+    "reviewSlug": {
+      "type": "string",
+      "default": ""
+    },
+    "verdict": {
+      "type": "string",
+      "role": "content"
+    }
+  },
+  "usesContext": ["postId"],
+  "supports": {
+    "className": true,
+    "customClassName": false,
+    "html": false,
+    "anchor": false,
+    "align": false,
+    "color": false,
+    "spacing": false,
+    "typography": false,
+    "reusable": false,
+    "renaming": false,
+    "multiple": true
+  },
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css"
+}

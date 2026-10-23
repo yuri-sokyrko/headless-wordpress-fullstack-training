@@ -24,7 +24,8 @@
     "spacing": false,
     "typography": false,
     "reusable": false,
-    "multiple": true
+    "multiple": true,
+    "renaming": false
   },
   "editorScript": "file:./index.js",
   "editorStyle": "file:./index.css"

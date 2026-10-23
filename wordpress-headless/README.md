@@ -90,6 +90,7 @@ media. Your plugin and theme code is a bind mount on your own disk and survives 
 | White screen, empty 500                                       | PHP syntax error; `WP_DEBUG_DISPLAY` is `false`                          | `docker compose logs --tail=30 wordpress`               |
 | Content vanished                                              | `down -v` was run                                                        | Reinstall; then the Module 04 seeder                    |
 | Incident Ticker gets a 403 from `/wp/v2/severity?context=edit` | Severity is a closed taxonomy; no role has `edit_terms` | Use `context: "view"` in the ticker's term query and rebuild the blocks with `npm run build` in `wp-content/plugins/blame-the-tech-blocks` |
+| Blocks lint crashes loading `@typescript-eslint` with `reading 'Intrinsic'` | An incompatible TypeScript version was installed through peer dependencies | Run `npm ci` in `wp-content/plugins/blame-the-tech-blocks`; TypeScript is pinned to 5.3.3, within the installed parser's supported range (`>=4.3.5 <5.4.0`) |
 
 Fuller list: [appendix 06](../.lessons/appendix/06-troubleshooting.md).
 

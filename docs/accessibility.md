@@ -17,11 +17,11 @@ the attribute is deleted and the element is changed.
 
 ## Every `aria-*` in `src/`, and why
 
-| Attribute               | Where                                | Justification                                                                       | Could a native element do it?                                      |
-| ----------------------- | ------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `aria-current="page"`   | `layout/NavLink.tsx`                 | marks the active nav item; a colour change announces nothing                        | no — there is no native "current" state for a link                 |
-| `aria-label` on `<nav>` | Header, MobileNav, Footer            | three navigation landmarks must be distinguishable                                  | no — `<nav>` has no native naming mechanism without visible text   |
-| `aria-hidden="true"`    | every decorative `lucide-react` icon | the icon duplicates adjacent text, or is decoration next to a `VisuallyHidden` name | no — this is the sanctioned way to remove decoration from the tree |
+| Attribute               | Where                                                        | Justification                                                                       | Could a native element do it?                                      |
+| ----------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `aria-current="page"`   | `layout/NavLink.tsx`                                         | marks the active nav item; a colour change announces nothing                        | no — there is no native "current" state for a link                 |
+| `aria-label` on `<nav>` | Header, MobileNav, Footer                                    | three navigation landmarks must be distinguishable                                  | no — `<nav>` has no native naming mechanism without visible text   |
+| `aria-hidden="true"`    | every decorative `lucide-react` icon                         | the icon duplicates adjacent text, or is decoration next to a `VisuallyHidden` name | no — this is the sanctioned way to remove decoration from the tree |
 | `aria-hidden="true"`    | `ui/skeleton.tsx`, `FeedSkeleton` in `app/[locale]/page.tsx` | placeholder boxes and glyphs carry no content                                       | no — same sanctioned removal of decoration from the tree           |
 
 Three attributes (one reused for skeletons), three justifications. Every lesson that adds a fourth adds a row.
@@ -49,3 +49,21 @@ They are audited by reading the rendered DOM, and by Module 22's axe run.
 | Heading levels inside `dangerouslySetInnerHTML` content cannot be audited       | Module 14 makes them auditable by parsing the blocks; controlling them stays with Module 22 |
 | No colour-contrast measurement of the severity tokens against their backgrounds | Module 22                                                                                   |
 | No screen-reader pass with VoiceOver or NVDA                                    | Module 22                                                                                   |
+
+## Editor-side accessibility (Lesson 13.5)
+
+The block editor is an application editors use every day, and it is inside wp-admin, which means
+none of Module 22's Playwright `a11y` project ever visits it. So the decisions get written down
+instead of asserted.
+
+| Decision                                                | Where                                                       | Why, and what the alternative would have cost                                                                                                                                                                                                          |
+| ------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Every control has a `label`, never a bare `placeholder` | all five blocks' `edit.js`                                  | `@wordpress/components` renders `label` as a real `<label>`; a placeholder is announced once and disappears on focus                                                                                                                                   |
+| `help` text on every non-obvious control                | `severity`, `incidentSlug`, `variant`, `leadSource`, `tone` | `SelectControl` wires `help` up with `aria-describedby`. A tooltip would not be reachable by keyboard                                                                                                                                                  |
+| `RichText` for content, `TextControl` for configuration | 13.2, 13.3, 13.4                                            | `RichText` is a `contenteditable` with the editor's own toolbar and announcements; a `TextControl` pretending to be content loses all of it                                                                                                            |
+| `<aside>` as `btt/incident-callout`'s root, from v2     | 13.5's deprecation                                          | A real landmark in the WordPress-rendered document and in Module 17's preview. `<div>` announced nothing. **Module 14's `IncidentCallout` must emit `<aside>` too** — the semantics are the block's, not the renderer's                                |
+| Colour is never the only signal                         | `severity` and `tone`                                       | `theme.json`'s palette names carry the meaning (`S1 — Catastrophic`), and the block always shows the severity as text as well as a border colour                                                                                                       |
+| **Zero `aria-*` attributes added**                      | —                                                           | Every control came from `@wordpress/components`, which owns its own ARIA. A hand-written `aria-label` on a component that already has a `label` produces a double announcement, which is the most common way to make a form worse while trying to help |
+
+Module 22 extends this file for the public site. Nothing here is covered by an automated check,
+which is why it is a table.

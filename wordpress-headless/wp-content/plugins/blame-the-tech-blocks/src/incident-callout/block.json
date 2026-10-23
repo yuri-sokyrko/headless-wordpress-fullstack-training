@@ -26,6 +26,11 @@
       "type": "string",
       "source": "html",
       "selector": "p"
+    },
+    "tone": {
+      "type": "string",
+      "default": "neutral",
+      "enum": ["warning", "neutral"]
     }
   },
   "supports": {
@@ -38,7 +43,8 @@
     "spacing": false,
     "typography": false,
     "reusable": true,
-    "multiple": true
+    "multiple": true,
+    "renaming": false
   },
   "editorScript": "file:./index.js",
   "style": "file:./style-index.css"

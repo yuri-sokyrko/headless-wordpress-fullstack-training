@@ -9,7 +9,7 @@ import { PanelBody, SelectControl, TextControl } from "@wordpress/components";
 import { SEVERITY_OPTIONS } from "../severities";
 
 export default function Edit({ attributes, setAttributes }) {
-  const { severity, incidentSlug, headline, body } = attributes;
+  const { severity, incidentSlug, headline, body, tone } = attributes;
 
   // `data-severity` is EDITOR ONLY. It is not in save(), so it never reaches
   // post_content and cannot break validation. style.scss keys off it so the
@@ -32,6 +32,26 @@ export default function Edit({ attributes, setAttributes }) {
               "blame-the-tech-blocks",
             )}
           />
+          <SelectControl
+            __nextHasNoMarginBottom
+            label={__("Tone", "blame-the-tech-blocks")}
+            value={tone}
+            options={[
+              {
+                value: "neutral",
+                label: __("Neutral", "blame-the-tech-blocks"),
+              },
+              {
+                value: "warning",
+                label: __("Warning", "blame-the-tech-blocks"),
+              },
+            ]}
+            onChange={(value) => setAttributes({ tone: value })}
+            help={__(
+              "Defaults from severity on old posts. Set it explicitly to override.",
+              "blame-the-tech-blocks",
+            )}
+          />
           <TextControl
             __nextHasNoMarginBottom
             label={__("Incident slug", "blame-the-tech-blocks")}
@@ -44,7 +64,7 @@ export default function Edit({ attributes, setAttributes }) {
           />
         </PanelBody>
       </InspectorControls>
-      <div {...blockProps}>
+      <aside {...blockProps}>
         <RichText
           identifier="headline"
           tagName="h3"
@@ -67,7 +87,7 @@ export default function Edit({ attributes, setAttributes }) {
             "blame-the-tech-blocks",
           )}
         />
-      </div>
+      </aside>
     </>
   );
 }
