@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { PostBySlugDocument, PostsSlugDocument } from '@/gql/graphql';
 import { postTag, listTag } from '@/lib/graphql/tags';
+import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
 // Runs at build time. Both params, because [locale] is dynamic too.
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
@@ -17,23 +18,24 @@ export default async function PostPage({
 }: {
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const { post } = await fetchGraphQL(
     PostBySlugDocument,
     { slug },
     { revalidate: 3600, tags: [postTag(slug), listTag('post')] }
   );
 
-  if (!post) notFound();
+  if (post == null) notFound();
 
   return (
     <>
       <h1>{post.title ?? 'Untitled post'}</h1>
       {post.date ? <time dateTime={post.date}>{post.date.slice(0, 10)}</time> : null}
 
-      {/* DEBT (Module 09 → Module 14): the post body as one opaque HTML string. The same
-          debt Lesson 09.3 took on the incident route, taken again here on purpose. */}
-      <div dangerouslySetInnerHTML={{ __html: post.content ?? '' }} />
+      {/* The blob is GONE — deleted, not commented out. A commented-out
+        dangerouslySetInnerHTML still matches the grep Module 24 turns into a CI
+        gate, and it is an invitation to somebody in a hurry. */}
+      <BlockRenderer blocks={post.editorBlocks} locale={locale} />
     </>
   );
 }

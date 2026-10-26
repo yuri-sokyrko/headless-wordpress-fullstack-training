@@ -14,10 +14,12 @@ query PostsList($first: Int!, $after: String) {
   }
 }
 
+# `content` is GONE. The debt Lesson 09.4 took on and Lesson 10.5 re-labelled is
+# paid here: the body is structured data, and no route renders an HTML blob.
 query PostBySlug($slug: ID!) {
   post(id: $slug, idType: SLUG) {
     ...PostCardFields
-    content
+    ...EditorBlocks
   }
 }
 
