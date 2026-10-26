@@ -29,12 +29,12 @@ at the same `Sub_part` of 191.
 
 ## Same intent, two models
 
-|                               | `tax_query` (Step 4)         | `meta_query` (Step 5)   |
-| ----------------------------- | ---------------------------- | ----------------------- |
-| `key` on the filtering table  | `term_taxonomy_id`           | `meta_key`              |
-| `rows`, product down the plan | 1 × 1 × 19 × 1 = **19**      | 200 × 1 = **200**       |
-| `filtered` percentage         | —                            | **100.00** — see below  |
-| `EXPLAIN ANALYZE` actual time | **0.0737 ms**                | **0.386 ms**            |
+|                               | `tax_query` (Step 4)    | `meta_query` (Step 5)  |
+| ----------------------------- | ----------------------- | ---------------------- |
+| `key` on the filtering table  | `term_taxonomy_id`      | `meta_key`             |
+| `rows`, product down the plan | 1 × 1 × 19 × 1 = **19** | 200 × 1 = **200**      |
+| `filtered` percentage         | —                       | **100.00** — see below |
+| `EXPLAIN ANALYZE` actual time | **0.0737 ms**           | **0.386 ms**           |
 
 Same answer, ten rows each, and the meta version is **5× slower on 200 posts**. The ratio is the
 point, not the milliseconds: the taxonomy plan enters `wp_term_relationships` by
@@ -119,3 +119,18 @@ bttsql "SHOW INDEX FROM wp_postmeta;"
 
 Reading the credentials from the container's own environment keeps the database password out of
 my shell history and off the process command line.
+
+## WPGraphQL Content Blocks (Lesson 14.1)
+
+Installed from a pinned GitHub release asset — the plugin is **not** in the .org directory, so
+`wp plugin install wp-graphql-content-blocks` fails. Version pinned: `vX.Y.Z` (record yours).
+
+| Added                            | Detail                                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `interface EditorBlock`          | `clientId`, `parentClientId`, `name`, `renderedHtml` — no `attributes`                         |
+| `interface NodeWithEditorBlocks` | carries `editorBlocks(flat: Boolean)`; implemented by `Post`, `Page`, `Incident`, `TechReview` |
+| ~90 concrete block types         | one per **PHP-registered** block, each with its own `attributes` object type                   |
+
+`schema.graphql` grew from 17778 to 28191 lines (record both). Upgrading this plugin is a schema change:
+`npm run schema:pull`, read the diff for **removals**, `npm run codegen`, `npm run type-check`.
+Never `wp plugin update --all` on this project.

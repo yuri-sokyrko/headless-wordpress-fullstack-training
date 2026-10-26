@@ -1,0 +1,39 @@
+# The body of any editor-composed content node, as a FLAT list. Spread by
+# posts.graphql (14.2), then pages.graphql, incidents.graphql, reviews.graphql and
+# hobt.graphql (14.4).
+#
+# THE INLINE FRAGMENTS BELOW ARE THE UNION. Lesson 14.2 derives the registry's key
+# type from this list, so the list and `blockRegistry` move in LOCKSTEP:
+#   · adding a `... on X` line here without adding a component to blockRegistry
+#     is an `npm run type-check` failure that names X;
+#   · deleting a line here while the component still exists is the same failure.
+# That is why the list is one entry long today and grows one lesson at a time:
+# 14.3 adds the five core blocks, 14.4 the five btt/* blocks, 14.5 CoreImage —
+# each one alongside the component that renders it.
+#
+# EVERY inline fragment MUST select `attributes`. That is how the generated union
+# distinguishes a block you support from the ~90 collapsed into one member.
+#
+# `renderedHtml` is deliberately NOT selected. Lesson 14.1 Key Concepts 6 and 7,
+# and the decision record in docs/api-contract.md.
+#
+# The type condition came from the introspection in Task §2 — do not assume it.
+fragment EditorBlocks on NodeWithEditorBlocks {
+  # flat: true — the consumer owns the recursion. Key Concept 2.
+  editorBlocks(flat: true) {
+    # The discriminant. Never `name` for narrowing — `name` is typed String.
+    __typename
+    # The tree, and the React key.
+    clientId
+    parentClientId
+    # For UnknownBlock's dev-only warning, and nothing else.
+    name
+
+    # Lesson 14.2 writes the component for this one, and only this one.
+    ... on CoreParagraph {
+      attributes {
+        content
+      }
+    }
+  }
+}

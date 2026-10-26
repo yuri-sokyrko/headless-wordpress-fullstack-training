@@ -151,3 +151,16 @@ Concept 6 for why the alternatives are worse.
 `save()` returns `null` and there is **no** renderer, so `the_content()` prints nothing for this
 block. Attributes at their default are omitted from the comment — the seeded fixture is
 `{"label":"Stop blaming the tech","href":"/hobt"}` with no `variant` and no `leadSource`.
+
+## `editorBlocks` (Lesson 14.1)
+
+The body of every editor-composed node is `editorBlocks(flat: true)`: an ordered, flat list
+where each entry carries `__typename`, `clientId`, `parentClientId`, `name` and its own typed
+`attributes`. `parentClientId` is the tree; the array order is the document order.
+
+- Every attribute is **nullable**, because an attribute at its default is omitted from the
+  serialised comment entirely.
+- `src/graphql/fragments/editorBlocks.graphql` is the single fragment. Its inline fragments
+  **are** the set of blocks this app renders.
+- Blocks registered in JavaScript but not in PHP have no concrete type and arrive as the bare
+  interface.

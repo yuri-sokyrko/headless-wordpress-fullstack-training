@@ -203,3 +203,26 @@ text, a file path, or a stack. The error page shows our own copy plus `error.dig
   traced with one `grep`.
 - A field goes in a query when a component renders it, and comes out the moment one stops.
   The compiler will not tell you; the audit in Lesson 10.5 Step 6 is how you find out.
+
+## Decision: `renderedHtml` is never rendered, and never selected (Lesson 14.1)
+
+WPGraphQL Content Blocks returns `attributes` **and** `renderedHtml` per block. This app renders
+`attributes` through React components and does not select `renderedHtml` at all.
+
+| Cost of rendering `renderedHtml`                               | Symptom you can check                                                |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- |
+| No `next/link` — raw `<a href>`                                | an in-content link reloads the tab                                   |
+| No `next/image` — raw `<img src>`                              | no `/_next/image` in the article body                                |
+| WordPress class names Tailwind never compiled                  | `wp-block-*` in the rendered HTML                                    |
+| WordPress's locale, not the route's                            | an English string on a `/de/` route                                  |
+| A `dangerouslySetInnerHTML` surface writable with `edit_posts` | more than one file matches `grep -rl 'dangerouslySetInnerHTML' src/` |
+
+**Exception:** inline rich text (`<strong>`, `<em>`, `<code>`, `<a>` inside a paragraph's own
+`content`) is rendered as HTML through `src/components/blocks/RichText.tsx`, sanitized against a
+strict allowlist. That is the only `dangerouslySetInnerHTML` in `next-app/`.
+
+**Invariant:** `grep -rn 'renderedHtml' next-app/src/` returns nothing. It stays that way.
+
+**Cost of the decision:** every insertable block needs a component; a block without one renders
+nothing in production and a dev-only warning locally. Correct for a designed product with a known
+block palette; wrong for a site where editors install arbitrary block plugins.
