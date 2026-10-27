@@ -6,6 +6,11 @@
 import type { ReactNode } from 'react';
 
 import { CoreParagraph } from '@/components/blocks/CoreParagraph';
+import { CoreCode } from '@/components/blocks/CoreCode';
+import { CoreHeading } from '@/components//blocks/CoreHeading';
+import { CoreList } from '@/components/blocks/CoreList';
+import { CoreListItem } from '@/components/blocks/CoreListItem';
+import { CoreQuote } from '@/components/blocks/CoreQuote';
 import type { EditorBlocksFragment } from '@/gql/graphql';
 
 /** One entry of the flat list from Lesson 14.1's fragment. */
@@ -66,7 +71,11 @@ export type BlockRegistry = {
  */
 export const blockRegistry = {
   CoreParagraph,
-  // 14.3 → CoreHeading, CoreList, CoreListItem, CoreQuote, CoreCode
+  CoreHeading,
+  CoreList,
+  CoreListItem,
+  CoreQuote,
+  CoreCode,
   // 14.4 → BttIncidentCallout, BttBlameQuote, BttScapegoatPicker,
   //        BttIncidentTicker, BttHobtCta
   // 14.5 → CoreImage

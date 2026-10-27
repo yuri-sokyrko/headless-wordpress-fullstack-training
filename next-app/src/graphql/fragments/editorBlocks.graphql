@@ -35,5 +35,36 @@ fragment EditorBlocks on NodeWithEditorBlocks {
         content
       }
     }
+
+    ... on CoreHeading {
+      attributes {
+        content
+        level
+      }
+    }
+
+    ... on CoreList {
+      attributes {
+        ordered
+        values
+      }
+    }
+    ... on CoreListItem {
+      attributes {
+        content
+      }
+    }
+
+    ... on CoreQuote {
+      attributes {
+        citation
+      }
+    }
+
+    ... on CoreCode {
+      attributes {
+        content
+      }
+    }
   }
 }

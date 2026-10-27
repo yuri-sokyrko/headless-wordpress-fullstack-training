@@ -31,6 +31,20 @@ emit `role="dialog"`, `aria-modal`, `aria-labelledby`, `aria-describedby`, `aria
 `aria-controls` and matching `id`s at render time. They will not appear in a `grep` of `src/`.
 They are audited by reading the rendered DOM, and by Module 22's axe run.
 
+### Editor-composed content (Lesson 14.3)
+
+No `aria-*` attribute is added by any block component, and none is accepted from editor
+content: `RichText` sets `ALLOW_ARIA_ATTR: false`, so an `aria-label` pasted into a paragraph is
+dropped. An accessibility claim that nobody reviewed is worse than none.
+
+| Decision                                                              | Consequence                                                                                                                                                                           |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CoreHeading` clamps `level` to 2–6                                   | The route keeps the page's only `<h1>`. An editor choosing H1 gets an `<h2>`, and nothing in wp-admin tells them so. Remove H1 from the level control in `theme.json` if that matters |
+| `CoreCode` renders `<pre><code>`                                      | Whitespace is meaningful and the content announces as code                                                                                                                            |
+| `CoreQuote` renders `<figure>`/`<blockquote>`/`<figcaption>`/`<cite>` | The quote and its attribution are semantically paired without ARIA                                                                                                                    |
+| `CoreList` renders a real `<ul>`/`<ol>`                               | "list, 2 items" is announced. This is why the legacy `values` fallback exists — an empty `<ul>` announces "list, 0 items"                                                             |
+| `jsx-a11y/heading-has-content` cannot see `CoreHeading`               | The element is computed, not literal, so the rule never fires. This table is the review surface instead                                                                               |
+
 ## Deliberately NOT used
 
 | Not used            | Why                                                                      |
@@ -43,12 +57,11 @@ They are audited by reading the rendered DOM, and by Module 22's axe run.
 
 ## Known gaps, owned by a later module
 
-| Gap                                                                             | Owner                                                                                       |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Focus is not moved after a client-side navigation                               | Module 22 (Lesson 11.4 Key Concept 7 describes the fix and its limits)                      |
-| Heading levels inside `dangerouslySetInnerHTML` content cannot be audited       | Module 14 makes them auditable by parsing the blocks; controlling them stays with Module 22 |
-| No colour-contrast measurement of the severity tokens against their backgrounds | Module 22                                                                                   |
-| No screen-reader pass with VoiceOver or NVDA                                    | Module 22                                                                                   |
+| Gap                                                                                                                                                                        | Owner                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Focus is not moved after a client-side navigation                                                                                                                          | Module 22 (Lesson 11.4 Key Concept 7 describes the fix and its limits) |
+| Heading levels in editor-composed bodies are not controlled: `CoreHeading` clamps `level` to `h2`–`h6`, but nothing stops an editor putting an `h4` directly under an `h2` | Module 22 (`heading-order` in the axe run)                             |
+| No screen-reader pass with VoiceOver or NVDA                                                                                                                               | Module 22                                                              |
 
 ## Editor-side accessibility (Lesson 13.5)
 
