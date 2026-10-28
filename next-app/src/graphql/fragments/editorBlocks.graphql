@@ -66,5 +66,46 @@ fragment EditorBlocks on NodeWithEditorBlocks {
         content
       }
     }
+
+    # `tone` arrives from Lesson 13.5's v2 attributes. If codegen says it is not a
+    # field on BttIncidentCalloutAttributes, you have not done 13.5's deprecation
+    # yet — go and do it, because Key Concept 2 is about that exact attribute.
+    ... on BttIncidentCallout {
+      attributes {
+        severity
+        incidentSlug
+        headline
+        body
+        tone
+      }
+    }
+
+    ... on BttBlameQuote {
+      attributes {
+        attribution
+      }
+    }
+
+    ... on BttScapegoatPicker {
+      attributes {
+        termId
+      }
+    }
+
+    ... on BttIncidentTicker {
+      attributes {
+        count
+        severities
+      }
+    }
+
+    ... on BttHobtCta {
+      attributes {
+        label
+        href
+        variant
+        leadSource
+      }
+    }
   }
 }

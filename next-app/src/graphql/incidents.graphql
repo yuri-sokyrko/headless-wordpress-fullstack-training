@@ -49,3 +49,23 @@ query HomepageFeeds($featuredCount: Int!, $recentCount: Int!) {
     }
   }
 }
+
+# For btt/incident-ticker (Lesson 14.4). This query is the TypeScript half of a
+# pair: render.php in blame-the-tech-blocks runs the WP_Query equivalent for the
+# editor preview. Change one, change the other — Lesson 23.5 has the contract test.
+# `...IncidentCardFields` and not a new field set: the ticker renders title,
+# severity, downtime and environment, which is exactly that fragment.
+# `severityIn` is the one narrow taxonomy argument the plugin registers (Lesson
+# 06.1 §9). No `taxQuery` exists in this schema — 05.2 §6 refuses the extension
+# that would add one. A `[String!]!` variable is accepted in a `[String]`
+# position, so the variable keeps its own non-null contract with the component.
+query IncidentTicker($first: Int!, $severities: [String!]!) {
+  incidents(
+    first: $first
+    where: { status: PUBLISH, orderby: { field: DATE, order: DESC }, severityIn: $severities }
+  ) {
+    nodes {
+      ...IncidentCardFields
+    }
+  }
+}

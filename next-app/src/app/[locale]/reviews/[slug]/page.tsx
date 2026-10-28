@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { ReviewBySlugDocument, ReviewSlugsDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { reviewTag, listTag } from '@/lib/graphql/tags';
+import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
   const data = await fetchGraphQL(ReviewSlugsDocument, { first: 20 });
@@ -16,7 +17,7 @@ export default async function ReviewsPage({
 }: {
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const { techReview } = await fetchGraphQL(
     ReviewBySlugDocument,
     { slug },
@@ -53,10 +54,7 @@ export default async function ReviewsPage({
       <h2>Cons</h2>
       <ul>{f?.cons?.map((row) => (row?.item ? <li key={row.item}>{row.item}</li> : null))}</ul>
 
-      {/* DEBT (Module 09 → Module 14): and here is the same content model's other half —
-          the review body as one opaque HTML string. Everything above this line is data.
-          This line is a blob. That contrast is the argument for Module 14. */}
-      <div dangerouslySetInnerHTML={{ __html: techReview.content ?? '' }} />
+      <BlockRenderer blocks={techReview.editorBlocks} locale={locale} />
     </>
   );
 }

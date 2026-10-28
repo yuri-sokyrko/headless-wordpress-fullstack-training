@@ -15,7 +15,7 @@ query ReviewsList($first: Int!, $after: String) {
 query ReviewBySlug($slug: ID!) {
   techReview(id: $slug, idType: SLUG) {
     ...TechReviewCardFields
-    content
+    ...EditorBlocks
     techReviewFields {
       ratingDx
       ratingDocs

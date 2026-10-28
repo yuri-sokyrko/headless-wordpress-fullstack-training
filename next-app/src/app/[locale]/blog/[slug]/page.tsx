@@ -32,9 +32,6 @@ export default async function PostPage({
       <h1>{post.title ?? 'Untitled post'}</h1>
       {post.date ? <time dateTime={post.date}>{post.date.slice(0, 10)}</time> : null}
 
-      {/* The blob is GONE — deleted, not commented out. A commented-out
-        dangerouslySetInnerHTML still matches the grep Module 24 turns into a CI
-        gate, and it is an invitation to somebody in a hurry. */}
       <BlockRenderer blocks={post.editorBlocks} locale={locale} />
     </>
   );

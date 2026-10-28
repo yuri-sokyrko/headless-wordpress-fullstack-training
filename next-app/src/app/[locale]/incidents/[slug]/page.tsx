@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { IncidentBySlugDocument, IncidentSlugsDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { incidentTag, listTag } from '@/lib/graphql/tags';
+import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
   // 40 seeded incidents (appendix 03 §9). `first: 100` is a CEILING, not a page size:
@@ -20,7 +21,7 @@ export default async function IncidentPage({
 }: {
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const { incident } = await fetchGraphQL(
     IncidentBySlugDocument,
     { slug },
@@ -59,10 +60,7 @@ export default async function IncidentPage({
 
       {details?.stackTrace ? <pre>{details.stackTrace}</pre> : null}
 
-      {/* DEBT (Module 09 → Module 14): the entire post body as one opaque HTML string.
-          Module 14 replaces this with BlockRenderer over structured block data. Never
-          render `renderedHtml`, and never put a user-supplied string in here. */}
-      <div dangerouslySetInnerHTML={{ __html: incident.content ?? '' }} />
+      <BlockRenderer blocks={incident.editorBlocks} locale={locale} />
     </>
   );
 }

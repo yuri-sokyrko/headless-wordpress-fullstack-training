@@ -1,0 +1,23 @@
+# The [locale]/[...slug] catch-all (Lesson 14.4). `page(idType: URI)` is fussy
+# about slashes — Lesson 11.5 Task §1 made you read the real value out of
+# WordPress rather than guess it, and the route rebuilds the same shape.
+query PageByUri($uri: ID!) {
+  page(id: $uri, idType: URI) {
+    id
+    title
+    uri
+    ...EditorBlocks
+  }
+}
+
+# generateStaticParams. `first: 50` is a SCOPE, not a limit on what renders: a page
+# outside this set still renders on demand, because `dynamicParams` defaults to
+# true. Lesson 18.1 decides how large the pre-rendered set should be, with numbers.
+query PageUris($first: Int!) {
+  pages(first: $first, where: { status: PUBLISH }) {
+    nodes {
+      id
+      uri
+    }
+  }
+}

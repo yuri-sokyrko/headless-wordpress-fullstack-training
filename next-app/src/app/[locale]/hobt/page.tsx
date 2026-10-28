@@ -7,6 +7,7 @@ import { HobtTestimonials } from '@/components/hobt/HobtTestimonials';
 import { HobtPromoDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { pageTag } from '@/lib/graphql/tags';
+import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
 // The ROUTE-SEGMENT cache: how long the rendered page may be reused. 60s because
 // `seatsLeft` drives a live badge — Lesson 10.3's policy table. Everything else
@@ -60,10 +61,8 @@ export default async function HobtPage({
         />
       </HobtHero>
 
-      {/* SECTION ORDER IS HARD-CODED HERE, and that is the debt. Moving
-          HobtTestimonials above HobtModules is a code change and a deploy.
-          Lesson 14.4 replaces this list with a BlockRenderer over
-          `editorBlocks`, and then marketing reorders it in Gutenberg. */}
+      <BlockRenderer blocks={data.page.editorBlocks} locale={locale} />
+
       <HobtModules heading="What you will learn" modules={promo.modules} />
 
       <HobtTestimonials heading="What graduates say" testimonials={promo.testimonials} />

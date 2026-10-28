@@ -226,3 +226,23 @@ strict allowlist. That is the only `dangerouslySetInnerHTML` in `next-app/`.
 **Cost of the decision:** every insertable block needs a component; a block without one renders
 nothing in production and a dev-only warning locally. Correct for a designed product with a known
 block palette; wrong for a site where editors install arbitrary block plugins.
+
+## Cache tags added in Lesson 14.4
+
+| Fetch                               | `revalidate` | Tags                               |
+| ----------------------------------- | ------------ | ---------------------------------- |
+| `PageByUri` (`[...slug]`)           | 3600         | `page:<last-uri-segment>`, `pages` |
+| `PageUris` (`generateStaticParams`) | 3600         | `pages`                            |
+| `ScapegoatById` (`ScapegoatPicker`) | 60           | **`scapegoat:<termId>`**           |
+| `IncidentTicker` (`IncidentTicker`) | 300          | `incidents`                        |
+
+**Module 18 owes one thing here.** `btt/scapegoat-picker` stores a term **ID**, so the component
+cannot know the term's slug before the response arrives and therefore cannot attach
+`termTag('scapegoat', slug)`. It attaches the ID-keyed form instead. The webhook must send
+**both** for every term change:
+
+    revalidateTag('scapegoat:the-intern')   // slug-keyed, for the leaderboard
+    revalidateTag('scapegoat:4')            // ID-keyed, for the picker block
+
+Until it does, a renamed term appears on a picker block after its 60-second window rather than
+immediately. Both strings are built by `src/lib/graphql/tags.ts`; neither is typed by hand.

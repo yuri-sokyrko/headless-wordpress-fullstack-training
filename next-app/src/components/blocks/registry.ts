@@ -11,6 +11,11 @@ import { CoreHeading } from '@/components//blocks/CoreHeading';
 import { CoreList } from '@/components/blocks/CoreList';
 import { CoreListItem } from '@/components/blocks/CoreListItem';
 import { CoreQuote } from '@/components/blocks/CoreQuote';
+import { BlameQuote } from '@/components/blocks/BlameQuote';
+import { HobtCta } from '@/components/blocks/HobtCta';
+import { IncidentCallout } from '@/components/blocks/IncidentCallout';
+import { IncidentTicker } from '@/components/blocks/IncidentTicker';
+import { ScapegoatPicker } from '@/components/blocks/ScapegoatPicker';
 import type { EditorBlocksFragment } from '@/gql/graphql';
 
 /** One entry of the flat list from Lesson 14.1's fragment. */
@@ -76,7 +81,10 @@ export const blockRegistry = {
   CoreListItem,
   CoreQuote,
   CoreCode,
-  // 14.4 → BttIncidentCallout, BttBlameQuote, BttScapegoatPicker,
-  //        BttIncidentTicker, BttHobtCta
+  BttIncidentCallout: IncidentCallout,
+  BttBlameQuote: BlameQuote,
+  BttScapegoatPicker: ScapegoatPicker,
+  BttIncidentTicker: IncidentTicker,
+  BttHobtCta: HobtCta,
   // 14.5 → CoreImage
 } satisfies BlockRegistry;

@@ -10,6 +10,7 @@ query HobtPromo($uri: ID!) {
   page(id: $uri, idType: URI) {
     id
     title
+    ...EditorBlocks
     hobtPromo {
       headline
       subheadline
