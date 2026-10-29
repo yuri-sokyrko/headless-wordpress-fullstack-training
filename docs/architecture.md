@@ -354,3 +354,70 @@ move to an S3/R2 media subdomain a one-array change.
 - whether the hero appeared in the Network panel before the avatars
 
 Lesson 21.1 creates `docs/perf-baseline.md` and should copy this row into it.
+
+## Credential inventory (Lesson 15.1)
+
+Five credentials. The mistake that matters is not losing one, it is using one where another
+belongs. Cookie attributes are the contract in appendix 04 §4 — not restated here.
+
+| Credential                   | Represents                       | Lifetime          | Transport             | Stored in                       | Blast radius if stolen                                                      |
+| ---------------------------- | -------------------------------- | ----------------- | --------------------- | ------------------------------- | --------------------------------------------------------------------------- |
+| btt_at (user JWT)            | one human                        | 300 s             | Authorization: Bearer | httpOnly cookie                 | Act as that user for up to 300 s. No password, other user, or admin access. |
+| btt_rt (refresh token)       | that human's right to a new JWT  | 30 d              | mutation variable     | httpOnly cookie, Path=/api/auth | Mint access tokens for that user for up to 30 days.                         |
+| BTT_APP_TOKEN / WP_APP_TOKEN | the Next.js application          | until rotated     | X-BTT-App-Token       | Fly secret / Vercel env         | Register users and submit leads as nobody until the token is rotated.       |
+| BTT_REVALIDATE_SECRET        | WordPress's right to purge cache | until rotated     | HMAC over the body    | both .env files                 | Force cache purges; cache stampede / denial of service, not disclosure.     |
+| Preview token                | one editor, one post, one click  | 120 s, single use | URL query parameter   | nowhere; consumed               | Read one unpublished post once.                                             |
+
+**Not on this list:** the wordpress*logged_in*\* cookie. No part of next-app ever holds, reads
+or forwards it, and that absence keeps the front end out of scope for wp-admin compromise.
+
+**Revocation.** A JWT cannot be revoked. `exp` is the revocation window, logout ends the
+session for one browser only, and rotating the eight salts plus GRAPHQL_JWT_AUTH_SECRET_KEY is
+the only way to invalidate everything at once.
+
+## Two audiences, two authentication paths (Lesson 15.1)
+
+|                                 | Editors                       | Public developers                      |
+| ------------------------------- | ----------------------------- | -------------------------------------- |
+| Authenticate to                 | WordPress, at /wp-login.php   | Next.js, at /{locale}/login            |
+| Credential                      | wordpress*logged_in*\* cookie | btt_at JWT in a cookie Next owns       |
+| Signed with                     | AUTH_KEY + AUTH_SALT          | GRAPHQL_JWT_AUTH_SECRET_KEY            |
+| Validated by                    | WordPress                     | WordPress — Next holds no signing key  |
+| Revocable                       | yes, per session              | no; expiry or key rotation only        |
+| Reaches wp-admin                | yes                           | never (admin_init bounce, Lesson 03.5) |
+| Reaches /graphql from a browser | yes, with a nonce             | never                                  |
+
+These two paths share `wp_users` and `wp_usermeta` and **nothing else** — no credential, no
+signing key, no cookie name, no session store. A JWT-key leak does not touch editors; an
+editor laptop compromise does not touch a public developer's session.
+
+The cost, stated plainly: nine independent secrets in wordpress-headless/.env instead of one,
+and a rotation procedure per secret. That is what the separation costs and it is worth it.
+
+(Add your own sentence naming which single secret, if leaked, would compromise BOTH paths.)
+
+<!-- docs/architecture.md — append -->
+
+## Where a session credential may live (Lesson 15.1)
+
+**Allowed:** an httpOnly cookie set by a Server Action or Route Handler; a server-side
+environment variable; a secret store (Fly secrets, Vercel env).
+
+**Forbidden, with the attack each one enables:**
+
+| Location                    | Attack                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| localStorage                | any injected script reads it synchronously and exfiltrates it; survives a tab close |
+| sessionStorage              | same read primitive, shorter window; "per tab" is not a boundary                    |
+| a URL, query string or hash | leaks via Referer, history, access logs, CDN logs, analytics and link unfurlers     |
+| a NEXT*PUBLIC* variable     | Next inlines the literal value into JavaScript every visitor downloads              |
+
+**The two exceptions:** the Lesson 17.2 preview token (single use, 120-second TTL, exchanged
+server-to-server, grants read access to one unpublished post) and the Lesson 15.3 email
+confirmation code (single use, 24-hour TTL, stored only as a sha256 hash, grants one
+email confirmation and one password set). The rule is precisely _no **session** credential in a
+URL, ever_ — not "no token in a URL". Single use is the property that carries both.
+
+**Enforcement, not intention:** `grep -rn 'localStorage\|sessionStorage' next-app/src/` returns
+nothing, and `npm run build && grep -r <secret value> .next/static/` returns nothing. Module 24
+makes both a CI gate.
