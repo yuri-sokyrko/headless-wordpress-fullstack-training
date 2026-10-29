@@ -1,0 +1,5 @@
+query MediaItemById($id: ID!) {
+  mediaItem(id: $id, idType: DATABASE_ID) {
+    ...MediaFields
+  }
+}

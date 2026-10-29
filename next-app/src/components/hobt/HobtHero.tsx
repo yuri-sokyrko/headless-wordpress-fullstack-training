@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 
+import type { MediaFieldsFragment } from '@/gql/graphql';
 import { Badge } from '@/components/ui/badge';
 
 export function HobtHero({
   locale,
   headline,
   subheadline,
+  heroImage,
   priceUsd,
   seatsLeft,
   children,
@@ -13,6 +16,7 @@ export function HobtHero({
   readonly locale: string;
   readonly headline: string | null;
   readonly subheadline: string | null;
+  readonly heroImage: MediaFieldsFragment | null;
   readonly priceUsd: number | null;
   readonly seatsLeft: number | null;
   // The one `children` slot on this page. Key Concept 1: the hero does not care
@@ -55,6 +59,28 @@ export function HobtHero({
 
       {subheadline !== null && subheadline !== '' ? (
         <p className="text-muted-foreground mt-4 max-w-2xl text-lg">{subheadline}</p>
+      ) : null}
+
+      {/* THE LCP ELEMENT of /hobt, and the only image on this route with
+          `priority`. Key Concept 5: it sets loading="eager" and
+          fetchpriority="high" and emits a <link rel="preload">, all of which take
+          bandwidth from something else. Six priorities is no priority.
+          Both dimensions are required before rendering: without them there is no
+          box to reserve, and the hero is exactly the element whose layout shift
+          you would feel. */}
+      {heroImage?.sourceUrl !== null &&
+      heroImage?.sourceUrl !== undefined &&
+      typeof heroImage.mediaDetails?.width === 'number' &&
+      typeof heroImage.mediaDetails?.height === 'number' ? (
+        <Image
+          src={heroImage.sourceUrl}
+          alt={heroImage.altText ?? ''}
+          width={heroImage.mediaDetails.width}
+          height={heroImage.mediaDetails.height}
+          priority
+          sizes="(min-width: 1024px) 1024px, 100vw"
+          className="mt-10 h-auto w-full rounded-lg"
+        />
       ) : null}
 
       {children !== undefined ? <div className="mt-8">{children}</div> : null}

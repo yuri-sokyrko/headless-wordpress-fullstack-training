@@ -67,6 +67,21 @@ fragment EditorBlocks on NodeWithEditorBlocks {
       }
     }
 
+    # The media library is the source of truth for dimensions and alt text, so
+    # this spreads MediaFields (Lesson 10.5) rather than declaring a second one.
+    # `attributes.width`/`height` are deliberately NOT selected: they are set only
+    # when an editor resized the image, and then they are the DISPLAY size.
+    # Lesson 14.5 Key Concept 3.
+    ... on CoreImage {
+      attributes {
+        id
+        url
+        alt
+        caption
+        sizeSlug
+      }
+    }
+
     # `tone` arrives from Lesson 13.5's v2 attributes. If codegen says it is not a
     # field on BttIncidentCalloutAttributes, you have not done 13.5's deprecation
     # yet — go and do it, because Key Concept 2 is about that exact attribute.

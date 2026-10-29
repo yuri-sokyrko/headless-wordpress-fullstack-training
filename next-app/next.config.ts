@@ -14,16 +14,21 @@ const nextConfig: NextConfig = {
   images: {
     // next/image refuses remote hosts it was not told about, on purpose: without an
     // allowlist your optimiser is an open image proxy anyone can bill you for.
-    // WordPress media is served from :8080, so declare it now — Module 14 renders
-    // featured images and Module 24 replaces this entry with the S3/R2 host.
+    // Module 24 replaces this entry with the S3/R2 host.
     remotePatterns: [
       {
         protocol: 'http',
         hostname: 'localhost',
         port: '8080',
-        pathname: '/wpcontent/uploads/**',
+        pathname: '/wp-content/uploads/**',
       },
     ],
+    // AVIF is ~50% smaller than JPEG and much slower to encode; WebP behind it means
+    // every browser gets something better than the original. Key Concept 7.
+    formats: ['image/avif', 'image/webp'],
+    qualities: [75, 90], // 75 is next/image's default; 90 is for anything where artefacts show.
+    minimumCacheTTL: 2678400, // 31 days.
+    dangerouslyAllowLocalIP: true,
   },
 };
 

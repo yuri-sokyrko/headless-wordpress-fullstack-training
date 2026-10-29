@@ -11,6 +11,7 @@ import { CoreHeading } from '@/components//blocks/CoreHeading';
 import { CoreList } from '@/components/blocks/CoreList';
 import { CoreListItem } from '@/components/blocks/CoreListItem';
 import { CoreQuote } from '@/components/blocks/CoreQuote';
+import { CoreImage } from '@/components/blocks/CoreImage';
 import { BlameQuote } from '@/components/blocks/BlameQuote';
 import { HobtCta } from '@/components/blocks/HobtCta';
 import { IncidentCallout } from '@/components/blocks/IncidentCallout';
@@ -81,10 +82,10 @@ export const blockRegistry = {
   CoreListItem,
   CoreQuote,
   CoreCode,
+  CoreImage,
   BttIncidentCallout: IncidentCallout,
   BttBlameQuote: BlameQuote,
   BttScapegoatPicker: ScapegoatPicker,
   BttIncidentTicker: IncidentTicker,
   BttHobtCta: HobtCta,
-  // 14.5 → CoreImage
 } satisfies BlockRegistry;

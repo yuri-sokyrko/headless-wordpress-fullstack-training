@@ -50,6 +50,7 @@ export default async function HobtPage({
         subheadline={promo.subheadline}
         priceUsd={promo.priceUsd}
         seatsLeft={promo.seatsLeft}
+        heroImage={promo.heroImage?.node ?? null}
       >
         {/* HobtCtaBand, instance one — inside the hero, via `children`. */}
         <HobtCtaBand

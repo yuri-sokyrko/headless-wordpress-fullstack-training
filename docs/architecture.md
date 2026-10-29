@@ -331,3 +331,26 @@ one `dangerouslySetInnerHTML` boundary, a static block is wrong within a day, an
 PHP breaks the preview path. Two implementations of a filter over two attributes is the cheapest
 of four bad options, and it is only cheap because the attributes are a contract rather than an
 accident.
+
+## Image delivery (Lesson 14.5)
+
+WordPress stores the originals; Next optimises on request. `remotePatterns` in
+`next.config.ts` is the **only** place a media hostname appears, which is what makes Module 24's
+move to an S3/R2 media subdomain a one-array change.
+
+| Route                                          | Image                    | `sizes`                                         | `priority`                                         |
+| ---------------------------------------------- | ------------------------ | ----------------------------------------------- | -------------------------------------------------- |
+| `/[locale]/hobt`                               | SCF `heroImage`          | `(min-width: 1024px) 1024px, 100vw`             | **yes** — the LCP element                          |
+| `/[locale]/hobt`                               | testimonial `avatar` × N | `40px`                                          | no                                                 |
+| `/[locale]/blog/[slug]`, `/[locale]/[...slug]` | `core/image` blocks      | `(min-width: 1024px) 720px, calc(100vw - 2rem)` | **no** — a block cannot know it is the LCP element |
+
+`config`: `formats: ['image/avif', 'image/webp']`, `qualities: [75, 90]`,
+`minimumCacheTTL: 2678400`. `deviceSizes` and `imageSizes` are left at their defaults.
+
+**First measurement, for Module 21 to start from.** Record your own numbers:
+
+- date, Next version, throttling used (4× CPU, Fast 4G)
+- `/en/hobt` LCP element: **\_\_\_** LCP time: **\_\_\_** ms
+- whether the hero appeared in the Network panel before the avatars
+
+Lesson 21.1 creates `docs/perf-baseline.md` and should copy this row into it.

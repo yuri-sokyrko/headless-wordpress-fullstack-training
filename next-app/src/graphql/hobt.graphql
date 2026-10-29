@@ -14,6 +14,11 @@ query HobtPromo($uri: ID!) {
     hobtPromo {
       headline
       subheadline
+      heroImage {
+        node {
+          ...MediaFields
+        }
+      }
       priceUsd
       seatsLeft
       demoBookingUrl
@@ -27,6 +32,11 @@ query HobtPromo($uri: ID!) {
         quote
         author
         role
+        avatar {
+          node {
+            ...MediaFields
+          }
+        }
       }
     }
   }
