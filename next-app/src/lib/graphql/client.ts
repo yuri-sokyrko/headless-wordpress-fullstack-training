@@ -38,6 +38,20 @@ type GraphQLResponseBody<TData> = {
   readonly errors?: readonly GraphQLErrorEntry[];
 };
 
+type ErrorPolicy = 'partial' | 'strict';
+
+/**
+ * WHICH credential is calling. A discriminated union rather than a `string`,
+ * because both credentials ARE strings and substituting one for the other
+ * usually still returns HTTP 200 (Lesson 15.2 §5).
+ *
+ * `kind: 'app'` deliberately carries NO token: this function reads WP_APP_TOKEN
+ * from the environment itself. So an app token can never arrive from a call
+ * site — and therefore never from a request, a form field, a query parameter,
+ * or a client component that was handed one by accident. Appendix 04 §4.
+ */
+export type Credential = { readonly kind: 'user'; readonly jwt: string } | { readonly kind: 'app' };
+
 // A type predicate: a claim about shape, not a validation. Lesson 07.4 Key Concept 3.
 function isGraphQLResponseBody<TData>(value: unknown): value is GraphQLResponseBody<TData> {
   return typeof value === 'object' && value !== null && ('data' in value || 'errors' in value);
@@ -96,7 +110,8 @@ function nextOptions(options: FetchGraphQLOptions | undefined): {
 async function execute<TResult>(
   operationName: string,
   body: string,
-  init: RequestInit
+  init: RequestInit,
+  policy: ErrorPolicy
 ): Promise<TResult> {
   let response: Response;
 
@@ -134,15 +149,20 @@ async function execute<TResult>(
   const hasErrors = parsed.errors !== undefined && parsed.errors.length > 0;
   const hasData = parsed.data !== undefined && parsed.data !== null;
 
+  // OPTION A, for authenticated calls: ANY errors entry throws, even alongside
+  // data. A refused mutation is `data: { createIncident: null }` WITH an errors
+  // array, and the caller must be able to show WordPress's own sentence.
+  // Lesson 15.2 §7.
+  if (hasErrors && policy === 'strict') {
+    throw new GraphQLRequestError(operationName, response.status, parsed.errors ?? []);
+  }
+
+  // OPTION B, for public reads: unchanged from Lesson 10.4 Key Concept 3.
   if (hasErrors && !hasData) {
-    // Nothing usable came back. Throw; the nearest error.tsx renders.
     throw new GraphQLRequestError(operationName, response.status, parsed.errors ?? []);
   }
 
   if (hasErrors) {
-    // PARTIAL: data AND errors. Policy B — log it, render what arrived. The accepted
-    // cost is a silent degradation until someone reads this line; Module 24 ships it
-    // to Sentry. Written up in docs/api-contract.md by Step 8.
     console.error(
       new GraphQLRequestError(operationName, response.status, parsed.errors ?? []).toString()
     );
@@ -150,7 +170,7 @@ async function execute<TResult>(
 
   if (!hasData) {
     throw new GraphQLRequestError(operationName, response.status, [
-      { message: 'the response container neither data nor errors' },
+      { message: 'the response contained neither data nor errors' },
     ]);
   }
 
@@ -172,19 +192,45 @@ export function fetchGraphQL<TResult, TVariables extends Record<string, unknown>
     {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       next: nextOptions(options),
-    }
+    },
+    'partial'
   );
 }
 
 /**
- * Authenticated calls. `cache: 'no-store'` is written here, not passed in, and there is
- * no options parameter through which a caller could override it. Module 15 supplies a
- * user JWT; Module 16 supplies the app-token variant (appendix 04 section 4).
+ * The only place in this application that reads WP_APP_TOKEN **for a GraphQL
+ * call**. Lesson 17.2 adds a second reader for the REST preview exchange, and
+ * replaces this invariant with a checkable one: `grep -rn 'WP_APP_TOKEN' src/`
+ * must name exactly two files.
+ */
+function creadentialHeaders(credential: Credential): Record<string, string> {
+  if (credential.kind === 'user') {
+    return { Authorization: `Bearer ${credential.jwt}` };
+  }
+
+  const appToken = process.env.WP_APP_TOKEN;
+  // Fail CLOSED. A misconfigured deployment must refuse the call, not send an
+  // empty header and let WordPress decide — hash_equals('', '') is true, and
+  // Lesson 06.2's guard is the only reason that is not exploitable there.
+  if (appToken === undefined || appToken === '') {
+    throw new Error(
+      'WP_APP_TOKEN is not set. Copy it from wordpress/headless/.env — Lesson 15.2 Step 4.'
+    );
+  }
+
+  return { 'X-BTT-App-Token': appToken };
+}
+
+/**
+ * Authenticated calls. `cache: 'no-store'` is written HERE, not passed in, and
+ * there is still no options parameter — so no caller can put an authenticated
+ * response into the shared Data Cache. Lesson 15.5 §10 and Module 18 both rely
+ * on that being unrepresentable rather than merely discouraged.
  */
 export function fetchGraphQLAuthed<TResult, TVariables extends Record<string, unknown>>(
   document: TypedDocumentNode<TResult, TVariables>,
   variables: TVariables,
-  token: string
+  credential: Credential
 ): Promise<TResult> {
   return execute<TResult>(
     operationNameOf(document),
@@ -194,8 +240,12 @@ export function fetchGraphQLAuthed<TResult, TVariables extends Record<string, un
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
+        ...creadentialHeaders(credential),
       },
-    }
+    },
+    // OPTION A. The word 'strict' appears exactly once in the codebase, and it
+    // appears HERE rather than in a parameter, so no call site can opt an
+    // authenticated write back into Option B. Lesson 15.2 §7.
+    'strict'
   );
 }

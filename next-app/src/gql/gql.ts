@@ -14,6 +14,7 @@ import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-
  * Learn more about it here: https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#reducing-bundle-size
  */
 type Documents = {
+    "mutation Login($username: String!, $password: String!) {\n  login(input: {username: $username, password: $password}) {\n    authToken\n    refreshToken\n    user {\n      id\n      databaseId\n      name\n      roles {\n        nodes {\n          name\n        }\n      }\n    }\n  }\n}\n\nmutation RefreshToken($refreshToken: String!) {\n  refreshJwtAuthToken(input: {jwtRefreshToken: $refreshToken}) {\n    authToken\n  }\n}\n\nquery Viewer {\n  viewer {\n    id\n    databaseId\n    name\n    roles {\n      nodes {\n        name\n      }\n    }\n  }\n}": typeof types.LoginDocument,
     "fragment IncidentCardFields on Incident {\n  id\n  title\n  slug\n  date\n  severities(first: 1) {\n    nodes {\n      name\n      slug\n    }\n  }\n  scapegoats(first: 1) {\n    nodes {\n      name\n      slug\n    }\n  }\n  incidentDetails {\n    downtimeMinutes\n    environment\n  }\n}": typeof types.IncidentCardFieldsFragmentDoc,
     "fragment IncidentDetailFields on Incident {\n  ...IncidentCardFields\n  ...EditorBlocks\n  incidentDetails {\n    occurredAt\n    estimatedCostUsd\n    resolutionStatus\n    blameConfidence\n    stackTrace\n    reporterDisplayName\n    isVerified\n  }\n}": typeof types.IncidentDetailFieldsFragmentDoc,
     "fragment MediaFields on MediaItem {\n  id\n  altText\n  sourceUrl\n  mediaDetails {\n    width\n    height\n  }\n}": typeof types.MediaFieldsFragmentDoc,
@@ -31,6 +32,7 @@ type Documents = {
     "query SiteChrome {\n  generalSettings {\n    title\n    description\n  }\n  siteSettings {\n    siteChrome {\n      siteTagline\n      primaryCtaLabel\n      primaryCtaUrl\n      incidentSubmissionOpen\n      footerBlurb\n      socialLinks {\n        network\n        url\n      }\n    }\n  }\n}": typeof types.SiteChromeDocument,
 };
 const documents: Documents = {
+    "mutation Login($username: String!, $password: String!) {\n  login(input: {username: $username, password: $password}) {\n    authToken\n    refreshToken\n    user {\n      id\n      databaseId\n      name\n      roles {\n        nodes {\n          name\n        }\n      }\n    }\n  }\n}\n\nmutation RefreshToken($refreshToken: String!) {\n  refreshJwtAuthToken(input: {jwtRefreshToken: $refreshToken}) {\n    authToken\n  }\n}\n\nquery Viewer {\n  viewer {\n    id\n    databaseId\n    name\n    roles {\n      nodes {\n        name\n      }\n    }\n  }\n}": types.LoginDocument,
     "fragment IncidentCardFields on Incident {\n  id\n  title\n  slug\n  date\n  severities(first: 1) {\n    nodes {\n      name\n      slug\n    }\n  }\n  scapegoats(first: 1) {\n    nodes {\n      name\n      slug\n    }\n  }\n  incidentDetails {\n    downtimeMinutes\n    environment\n  }\n}": types.IncidentCardFieldsFragmentDoc,
     "fragment IncidentDetailFields on Incident {\n  ...IncidentCardFields\n  ...EditorBlocks\n  incidentDetails {\n    occurredAt\n    estimatedCostUsd\n    resolutionStatus\n    blameConfidence\n    stackTrace\n    reporterDisplayName\n    isVerified\n  }\n}": types.IncidentDetailFieldsFragmentDoc,
     "fragment MediaFields on MediaItem {\n  id\n  altText\n  sourceUrl\n  mediaDetails {\n    width\n    height\n  }\n}": types.MediaFieldsFragmentDoc,
@@ -62,6 +64,10 @@ const documents: Documents = {
  */
 export function graphql(source: string): unknown;
 
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "mutation Login($username: String!, $password: String!) {\n  login(input: {username: $username, password: $password}) {\n    authToken\n    refreshToken\n    user {\n      id\n      databaseId\n      name\n      roles {\n        nodes {\n          name\n        }\n      }\n    }\n  }\n}\n\nmutation RefreshToken($refreshToken: String!) {\n  refreshJwtAuthToken(input: {jwtRefreshToken: $refreshToken}) {\n    authToken\n  }\n}\n\nquery Viewer {\n  viewer {\n    id\n    databaseId\n    name\n    roles {\n      nodes {\n        name\n      }\n    }\n  }\n}"): (typeof documents)["mutation Login($username: String!, $password: String!) {\n  login(input: {username: $username, password: $password}) {\n    authToken\n    refreshToken\n    user {\n      id\n      databaseId\n      name\n      roles {\n        nodes {\n          name\n        }\n      }\n    }\n  }\n}\n\nmutation RefreshToken($refreshToken: String!) {\n  refreshJwtAuthToken(input: {jwtRefreshToken: $refreshToken}) {\n    authToken\n  }\n}\n\nquery Viewer {\n  viewer {\n    id\n    databaseId\n    name\n    roles {\n      nodes {\n        name\n      }\n    }\n  }\n}"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

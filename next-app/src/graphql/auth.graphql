@@ -1,0 +1,50 @@
+# Authentication operations. Consumed by src/lib/auth/ and src/actions/auth.ts
+# (Lesson 15.4). Lesson 15.3 appends RegisterDeveloper and VerifyDeveloper here.
+#
+# The plugin also decorates User with jwtAuthToken / jwtRefreshToken /
+# jwtUserSecret. NONE of them are selected anywhere in this app: a query result
+# that contains a credential is a credential in whatever holds query results.
+
+mutation Login($username: String!, $password: String!) {
+  login(input: { username: $username, password: $password }) {
+    authToken
+    refreshToken
+    user {
+      id
+      databaseId
+      name
+      # Capability-gated inside WPGraphQL: resolves only for a caller who can
+      # list_users, so a reporter asking for its OWN roles may get an empty
+      # connection. Selected for DISPLAY. Nothing in this app branches on it.
+      roles {
+        nodes {
+          name
+        }
+      }
+    }
+  }
+}
+
+mutation RefreshToken($refreshToken: String!) {
+  # Returns a new authToken and NOT a new refreshToken. The refresh token is not
+  # rotated — Lesson 15.4 states that cost rather than hiding it.
+  refreshJwtAuthToken(input: { jwtRefreshToken: $refreshToken }) {
+    authToken
+  }
+}
+
+query Viewer {
+  # null for an anonymous caller. That null IS the authentication check: it is
+  # WordPress verifying the signature, the expiry and the user row, which is the
+  # only party that can. getSession() in Lesson 15.4 is a wrapper around it.
+  viewer {
+    id
+    databaseId
+    name
+    roles {
+      nodes {
+        name
+      }
+    }
+  }
+}

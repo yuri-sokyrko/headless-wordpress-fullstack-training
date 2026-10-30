@@ -7043,6 +7043,9 @@ type User implements Node & UniformResourceIdentifiable & Commenter & DatabaseId
   "Whether the node represents the front page."
   isFrontPage: Boolean!
 
+  "Whether the JWT User secret has been revoked. If the secret has been revoked, auth tokens will not be issued until an admin, or user with proper capabilities re-issues a secret for the user."
+  isJwtAuthSecretRevoked: Boolean!
+
   "Whether  the node represents the blog page."
   isPostsPage: Boolean!
 
@@ -7051,6 +7054,18 @@ type User implements Node & UniformResourceIdentifiable & Commenter & DatabaseId
 
   "Whether the node is a Term"
   isTermNode: Boolean!
+
+  "The expiration for the JWT Token for the user. If not set custom for the user, it will use the default sitewide expiration setting"
+  jwtAuthExpiration: String
+
+  "A JWT token that can be used in future requests for authentication/authorization"
+  jwtAuthToken: String
+
+  "A JWT token that can be used in future requests to get a refreshed jwtAuthToken. If the refresh token used in a request is revoked or otherwise invalid, a valid Auth token will NOT be issued in the response headers."
+  jwtRefreshToken: String
+
+  "A unique secret tied to the users JWT token that can be revoked or refreshed. Revoking the secret prevents JWT tokens from being issued to the user. Refreshing the token invalidates previously issued tokens, but allows new tokens to be issued."
+  jwtUserSecret: String
 
   "Last name of the user."
   lastName: String
@@ -26281,6 +26296,18 @@ type RootMutation {
     count: Int
   ): Int
 
+  "Login a user. Request for an authToken and User details in response"
+  login(
+    "Input for the login mutation"
+    input: LoginInput!
+  ): LoginPayload
+
+  "Use a valid JWT Refresh token to retrieve a new JWT Auth Token"
+  refreshJwtAuthToken(
+    "Input for the refreshJwtAuthToken mutation"
+    input: RefreshJwtAuthTokenInput!
+  ): RefreshJwtAuthTokenPayload
+
   "Create an unverified incident_reporter. Server-to-server only: requires the X-BTT-App-Token header. Returns the same payload whether or not the email was already registered."
   registerDeveloper(
     "Input for the registerDeveloper mutation"
@@ -27055,8 +27082,14 @@ input CreateUserInput {
   "A string that contains the plain text password for the user."
   password: String
 
+  "If true, this will refresh the users JWT secret."
+  refreshJwtUserSecret: Boolean
+
   "The date the user registered. Format is Y-m-d H:i:s."
   registered: String
+
+  "If true, this will revoke the users JWT secret. If false, this will unrevoke the JWT secret AND issue a new one. To revoke, the user must have proper capabilities to edit users JWT secrets."
+  revokeJwtUserSecret: Boolean
 
   "A string for whether to enable the rich editor or not. False if not empty."
   richEditing: String
@@ -27362,6 +27395,51 @@ type DeleteUserPayload {
   user: User
 }
 
+"Input for the login mutation."
+input LoginInput {
+  "This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions."
+  clientMutationId: String
+
+  "The plain-text password for the user logging in."
+  password: String!
+
+  "The username used for login. Typically a unique or email address depending on specific configuration"
+  username: String!
+}
+
+"The payload for the login mutation."
+type LoginPayload {
+  "JWT Token that can be used in future requests for Authentication"
+  authToken: String
+
+  "If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions."
+  clientMutationId: String
+
+  "A JWT token that can be used in future requests to get a refreshed jwtAuthToken. If the refresh token used in a request is revoked or otherwise invalid, a valid Auth token will NOT be issued in the response headers."
+  refreshToken: String
+
+  "The user that was logged in"
+  user: User
+}
+
+"Input for the refreshJwtAuthToken mutation."
+input RefreshJwtAuthTokenInput {
+  "This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions."
+  clientMutationId: String
+
+  "A valid, previously issued JWT refresh token. If valid a new Auth token will be provided. If invalid, expired, revoked or otherwise invalid, a new AuthToken will not be provided."
+  jwtRefreshToken: String!
+}
+
+"The payload for the refreshJwtAuthToken mutation."
+type RefreshJwtAuthTokenPayload {
+  "JWT Token that can be used in future requests for Authentication"
+  authToken: String
+
+  "If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions."
+  clientMutationId: String
+}
+
 "Input for the registerDeveloper mutation."
 input RegisterDeveloperInput {
   "This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions."
@@ -27427,8 +27505,14 @@ input RegisterUserInput {
   "A string that contains the plain text password for the user."
   password: String
 
+  "If true, this will refresh the users JWT secret."
+  refreshJwtUserSecret: Boolean
+
   "The date the user registered. Format is Y-m-d H:i:s."
   registered: String
+
+  "If true, this will revoke the users JWT secret. If false, this will unrevoke the JWT secret AND issue a new one. To revoke, the user must have proper capabilities to edit users JWT secrets."
+  revokeJwtUserSecret: Boolean
 
   "A string for whether to enable the rich editor or not. False if not empty."
   richEditing: String
@@ -28165,8 +28249,14 @@ input UpdateUserInput {
   "A string that contains the plain text password for the user."
   password: String
 
+  "If true, this will refresh the users JWT secret."
+  refreshJwtUserSecret: Boolean
+
   "The date the user registered. Format is Y-m-d H:i:s."
   registered: String
+
+  "If true, this will revoke the users JWT secret. If false, this will unrevoke the JWT secret AND issue a new one. To revoke, the user must have proper capabilities to edit users JWT secrets."
+  revokeJwtUserSecret: Boolean
 
   "A string for whether to enable the rich editor or not. False if not empty."
   richEditing: String
