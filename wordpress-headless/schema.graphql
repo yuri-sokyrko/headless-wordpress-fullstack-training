@@ -26421,6 +26421,12 @@ type RootMutation {
     "Input for the updateUser mutation"
     input: UpdateUserInput!
   ): UpdateUserPayload
+
+  "Consume the single-use code emailed by registerDeveloper, set the account password, and mark the email verified. Server-to-server only: requires the X-BTT-App-Token header. Returns `verified: false` — with no error — for an unknown user, a wrong code, an expired code or an already-used code."
+  verifyDeveloper(
+    "Input for the verifyDeveloper mutation"
+    input: VerifyDeveloperInput!
+  ): VerifyDeveloperPayload
 }
 
 "Input for the createCategory mutation."
@@ -28278,4 +28284,28 @@ type UpdateUserPayload {
 
   "The User object mutation type."
   user: User
+}
+
+"Input for the verifyDeveloper mutation."
+input VerifyDeveloperInput {
+  "This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions."
+  clientMutationId: String
+
+  "The `token` query parameter from the verification link. Compared against a stored sha256 hash with hash_equals()."
+  code: String!
+
+  "The password the user chooses. registerDeveloper generated a random one and never disclosed it, so this is the first password the account owner holds."
+  password: String!
+
+  "The `uid` query parameter from the verification link."
+  userId: Int!
+}
+
+"The payload for the verifyDeveloper mutation."
+type VerifyDeveloperPayload {
+  "If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions."
+  clientMutationId: String
+
+  "True only when the code was valid, unexpired and unused. False for every other case, with no detail about which."
+  verified: Boolean!
 }

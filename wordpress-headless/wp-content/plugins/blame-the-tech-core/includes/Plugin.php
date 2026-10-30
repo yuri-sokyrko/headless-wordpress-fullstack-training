@@ -40,6 +40,7 @@ final class Plugin {
 		'includes/graphql/mutation-register-developer.php',
 		'includes/graphql/mutation-submit-hobt-lead.php',
 		'includes/graphql/performance.php',
+		'includes/graphql/mutation-verify-developer.php',
 	);
 
 	/**
@@ -84,6 +85,12 @@ final class Plugin {
 		grant_incident_caps_to_core_roles();
 
 		ensure_reporter_role();
+
+		// New in Lesson 15.3. Idempotent, and deliberately NOT gated on
+		// ROLES_VERSION: a role lives in a shared option that any plugin can
+		// add to, so this runs on every activation.
+		strip_reporter_extras();
+
 		close_wp_registration();
 
 		ensure_permalink_structure();

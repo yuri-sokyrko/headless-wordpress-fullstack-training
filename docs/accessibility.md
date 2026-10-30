@@ -84,3 +84,13 @@ instead of asserted.
 
 Module 22 extends this file for the public site. Nothing here is covered by an automated check,
 which is why it is a table.
+
+| Attribute / role | Where                        | Justification                                                                                                             | Could a native element do it?                                  |
+| ---------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| role="alert"     | components/auth/AuthForm.tsx | announces the validation summary the moment it appears; implies aria-live="assertive", so no separate attribute is needed | no — there is no native element that announces its own arrival |
+| role="status"    | components/auth/AuthForm.tsx | the settled confirmation ("check your inbox"), announced politely rather than interrupting                                | no                                                             |
+
+**Known gap, closed in Lesson 16.1.** Errors are a single summary region, not per-field
+messages. There is no aria-describedby linking an input to its error and no focus move to the
+first invalid field. That is the smaller version of the right pattern and it is written down
+here so it is a debt rather than an oversight.

@@ -48,3 +48,22 @@ query Viewer {
     }
   }
 }
+
+mutation RegisterDeveloper($email: String!, $displayName: String!, $locale: String) {
+  # App-token guarded (Lesson 06.2). Returns the SAME payload whether or not the
+  # address was already registered — see Lesson 15.3 §1. The front end must not
+  # undo that by rendering two different sentences.
+  registerDeveloper(input: { email: $email, displayName: $displayName, locale: $locale }) {
+    accepted
+    email
+  }
+}
+
+mutation verifyDeveloper($userId: Int!, $code: String!, $password: String!) {
+  # `userId` and `code` are the `uid` and `token` query parameters from the
+  # emailed link. `verified: false` covers unknown user, wrong code, expired
+  # code and already-used code, with no detail about which.
+  verifyDeveloper(input: { userId: $userId, code: $code, password: $password }) {
+    verified
+  }
+}
