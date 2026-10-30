@@ -421,3 +421,21 @@ URL, ever_ — not "no token in a URL". Single use is the property that carries 
 **Enforcement, not intention:** `grep -rn 'localStorage\|sessionStorage' next-app/src/` returns
 nothing, and `npm run build && grep -r <secret value> .next/static/` returns nothing. Module 24
 makes both a CI gate.
+
+## The two credentials (Lesson 15.2)
+
+|            | User JWT                            | Application token                                                   |
+| ---------- | ----------------------------------- | ------------------------------------------------------------------- |
+| Represents | one human                           | the Next.js application                                             |
+| Header     | Authorization: Bearer <jwt>         | X-BTT-App-Token: <token>                                            |
+| Lifetime   | 300 s (refreshed via btt_rt)        | until rotated                                                       |
+| Used by    | viewer, createIncident              | registerDeveloper, verifyDeveloper, submitHobtLead, /preview/verify |
+| Held by    | the browser, as opaque cookie bytes | the servers only, never a browser                                   |
+
+**Substitution is not loud.** An app token sent where a user JWT belongs returns HTTP 200 with
+an `errors` array; sent alongside a valid JWT it is ignored and the call succeeds. There is no
+status code to alert on. That is why `fetchGraphQLAuthed`'s third parameter is the
+discriminated union `Credential` and not a `string`: substitution is a compile error.
+
+`Credential { kind: 'app' }` carries no token. `src/lib/graphql/client.ts` reads WP_APP_TOKEN
+from the environment itself, so an app token cannot arrive from a call site.
