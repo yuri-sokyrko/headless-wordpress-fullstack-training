@@ -266,7 +266,7 @@ function reporter_new_user_notification_email(array $email, \WP_User $user, stri
 			'uid' => (int) $user->ID,
 			'token' => $code,
 		),
-		trailingslashit((string) getenv('BTT_FORNTEND_URL')) . 'verify'
+		trailingslashit((string) getenv('BTT_FRONTEND_URL')) . 'verify'
 	);
 
 	/* translators: %s: site name. */

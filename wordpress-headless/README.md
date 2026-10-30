@@ -55,6 +55,28 @@ the `wpcli` service is pinned to uid 33, never root. Full list:
 `.env` also sets `COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml`, so a bare
 `docker compose …` loads both files. Without it, a bare `run` recreates `db` and unpublishes 3306.
 
+## Mail delivery
+
+The core plugin routes `wp_mail()` through Mailpit when `BTT_SMTP_HOST=mailpit`
+is configured, using `BTT_SMTP_PORT=1025` by default. This is an unauthenticated,
+unencrypted development transport, not a production SMTP configuration. When
+`BTT_SMTP_HOST` is unset, the plugin leaves WordPress's mail transport unchanged.
+Delivery failures are logged via `wp_mail_failed`, without message contents.
+For Mailpit only, the invalid default sender `wordpress@localhost` becomes
+`wordpress@blame-the-tech.test`; custom sender addresses are preserved.
+If you change the environment, recreate WordPress with `docker compose up -d wordpress`.
+
+An empty Mailpit inbox returns `"messages":[]`, so `.messages[0].ID` and
+`.messages[0].Subject` both evaluate to `null`. Fetching `/api/v1/message/null`
+returns an HTTP error, not a JSON message. Use `curl -fsS` and
+`jq -er '.messages[0].ID // error("Mailpit inbox is empty")'` to stop at the real error.
+
+`registerDeveloper` deliberately returns `accepted: true` for an existing email
+without sending another message. After fixing delivery, register a fresh test
+email to obtain a verification link; retrying the same address will not resend it.
+Mailpit storage is not persisted by this Compose stack, so recreating Mailpit
+also clears previously captured messages.
+
 ## Resetting
 
 | You want to                                           | Command                                                                                                |

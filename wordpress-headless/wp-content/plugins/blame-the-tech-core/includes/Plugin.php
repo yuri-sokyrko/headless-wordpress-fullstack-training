@@ -32,6 +32,7 @@ final class Plugin {
 		'includes/statuses.php',
 		'includes/admin/incident-columns.php',
 		'includes/roles.php',
+		'includes/mail.php',
 		'includes/acf.php',
 		'includes/graphql/enums.php',
 		'includes/graphql/fields.php',
