@@ -1,42 +1,83 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-// One locale today (Lesson 09.1 Key Concept 6). Module 20 adds 'uk' and 'de' here, plus
-// Accept-Language negotiation and the NEXT_LOCALE cookie.
-const LOCALES: readonly string[] = ['en'];
+// From jwt.ts, NOT from session.ts: this file cannot import a module carrying
+// `import 'server-only'`, because proxy is not a react-server context.
+// Lesson 15.4 §6 and Lesson 15.5 §3.
+import { AT_COOKIE, secondsUntilExpiry } from '@/lib/auth/jwt';
 
-// One of the four legitimately public variables (appendix 04 §3.2). Publishing it is
-// harmless: it is a two-letter language code that is already in the URL.
+// One locale today (Lesson 09.1 §6). Module 20 adds 'uk' and 'de' here.
+const LOCALES: readonly string[] = ['en'];
 const DEFAULT_LOCALE = process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? 'en';
+
+/** Prefixes BELOW the locale segment that require a session. A UX gate only. */
+const GUARDED: readonly string[] = ['/account', '/incidents/submit'];
+
+/** Hand off to /api/auth/refresh with fewer than this many seconds left. */
+const REFRESH_WINDOW_SECONDS = 60;
+
+function isGuarded(pathname: string, locale: string): boolean {
+  const rest = pathname.slice(locale.length + 1);
+
+  return GUARDED.some((prefix) => rest === prefix || rest.startsWith(`${prefix}/`));
+}
 
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
-
-  // '/en/incidents'.split('/') -> ['', 'en', 'incidents']. noUncheckedIndexedAccess
-  // from Lesson 07.3 is why the ?? '' is not optional.
   const firstSegment = pathname.split('/')[1] ?? '';
 
-  // Already localised — including RSC payload requests for client-side navigations,
-  // which arrive on these same URLs with a query string.
-  if (LOCALES.includes(firstSegment)) {
+  // ── 1. LOCALE NORMALISATION — unchanged from Lesson 09.5 ──────────
+  if (!LOCALES.includes(firstSegment)) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${DEFAULT_LOCALE}${pathname === '/' ? '' : pathname}`;
+
+    return NextResponse.redirect(url);
+  }
+
+  const token = request.cookies.get(AT_COOKIE)?.value ?? '';
+
+  // ── 2. NEAR-EXPIRY HAND-OFF ───────────────────────────────────────
+  // On EVERY matched path, not only guarded ones, so a session renews while the
+  // user reads public pages. exp ARITHMETIC ONLY — no signature check, because
+  // Next holds no signing key. And no WordPress round trip: this is string
+  // maths, which is what the module README means by "without a round trip per
+  // request".
+  if (token !== '' && secondsUntilExpiry(token) <= REFRESH_WINDOW_SECONDS) {
+    const handoff = request.nextUrl.clone();
+    handoff.pathname = '/api/auth/refresh';
+    // Assign `search` rather than using searchParams.set(): URLSearchParams
+    // form-urlencodes, which turns `/` into `%2F`.
+    handoff.search = `?next=${pathname}`;
+
+    return NextResponse.redirect(handoff);
+  }
+
+  // ── 3. THE GATE ───────────────────────────────────────────────────
+  if (!isGuarded(pathname, firstSegment)) {
     return NextResponse.next();
   }
 
-  const url = request.nextUrl.clone();
-  url.pathname = `/${DEFAULT_LOCALE}${pathname === '/' ? '' : pathname}`;
+  if (token === '') {
+    const login = request.nextUrl.clone();
+    login.pathname = `/${firstSegment}/login`;
+    // FROZEN SHAPE. Module 16's Starting State asserts
+    // `307 http://localhost:3000/en/login?next=/en/account` — unescaped.
+    login.search = `?next=${pathname}`;
 
-  // No status argument: redirect() defaults to 307, which preserves the method and the
-  // body. Module 16 POSTs Server Actions through paths this proxy may touch, and a
-  // 302 that turns a POST into a GET loses the submission silently. Key Concept 8.
-  return NextResponse.redirect(url);
+    return NextResponse.redirect(login);
+  }
+
+  // ── 4. NO SHARED CACHE FOR AN AUTHENTICATED RESPONSE ──────────────
+  const response = NextResponse.next();
+  response.headers.set('Cache-Control', 'private, no-store');
+
+  return response;
 }
 
+// UNCHANGED from Lesson 09.5, and that is the finding rather than an oversight.
+// `/en/account` already reaches proxy: it is a page path with no dot and
+// no `api` or `_next` prefix. Adding '/api/auth/:path*' would run proxy on
+// the endpoint step 2 redirects TO, and the redirect would loop. Removing the
+// `api` exclusion would send /api/health to /en/api/health. Lesson 15.5 §4.
 export const config = {
-  // Run on everything EXCEPT:
-  //   api          — /api/health must answer, unprefixed, to a monitor
-  //   _next        — Next's own JS, CSS and image chunks
-  //   favicon.ico  — named explicitly because it is requested constantly
-  //   .*\..*       — anything with a dot: robots.txt, sitemap.xml, .png, .svg
-  // This must be a static literal. Next reads it at build time and cannot evaluate
-  // a matcher you computed at runtime.
   matcher: ['/((?!api|_next|favicon\\.ico|.*\\..*).*)'],
 };

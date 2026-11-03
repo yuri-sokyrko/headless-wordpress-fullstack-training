@@ -45,7 +45,7 @@ export function decodeExpiry(jwt: string): number | null {
     // base64url → base64: swap the alphabet, then restore the '=' padding.
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const padding = (4 - (base64.length % 4)) % 4;
-    const claims: unknown = JSON.parse(atob(base64 + '-'.repeat(padding)));
+    const claims: unknown = JSON.parse(atob(base64 + '='.repeat(padding)));
 
     if (typeof claims !== 'object' || claims === null) {
       return null;

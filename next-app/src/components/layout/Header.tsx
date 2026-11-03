@@ -67,6 +67,7 @@ export async function Header({
         </nav>
 
         <div className="ml-auto flex items-center gap-2 md:ml-4">
+          <span className="text-muted-foreground mr-4 hidden md:block">|</span>
           {session.isLoggedIn ? (
             <>
               <span className="text-muted-foreground hidden text-sm sm:inline">

@@ -30,6 +30,21 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 2678400, // 31 days.
     dangerouslyAllowLocalIP: true,
   },
+  experimental: {
+    serverActions: {
+      // Next rejects a Server Action POST whose Origin does not match the Host.
+      // Behind a proxy, or on a preview deployment, the Host Next sees is not
+      // the origin the browser used — so the allowlist has to say so.
+      //
+      // 127.0.0.1 is here because EVERY Playwright address in this course is
+      // 127.0.0.1, never localhost. Omit it and every Server Action in the E2E
+      // suite fails with "Invalid Server Actions request", which reads like a
+      // test bug and is a configuration bug.
+      //
+      // Module 24 adds the production and preview origins from the environment.
+      allowedOrigins: ['localhost:3000', '127.0.0.1:3000'],
+    },
+  },
 };
 
 export default nextConfig;
