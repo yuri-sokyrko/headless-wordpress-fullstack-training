@@ -69,3 +69,23 @@ query IncidentTicker($first: Int!, $severities: [String!]!) {
     }
   }
 }
+
+# The term ALLOWLIST, read at submit time and used to build the two <Select>s.
+# hideEmpty: false because a brand-new scapegoat with no incidents yet is still
+# a legal choice. `orderby` is deliberately absent: sorting fourteen terms in
+# TypeScript costs nothing and does not pin the lesson to one WPGraphQL
+# version's term-ordering enum.
+query IncidentTermOptions {
+  scapegoats(first: 100, where: { hideEmpty: false }) {
+    nodes {
+      slug
+      name
+    }
+  }
+  severities(first: 10, where: { hideEmpty: false }) {
+    nodes {
+      slug
+      name
+    }
+  }
+}

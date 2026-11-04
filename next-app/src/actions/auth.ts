@@ -2,10 +2,13 @@
 
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import type { ZodError } from 'zod';
 
 import { RegisterDeveloperDocument, VerifyDeveloperDocument, LoginDocument } from '@/gql/graphql';
 import { clearSessionCookies, setSessionCookies } from '@/lib/auth/cookies';
 import { fetchGraphQLAuthed, fetchGraphQL } from '@/lib/graphql/client';
+
+import { registerSchema, loginSchema, verifySchema } from '@/lib/validation/schemas';
 
 /**
  * EVERY EXPORT OF A 'use server' MODULE MUST BE AN ASYNC FUNCTION.
@@ -24,70 +27,18 @@ export type AuthFormState = {
   readonly fieldErrors: Readonly<Record<string, string>>;
 };
 
-/**
- * ─────────────────────────────────────────────────────────────────────────────
- * DATED DEBT — replaced in Lesson 16.1 by src/lib/validation/schemas.ts (Zod).
- *
- * `zod` is not a dependency yet, on purpose: it arrives with react-hook-form and
- * @hookform/resolvers so the whole form story lands in one lesson. Until then
- * this is fifty lines of hand-written checking, and it has the two weaknesses
- * you would expect. It does not narrow types (every value stays `string`), and
- * the rules live here instead of in a schema the client could share. Both are
- * exactly what 16.1 fixes. Do not extend this helper; replace it.
- * ─────────────────────────────────────────────────────────────────────────────
- */
-type FieldRule = {
-  readonly label: string;
-  readonly min: number;
-  readonly max: number;
-  readonly email?: boolean;
-  /** Passwords only. Trimming a passphrase changes it, and the user could then never sign in. */
-  readonly keepWhitespace?: boolean;
-};
-
-type FieldResult = { readonly value: string; readonly error: string | null };
-
-// Deliberately loose. An email regex that tries to implement RFC 5322 rejects
-// valid addresses; WordPress's is_email() is the real check and it runs in PHP
-// on every one of these values (Lesson 06.2 §6). This one catches typos.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-function field(formData: FormData, name: string, rule: FieldRule): FieldResult {
-  const raw = formData.get(name);
-
-  // FormData values are `string | File | null`. A File would stringify to
-  // "[object File]" and pass a length check, so `typeof` is the only honest test.
-  if (typeof raw !== 'string') {
-    return { value: '', error: `${rule.label} is required.` };
-  }
-
-  const value = rule.keepWhitespace === true ? raw : raw.trim();
-
-  if (value.length < rule.min) {
-    return { value, error: `${rule.label} must be at least ${rule.min} character(s).` };
-  }
-
-  if (value.length > rule.max) {
-    return { value, error: `${rule.label} must be ${rule.max} characters or fewer.` };
-  }
-
-  if (rule.email === true && !EMAIL_RE.test(value)) {
-    return { value, error: `${rule.label} does not look like an email address.` };
-  }
-
-  return { value, error: null };
-}
-
-function errorsOf(fields: Readonly<Record<string, FieldResult>>): Readonly<Record<string, string>> {
+function validationFailure(error: ZodError): AuthFormState {
   const errors: Record<string, string> = {};
 
-  for (const [name, result] of Object.entries(fields)) {
-    if (result.error !== null) {
-      errors[name] = result.error;
+  for (const issue of error.issues) {
+    const name = issue.path[0];
+
+    if (typeof name === 'string') {
+      errors[name] ??= issue.message;
     }
   }
 
-  return errors;
+  return { status: 'error', message: 'Check the fields below.', fieldErrors: errors };
 }
 
 /** One sentence, one reason. See the comment inside `register`. */
@@ -186,29 +137,18 @@ export async function register(
     return { status: 'error', message: TOO_MANY, fieldErrors: {} };
   }
 
-  const fields = {
-    displayName: field(formData, 'displayName', { label: 'Display name', min: 1, max: 80 }),
-    email: field(formData, 'email', { label: 'Email', min: 5, max: 190, email: true }),
-  };
+  const parsed = registerSchema.safeParse({
+    displayName: formData.get('displayName') ?? '',
+    email: formData.get('email') ?? '',
+    locale: formData.get('locale') ?? undefined,
+  });
 
-  const fieldErrors = errorsOf(fields);
-
-  if (Object.keys(fieldErrors).length > 0) {
-    return { status: 'error', message: 'Check the fields below.', fieldErrors };
+  if (!parsed.success) {
+    return validationFailure(parsed.error);
   }
 
   try {
-    const data = await fetchGraphQLAuthed(
-      RegisterDeveloperDocument,
-      {
-        email: fields.email.value,
-        displayName: fields.displayName.value,
-        // Module 20 reads the real locale from the route segment. Hard-coded
-        // here, and WordPress falls back to `en` for anything it does not know.
-        locale: 'en',
-      },
-      { kind: 'app' }
-    );
+    const data = await fetchGraphQLAuthed(RegisterDeveloperDocument, parsed.data, { kind: 'app' });
 
     if (data.registerDeveloper?.accepted !== true) {
       return { status: 'error', message: 'Registration could not be completed.', fieldErrors: {} };
@@ -238,33 +178,20 @@ export async function register(
  * before the human ever clicked it.
  */
 export async function verify(_previous: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const fields = {
-    uid: field(formData, 'uid', { label: 'Account reference', min: 1, max: 20 }),
-    token: field(formData, 'token', { label: 'Confirmation code', min: 8, max: 200 }),
-    password: field(formData, 'password', {
-      label: 'Password',
-      min: 12,
-      max: 200,
-      keepWhitespace: true,
-    }),
-  };
+  const parsed = verifySchema.safeParse({
+    uid: formData.get('uid') ?? '',
+    token: formData.get('token') ?? '',
+    password: formData.get('password') ?? '',
+  });
 
-  const fieldErrors = errorsOf(fields);
-
-  if (Object.keys(fieldErrors).length > 0) {
-    return { status: 'error', message: 'Check the fields below.', fieldErrors };
-  }
-
-  const userId = Number.parseInt(fields.uid.value, 10);
-
-  if (!Number.isSafeInteger(userId) || userId <= 0) {
-    return { status: 'error', message: 'That confirmation link is not valid.', fieldErrors: {} };
+  if (!parsed.success) {
+    return validationFailure(parsed.error);
   }
 
   try {
     const data = await fetchGraphQLAuthed(
       VerifyDeveloperDocument,
-      { userId, code: fields.token.value, password: fields.password.value },
+      { userId: parsed.data.uid, code: parsed.data.token, password: parsed.data.password },
       { kind: 'app' }
     );
 
@@ -316,23 +243,22 @@ export async function login(_previous: AuthFormState, formData: FormData): Promi
   const locale = safeLocale(formData.get('locale'));
   const nextPath = safeNextPath(formData.get('next'), `/${locale}`);
 
-  const fields = {
-    email: field(formData, 'email', { label: 'Email', min: 5, max: 190, email: true }),
-    // min: 1, not 12. This is a LOGIN: an old account may have a short password
-    // and refusing to even try would lock out a user WordPress would accept.
-    // Password policy belongs where the password is set, not where it is used.
-    password: field(formData, 'password', {
-      label: 'Password',
-      min: 1,
-      max: 200,
-      keepWhitespace: true,
-    }),
-  };
+  // The current login form calls its identifier "email"; the shared schema
+  // accepts a username or email, matching WordPress's login mutation.
+  const parsed = loginSchema.safeParse({
+    username: formData.get('email') ?? '',
+    password: formData.get('password') ?? '',
+  });
 
-  const fieldErrors = errorsOf(fields);
+  if (!parsed.success) {
+    const failure = validationFailure(parsed.error);
+    const fieldErrors: Record<string, string> = {};
 
-  if (Object.keys(fieldErrors).length > 0) {
-    return { status: 'error', message: 'Check the fields below.', fieldErrors };
+    for (const [name, message] of Object.entries(failure.fieldErrors)) {
+      fieldErrors[name === 'username' ? 'email' : name] = message;
+    }
+
+    return { ...failure, fieldErrors };
   }
 
   // ── 3. ASK WORDPRESS ───────────────────────────────────────────────
@@ -340,13 +266,7 @@ export async function login(_previous: AuthFormState, formData: FormData): Promi
   let refreshToken: string;
 
   try {
-    // `username` carries an EMAIL. wp_authenticate_email_password resolves it,
-    // and registerDeveloper never tells the user their generated login, so an
-    // email is the only identifier a public developer has (Lesson 15.2 Step 5).
-    const data = await fetchGraphQL(LoginDocument, {
-      username: fields.email.value,
-      password: fields.password.value,
-    });
+    const data = await fetchGraphQL(LoginDocument, parsed.data);
 
     const payload = data.login;
 

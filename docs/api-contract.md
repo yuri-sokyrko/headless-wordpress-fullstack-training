@@ -246,3 +246,27 @@ cannot know the term's slug before the response arrives and therefore cannot att
 
 Until it does, a renamed term appears on a picker block after its 60-second window rather than
 immediately. Both strings are built by `src/lib/graphql/tags.ts`; neither is typed by hand.
+
+## Input validation — the three layers (Lesson 16.1)
+
+| Layer             | Where                                                                | Purpose                                                    | Delete it and                                      |
+| ----------------- | -------------------------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| 1 — browser       | `zodResolver` in a client form                                       | the user sees the problem without a round trip             | messages get worse; **no** security change         |
+| 2 — Server Action | `schema.safeParse(formData)` in `src/actions/*`                      | this application never sends WordPress something malformed | typed field errors are lost; layer 3 still refuses |
+| 3 — WordPress     | `sanitize_*` + `is_email` + range checks in `includes/graphql/*.php` | **the only layer an attacker cannot go around**            | a security incident                                |
+
+Layer 1 removes zero attack surface: an attacker does not use the form. Layer 2 is the boundary of
+_our_ code. Layer 3 is the control, because `/graphql` is reachable directly and appendix 04 §6
+says the origin is discoverable from any media URL.
+
+Shape is not existence. A `regex` proves `s9-apocalyptic` is slug-shaped; only a lookup proves it
+is a `severity` term. Term allowlists are fetched from WordPress **server-side at submit time**,
+never accepted from the form.
+
+The auth actions parse extracted FormData fields with `registerSchema`, `loginSchema` and
+`verifySchema` from `next-app/src/lib/validation/schemas.ts`. Validation failures keep the first
+message per field as a string in `AuthFormState.fieldErrors`. The login form's `email` field maps
+to the schema's `username`, and errors map back to `email`. Passwords are never trimmed;
+verification requires 12–200 characters and a complete 32-character code, while login accepts
+any non-empty password. Registration passes the validated locale to WordPress, defaulting to `en`
+when it is omitted.

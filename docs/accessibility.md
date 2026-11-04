@@ -85,12 +85,23 @@ instead of asserted.
 Module 22 extends this file for the public site. Nothing here is covered by an automated check,
 which is why it is a table.
 
-| Attribute / role | Where                        | Justification                                                                                                             | Could a native element do it?                                  |
-| ---------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| role="alert"     | components/auth/AuthForm.tsx | announces the validation summary the moment it appears; implies aria-live="assertive", so no separate attribute is needed | no — there is no native element that announces its own arrival |
-| role="status"    | components/auth/AuthForm.tsx | the settled confirmation ("check your inbox"), announced politely rather than interrupting                                | no                                                             |
+| Attribute / role   | Where                        | Justification                                                                                                             | Could a native element do it?                                  |
+| ------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| role="alert"       | components/auth/AuthForm.tsx | announces the validation summary the moment it appears; implies aria-live="assertive", so no separate attribute is needed | no — there is no native element that announces its own arrival |
+| role="status"      | components/auth/AuthForm.tsx | the settled confirmation ("check your inbox"), announced politely rather than interrupting                                | no                                                             |
+| `role="alert"`     | `ui/form.tsx` `FormMessage`  | announces a validation message when it appears, without stealing focus                                                    | no — there is no element whose insertion is announced          |
+| `aria-invalid`     | `ui/form.tsx` `FormControl`  | the field is announced as invalid independently of its message                                                            | no                                                             |
+| `aria-describedby` | `ui/form.tsx` `FormControl`  | ties the hint **and** the error to the input                                                                              | partly — `<label>` names it, nothing describes it              |
+| `role="status"`    | `auth/RegisterForm.tsx`      | announces the success message politely                                                                                    | no                                                             |
 
-**Known gap, closed in Lesson 16.1.** Errors are a single summary region, not per-field
-messages. There is no aria-describedby linking an input to its error and no focus move to the
-first invalid field. That is the smaller version of the right pattern and it is written down
-here so it is a debt rather than an oversight.
+## Form errors — the pattern, once
+
+Every form in this app uses `ui/form.tsx`, so every form gets the same four mechanisms without
+remembering them. Three rules that are not in the code and have to be written down:
+
+1. The message element is **always rendered**, empty when there is no error. Unmounting it makes
+   the announcement unreliable.
+2. Ids come from `useId()`. Two instances of one form on one page must not collide.
+3. Focus moves to the **first invalid field**, from an effect keyed on the action's returned
+   state — so the client resolver, the server parse and the no-JavaScript round trip all land in
+   the same code path.
