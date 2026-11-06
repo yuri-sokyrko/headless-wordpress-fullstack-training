@@ -104,13 +104,10 @@ function submit_hobt_lead_payload( array $input, AppContext $context, ResolveInf
 	}
 
 	// ── 5. WRITE ───────────────────────────────────────────────────────
-	if ( ! leads_table_exists() ) {
-		// Module 16 creates the table. The caller learns that the endpoint is
-		// unavailable and nothing about schemas, tables or plugins.
-		graphql_debug( 'wp_btt_leads does not exist yet — Module 16 creates it with dbDelta().' );
-
-		throw new UserError( __( 'Temporarily unavailable.', 'blame-the-tech-core' ) );
-	}
+	// Lesson 16.3 created wp_btt_leads with dbDelta() in includes/Leads.php, so
+	// the table-existence guard Lesson 06.2 left here is GONE. Removing the
+	// table without removing the guard, or the guard without the table, leaves
+	// the funnel silently broken in one of two different ways.
 
 	global $wpdb;
 

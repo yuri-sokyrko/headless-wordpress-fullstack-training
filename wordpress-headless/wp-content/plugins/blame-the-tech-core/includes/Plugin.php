@@ -34,6 +34,7 @@ final class Plugin {
 		'includes/roles.php',
 		'includes/mail.php',
 		'includes/acf.php',
+		'includes/Leads.php',
 		'includes/graphql/enums.php',
 		'includes/graphql/fields.php',
 		'includes/graphql/app-token.php',
@@ -84,15 +85,10 @@ final class Plugin {
 		seed_default_terms();
 
 		grant_incident_caps_to_core_roles();
-
 		ensure_reporter_role();
-
-		// New in Lesson 15.3. Idempotent, and deliberately NOT gated on
-		// ROLES_VERSION: a role lives in a shared option that any plugin can
-		// add to, so this runs on every activation.
 		strip_reporter_extras();
-
 		close_wp_registration();
+		ensure_leads_table();
 
 		ensure_permalink_structure();
 
