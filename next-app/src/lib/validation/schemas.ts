@@ -170,3 +170,44 @@ export function refineTerms(allowed: IncidentTermAllowlist) {
     }
   });
 }
+
+/**
+ * Lead sources, stored KEBAB-case, matching wp_btt_leads.source and the SCF
+ * select convention. The block attribute `leadSource` on btt/hobt-cta uses the
+ * same values. The GraphQL enum is LeadSource (appendix 03 §3) in
+ * SCREAMING_SNAKE, and src/actions/leads.ts maps between them.
+ */
+export const LEAD_SOURCES = [
+  'hobt-hero',
+  'hobt-cta-block',
+  'hobt-footer',
+  'incident-sidebar',
+] as const;
+
+export const leadSchema = z.object({
+  email,
+  // wp_btt_leads.full_name varchar(190), and mutation-submit-hobt-lead.php
+  // checks '' === $full_name || mb_strlen( $full_name ) > 190.
+  fullName: z.string().trim().min(1, 'Enter your name.').max(190, 'That name is too long.'),
+  company: z.string().trim().max(190, 'That company name is too long.').default(''),
+  // varchar(32). A free-text bucket rather than an enum, because marketing
+  // changes the brackets and a schema change is the wrong cost for that.
+  teamSize: z.string().trim().max(32).default(''),
+  source: z.enum(LEAD_SOURCES),
+  locale,
+  // A checkbox posts 'on' when ticked and is ABSENT when not, so a boolean
+  // schema would see `undefined` and a `z.boolean()` would reject it with a
+  // type error rather than "consent is required". Model what FormData sends.
+  consent: z.literal('on', {
+    errorMap: () => ({ message: 'Please confirm you are happy to be contacted.' }),
+  }),
+  // The HONEYPOT. A human never fills this, so anything at all is a refusal.
+  // Validated, not ignored: a schema that drops the field cannot refuse on it.
+  website: z.literal('').default(''),
+  // The UNSIGNED render timestamp. Weak by construction (§5) — a bot can
+  // rewrite it. Kept because it costs one hidden input.
+  renderedAt: z.string().trim().default(''),
+  // The Turnstile token. Shape only; the verdict comes from siteverify.
+  turnstileToken: z.string().trim().default(''),
+});
+export type LeadInput = z.infer<typeof leadSchema>;

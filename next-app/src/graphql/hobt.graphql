@@ -41,3 +41,11 @@ query HobtPromo($uri: ID!) {
     }
   }
 }
+
+# `accepted` is the ONLY output field. No row id, and no way to tell a duplicate
+# from a new lead — Lesson 06.2 §9 and §8, on purpose.
+mutation SubmitHobtLead($input: SubmitHobtLeadInput!) {
+  submitHobtLead(input: $input) {
+    accepted
+  }
+}

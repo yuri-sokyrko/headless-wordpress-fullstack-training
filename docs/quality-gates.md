@@ -50,3 +50,31 @@ questions. **Every cell has a real answer, and "n/a" always carries its reason.*
   HMAC over the body.
 
 (Add your own row: which entry point would you attack first, and which cell is the reason?)
+
+## PII and logging (Lesson 16.3)
+
+`wp_btt_leads` is the only place in this application that stores personal data. Five rules, no
+exceptions, and each one is grep-checkable.
+
+| Rule                                              | Enforced by                                                                                                                                                                                                                                                 |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The raw IP is never stored                        | there is no `ip` column. `ip_hash CHAR(64)` cannot hold a dotted quad                                                                                                                                                                                       |
+| `ip_hash` is a **keyed** HMAC, never a plain hash | `hash_hmac( 'sha256', $ip, BTT_LEAD_IP_HMAC_KEY )`. An unkeyed IPv4 hash is brute-forceable in seconds — 2^32 inputs                                                                                                                                        |
+| No email, IP or token in a log line               | `grep -rn 'console' next-app/src/actions/` returns nothing. The one `catch` that binds an error reads `error.errors` — WordPress's own fixed message set — and never serialises the object, which can carry the request options and therefore the app token |
+| No request body in an error path                  | the generic `REFUSED` message, from a fixed set                                                                                                                                                                                                             |
+| Duplicates are accepted, not reported             | `UNIQUE KEY (email, source)` in MySQL. Telling a caller the address is known is an enumeration oracle                                                                                                                                                       |
+
+**Why logging is a data-protection question and not an ops one.** A log line has no schema, no
+retention policy, no deletion-request workflow and much wider read access than the database — and
+it is replicated to wherever the log drain points. Anything you log, you have published to a system
+with none of the controls you built. Module 24's Sentry `beforeSend` scrubber is checked against
+this table.
+
+Rotating `BTT_LEAD_IP_HMAC_KEY` makes historic hashes unlinkable from new ones. That is a deletion
+mechanism, and it costs you abuse-detection history. `docs/runbook.md` records the date.
+
+Add this row to the entry-point matrix from Lesson 15.5:
+
+| Entry point           | AuthN                                                                                                               | AuthZ                                                                                                                                                                    | Validation                                                | Rate limit                  | CSRF                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | --------------------------- | -------------------------------- |
+| `submitLead` (action) | none — the caller is anonymous by definition; the **application** authenticates to WordPress with `X-BTT-App-Token` | n/a, and here is why: there is no subject to authorise. Entitlement to write is decided by the spam stack — honeypot, Cloudflare-issued timestamp, Turnstile, rate limit | `leadSchema.safeParse`, then PHP re-validates every field | Upstash per IP, fail closed | Next Origin/Host on action POSTs |

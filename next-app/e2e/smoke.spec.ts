@@ -134,14 +134,6 @@ test.describe('the app shell', () => {
 
     await expect(page.getByRole('link', { name: 'Start Now' })).toHaveCount(2);
     await expect(page.getByRole('button', { name: 'Get Demo' })).toHaveCount(2);
-
-    // aria-disabled, NOT disabled: an inert control must stay in the tab order,
-    // or a keyboard user never reaches the sentence explaining why it does
-    // nothing. Lesson 11.5's `aria-*` inventory records the reasoning.
-    await expect(page.getByRole('button', { name: 'Get Demo' }).first()).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
   });
 
   test('the seeded primary menu renders four top-level items', async ({ page }) => {

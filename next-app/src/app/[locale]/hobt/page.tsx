@@ -8,6 +8,7 @@ import { HobtPromoDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { pageTag } from '@/lib/graphql/tags';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
+import { LeadForm } from '@/components/hobt/LeadForm';
 
 // The ROUTE-SEGMENT cache: how long the rendered page may be reused. 60s because
 // `seatsLeft` drives a live badge — Lesson 10.3's policy table. Everything else
@@ -54,11 +55,11 @@ export default async function HobtPage({
       >
         {/* HobtCtaBand, instance one — inside the hero, via `children`. */}
         <HobtCtaBand
-          idPrefix="hero"
           heading="Stop blaming DNS. Start shipping."
           blurb={null}
           startNowUrl={promo.startNowUrl}
           demoBookingUrl={promo.demoBookingUrl}
+          locale={locale}
         />
       </HobtHero>
 
@@ -75,12 +76,18 @@ export default async function HobtPage({
         {/* HobtCtaBand, instance two — same component, different props, no
             positional flag anywhere. That is Key Concept 2, proved. */}
         <HobtCtaBand
-          idPrefix="closing"
           heading="Ready to omit blaming tech?"
           blurb="Nine modules. One incident-free quarter. Probably."
           startNowUrl={promo.startNowUrl}
           demoBookingUrl={promo.demoBookingUrl}
+          locale={locale}
+          leadSource="hobt-footer"
         />
+      </section>
+
+      <section id="lead" className="mx-auto w-full max-w-md py-16">
+        <h2 className="text-2xl font-semibold tracking-tight">Book a demo</h2>
+        <LeadForm source="hobt-footer" locale={locale} demoBookingUrl={promo.demoBookingUrl} />
       </section>
     </>
   );

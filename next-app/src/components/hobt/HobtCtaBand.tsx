@@ -1,22 +1,29 @@
 import { Button } from '@/components/ui/button';
+// Anchored edit: replace the inert GET DEMO block and the explanatory <p>
+// beneath it. `noteId` and the `aria-describedby` it fed go with them.
+import { GetDemoDialog } from '@/components/hobt/GetDemoDialog';
+import type { LEAD_SOURCES } from '@/lib/validation/schemas';
 
 export function HobtCtaBand({
-  idPrefix,
   heading,
   blurb,
   startNowUrl,
   demoBookingUrl,
+  locale,
+  // Kebab-case, matching wp_btt_leads.source and the btt/hobt-cta block's
+  // `leadSource` attribute. The block component from Lesson 14.4 passes its
+  // attribute straight through.
+  leadSource = 'hobt-hero',
 }: {
   // An identity, not a place. The component renders identically whichever
   // value it gets — Key Concept 2.
-  readonly idPrefix: string;
   readonly heading: string;
   readonly blurb: string | null;
   readonly startNowUrl: string | null;
   readonly demoBookingUrl: string | null;
+  readonly locale: string;
+  readonly leadSource?: (typeof LEAD_SOURCES)[number];
 }) {
-  const noteId = `${idPrefix}-demo-note`;
-
   return (
     <div className="border-border bg-card rounded-lg border p-6">
       <p className="text-lh font-semibold tracking-tight">{heading}</p>
@@ -36,24 +43,8 @@ export function HobtCtaBand({
           </Button>
         ) : null}
 
-        {/* GET DEMO — deliberately inert. No <form>, no onClick, no fetch.
-            `aria-disabled` rather than `disabled`: a disabled control leaves the
-            tab order, so a keyboard user would never reach the button OR the
-            sentence explaining it. Lesson 11.4 Key Concept 1. */}
-        {demoBookingUrl !== null && demoBookingUrl !== '' ? (
-          <Button variant="outline" size="xl" aria-disabled="true" aria-describedby={noteId}>
-            Get Demo
-          </Button>
-        ) : null}
+        <GetDemoDialog source={leadSource} locale={locale} demoBookingUrl={demoBookingUrl} />
       </div>
-
-      {demoBookingUrl !== null && demoBookingUrl !== '' ? (
-        // VISIBLE, not just announced. A control that does nothing needs a
-        // reason a sighted mouse user can also read.
-        <p id={noteId} className="text-muted-foreground mt-3 text-xs">
-          Demo booking opens in Module 16, once the lead form is validated and rate limited.
-        </p>
-      ) : null}
     </div>
   );
 }
