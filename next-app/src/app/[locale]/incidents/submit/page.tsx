@@ -1,12 +1,13 @@
 import Link from 'next/link';
 
+import { IncidentTermOptionsDocument } from '@/gql/graphql';
 import { requireCapability } from '@/lib/auth/guards';
+import { IncidentSubmitForm } from '@/components/incidents/IncidentSubmitForm';
+import { fetchGraphQL } from '@/lib/graphql/client';
+import { taxonomyListTag } from '@/lib/graphql/tags';
 
 export const dynamic = 'force-dynamic';
 
-// A STATIC segment beats a dynamic sibling: /en/incidents/submit resolves here
-// and not through [slug]/page.tsx with slug="submit". Worth knowing, because the
-// symptom of getting it wrong is a 404 for a page that plainly exists.
 export default async function SubmitIncidentPage({
   params,
 }: {
@@ -20,20 +21,33 @@ export default async function SubmitIncidentPage({
     'incident_reporter'
   );
 
+  const terms = await fetchGraphQL(IncidentTermOptionsDocument, undefined, {
+    revalidate: 60,
+    tags: [taxonomyListTag('scapegoat'), taxonomyListTag('severity')],
+  });
+
+  const options = (
+    nodes: ReadonlyArray<{ slug?: string | null; name?: string | null } | null> | null | undefined
+  ) =>
+    (nodes ?? []).flatMap((node) =>
+      node?.slug && node?.name ? [{ slug: node.slug, name: node.name }] : []
+    );
+
   return (
-    <section className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-semibold tracking-tight">File an incident</h1>
+    <section className="mx-auto w-full max-w-3xl px-4 py-12">
+      <h1 className="text-2xl font-semibold tracking-tight">Submit an incident</h1>
 
-      <p className="text-muted-forefround mt-2 text-sm">
-        Signed in as {session.displayName}. Every submission is created as <code>pending</code> and
-        reviewed by an editor before it appears — that is enforced in WordPress, not here.
+      <p className="text-muted-foreground mt-2 text-sm">
+        Every submission is reviewed by a moderator before it appears. Nothing you send here is
+        published automatically — your account has no publishing capability at all.
       </p>
 
-      <p className="border-border mt-6 rounded-md border border-dashed p-4 text-sm">
-        The submission form arrives in Module 16, with Zod validation, a shared rate limiter and an
-        accessible error pattern. The <strong>guard</strong> you just walked through is finished:
-        Lesson 16.2 replaces this shell and leaves it alone.
-      </p>
+      <IncidentSubmitForm
+        locale={locale}
+        scapegoats={options(terms.scapegoats?.nodes)}
+        severities={options(terms.severities?.nodes)}
+        reporterDisplayName={session.displayName}
+      />
 
       <p className="mt-6 text-sm">
         <Link href={`/${locale}/account`} className="underline">

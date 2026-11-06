@@ -21,6 +21,40 @@ use WPGraphQL\AppContext;
 
 defined( 'ABSPATH' ) || exit;
 
+/** Five submissions per ten minutes per user. Lesson 16.2 §6. */
+const SUBMISSION_LIMIT = 5;
+const SUBMISSION_WINDOW = 600;
+
+/**
+ * The AUTHORITATIVE rate limit.
+ *
+ * The Next.js limiter (src/lib/rate-limit.ts) is keyed on IP, runs before
+ * authentication, and sheds load at the edge. It is also bypassed the moment
+ * somebody finds this origin, which every media sourceUrl in every response
+ * makes inevitable (appendix 04 §6). This one is keyed on the USER, runs after
+ * authorisation, and cannot be routed around.
+ *
+ * set_transient() RESETS the expiry, so the window SLIDES forward on every
+ * hit rather than staying fixed: a reporter who submits four times every nine
+ * minutes never returns to zero. That is acceptable here — the goal is to
+ * blunt a burst, not to bill anyone — and a fixed window would need a stored
+ * start timestamp. With a persistent object cache a transient can also be
+ * evicted early, so this is best-effort by construction. Say which one you
+ * built; never let a reader assume the other.
+ *
+ * @throws \GraphQL\Error\UserError When the budget is spent.
+ */
+function require_submission_budget(int $user_id): void {
+	$key = 'btt_ci_' . $user_id;
+	$hits = (int) get_transient($key);
+
+	if($hits >= SUBMISSION_LIMIT) {
+		throw new UserError(__('Too many submissions. Try again later.', 'blame-the-tech-core'));
+	}
+
+	set_transient($key, $hits, SUBMISSION_WINDOW);
+}
+
 /**
  * Resolve a term slug to a term ID, or fail.
  *
@@ -150,6 +184,10 @@ function create_incident_payload( array $input, AppContext $context, ResolveInfo
 	// checked here: it is a content setting, not an authorisation decision,
 	// and a mutation that fails closed when an SCF options page has never
 	// been saved takes the submission form down for a reason nobody can see.
+
+	// ── 2b. RATE LIMIT ─────────────────────────────────────────────────
+	// After authorisation, because the key is the user id. Lesson 16.2 §6.
+	require_submission_budget(get_current_blog_id());
 
 	// ── 3. SANITISE ────────────────────────────────────────────────────
 	$title    = sanitize_text_field( (string) ( $input['title'] ?? '' ) );

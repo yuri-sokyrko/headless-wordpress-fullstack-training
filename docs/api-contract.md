@@ -270,3 +270,62 @@ to the schema's `username`, and errors map back to `email`. Passwords are never 
 verification requires 12–200 characters and a complete 32-character code, while login accepts
 any non-empty password. Registration passes the validated locale to WordPress, defaulting to `en`
 when it is omitted.
+
+## Server Actions — the five-step skeleton (Lesson 16.2)
+
+Every Server Action in this application is these five steps, in this order, with the numbers as
+comments. If an action skips a step, the skip is a bug, and a reviewer must be able to see the
+gap by reading the comments.
+
+| #   | Step                                            | Failure mode            | Response                                                        |
+| --- | ----------------------------------------------- | ----------------------- | --------------------------------------------------------------- |
+| 1   | `limit(key)` by IP                              | Redis unreachable       | **fail closed** — refuse the write                              |
+| 2   | `schema.safeParse(formData)`                    | invalid input           | typed field errors. **Never `throw`**                           |
+| 3   | `getSession()` then the capability read         | no session / wrong role | error state, not a redirect — a redirect loses the input        |
+| 4   | `fetchGraphQLAuthed(..., credential)`           | WordPress disagrees     | surface it. WordPress is the authority                          |
+| 5   | `revalidatePath` / `revalidateTag`, then return | stale page              | tag names come from `src/lib/graphql/tags.ts`, never hand-typed |
+
+Step 5 is a decision, not a ritual. `submitIncident` creates a `pending` post, so no public page
+changes and the `incidents` list tag is deliberately **not** expired; what is stale is the Router
+Cache entry for `/{locale}/account`. Module 18's webhook expires the public tags at the moment
+publication actually happens.
+
+Creation is confirmed by the returned incident's positive `databaseId`, not its `slug`.
+WordPress can leave a pending post's slug empty until publication. A missing confirmation or
+interrupted response does not prove that the write failed; the form must not claim nothing
+was saved or encourage an immediate duplicate submission.
+
+## Reads tolerate a partial response; writes do not (Lesson 15.2)
+
+Lesson 10.4's policy — log the `errors` array, return whatever `data` arrived — is right for a
+query and wrong for a mutation. A WPGraphQL mutation field is nullable, so a refused write arrives
+as `data: { createIncident: null }` **with** `errors`; `data` is technically present, so the
+partial-response rule would return a null payload and leave WordPress's own sentence in a log.
+
+|                                  | `fetchGraphQL`             | `fetchGraphQLAuthed`            |
+| -------------------------------- | -------------------------- | ------------------------------- |
+| Used for                         | reads                      | writes                          |
+| `data` present, `errors` present | log, return partial `data` | **throw `GraphQLRequestError`** |
+| `data` null or absent            | throw                      | throw                           |
+
+**No call site chooses the policy.** The function you call decides, so there is no option to forget
+on the one mutation where it mattered. Lesson 15.2 wrote the split into `client.ts` as an
+`execute()` policy parameter that only those two wrappers set.
+
+Every action therefore ends with the same catch:
+
+| Thrown                | Response                                                                                                                                                                                            |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GraphQLRequestError` | `formatGraphQLErrors(error.errors)` — **WordPress's own wording**, safe by construction because Lesson 06.2 §8 fixed the message set to single sentences with no path, plugin, class or SQL in them |
+| anything else         | a generic sentence. A timeout has no WordPress message, and an opaque failure is the honest answer                                                                                                  |
+
+The error object itself is never logged or serialised: a `fetch` error can carry the request
+options, and those carry a Bearer token or the app token.
+
+## Entry points added in Module 16
+
+Add these rows to the entry-point matrix Lesson 15.5 put in `docs/quality-gates.md`:
+
+| Entry point               | AuthN                                    | AuthZ                                                            | Validation                                          | Rate limit                                                        | CSRF                                          |
+| ------------------------- | ---------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------- |
+| `submitIncident` (action) | session cookie → `{ kind: 'user', jwt }` | `create_incidents` **in PHP**; the role read in the action is UX | `refineTerms(...).safeParse`, then PHP re-validates | Upstash per IP (fail closed) **plus** a per-user transient in PHP | Next Origin/Host on action POSTs + `SameSite` |

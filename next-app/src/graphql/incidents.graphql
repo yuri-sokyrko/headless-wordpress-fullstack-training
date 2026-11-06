@@ -89,3 +89,18 @@ query IncidentTermOptions {
     }
   }
 }
+
+# `status` is a String on the way OUT, carrying the raw post_status (`pending`).
+# The INPUT `status` field is PostStatusEnum, is accepted, and is always
+# discarded — Lesson 06.2 §5. Selecting the output field is how the
+# Verification block proves it.
+mutation CreateIncident($input: CreateIncidentInput!) {
+  createIncident(input: $input) {
+    incident {
+      databaseId
+      slug
+      title
+      status
+    }
+  }
+}
