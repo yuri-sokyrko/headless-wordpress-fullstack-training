@@ -1,7 +1,5 @@
-import { Button } from '@/components/ui/button';
-// Anchored edit: replace the inert GET DEMO block and the explanatory <p>
-// beneath it. `noteId` and the `aria-describedby` it fed go with them.
 import { GetDemoDialog } from '@/components/hobt/GetDemoDialog';
+import { StartNowButton } from '@/components/hobt/StartNowButton';
 import type { LEAD_SOURCES } from '@/lib/validation/schemas';
 
 export function HobtCtaBand({
@@ -32,17 +30,7 @@ export function HobtCtaBand({
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        {/* START NOW — a real link when the URL exists. asChild so this renders
-            ONE <a>, not an anchor inside a button (Lesson 11.2 Key Concept 7).
-            Plain <a href>, not next/link: the target is off-site. */}
-        {startNowUrl !== null && startNowUrl !== '' ? (
-          <Button asChild variant="blame" size="xl">
-            <a href={startNowUrl} rel="noopener noreferrer">
-              Start Now
-            </a>
-          </Button>
-        ) : null}
-
+        <StartNowButton startNowUrl={startNowUrl} locale={locale} leadSource={leadSource} />
         <GetDemoDialog source={leadSource} locale={locale} demoBookingUrl={demoBookingUrl} />
       </div>
     </div>

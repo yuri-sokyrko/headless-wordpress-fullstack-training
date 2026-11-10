@@ -9,13 +9,14 @@ import { headers } from 'next/headers';
 import {
   CreateIncidentDocument,
   IncidentTermOptionsDocument,
+  SiteChromeDocument,
   type CreateIncidentInput,
 } from '@/gql/graphql';
 import { readAccessToken } from '@/lib/auth/cookies';
 import { getSession } from '@/lib/auth/session';
 import { fetchGraphQLAuthed, fetchGraphQL } from '@/lib/graphql/client';
 import { formatGraphQLErrors, isGraphQLRequestError } from '@/lib/graphql/errors';
-import { listTag, taxonomyListTag } from '@/lib/graphql/tags';
+import { listTag, taxonomyListTag, siteTag } from '@/lib/graphql/tags';
 import { limit } from '@/lib/rate-limit';
 import {
   refineTerms,
@@ -120,6 +121,31 @@ export async function submitIncident(
         verdict.reason === 'exceeded'
           ? `Too main submissions. Try again in ${verdict.retryAfterSeconds} seconds.`
           : 'Submissions are temporarily unavailable. Try again shortly.',
+    };
+  }
+
+  // ── 1b. KILL SWITCH ────────────────────────────────────────────────
+  // Lesson 04.3 promised this refuses BEFORE it validates anything, so it sits
+  // here rather than inside step 3. It is a CONTENT setting, not an
+  // authorisation decision (Lesson 16.4 §5) — which is why it is read here and
+  // deliberately not in createIncident.
+  const chrome = await fetchGraphQL(SiteChromeDocument, undefined, {
+    revalidate: 60,
+    tags: [siteTag()],
+  });
+
+  // `!== false`, not `=== true`. TWO optional links, because the shape is two
+  // levels: `siteSettings` is the SCF options PAGE and `siteChrome` is the field
+  // group on it (Lesson 04.3 §5). Either can be null on an install nobody has
+  // saved, and treating null as "closed" gives a fresh environment a dead
+  // submission form for a reason no error message mentions. Compare the rate
+  // limiter above, which fails CLOSED on a missing variable, because that one
+  // IS a security control. Lesson 16.4 §5 has the test for telling them apart.
+  if (chrome.siteSettings?.siteChrome?.incidentSubmissionOpen === false) {
+    return {
+      status: 'error',
+      message:
+        'Incident submitssion is paused right now. Nothing you typed was sent - try again later.',
     };
   }
 

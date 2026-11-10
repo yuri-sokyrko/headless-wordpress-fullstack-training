@@ -36,6 +36,7 @@ export default async function IncidentPage({
   const scapegoat = incident.scapegoats?.nodes[0];
   const downtime = details?.downtimeMinutes;
   const confidence = details?.blameConfidence;
+  const estimtedCostUsd = details?.estimatedCostUsd;
 
   return (
     <>
@@ -54,8 +55,11 @@ export default async function IncidentPage({
         <dt>Downtime</dt>
         <dd>{downtime == null ? 'Not recorded' : `${downtime} minutes`}</dd>
 
+        <dt>Estimated cost USD</dt>
+        <dd>{estimtedCostUsd == null ? 'Not recorded' : `${estimtedCostUsd}$`}</dd>
+
         <dt>Blame confidence</dt>
-        <dd>{confidence == null ? 'Not recorded' : `${confidence}$`}</dd>
+        <dd>{confidence == null ? 'Not recorded' : `${confidence}%`}</dd>
       </dl>
 
       {details?.stackTrace ? <pre>{details.stackTrace}</pre> : null}

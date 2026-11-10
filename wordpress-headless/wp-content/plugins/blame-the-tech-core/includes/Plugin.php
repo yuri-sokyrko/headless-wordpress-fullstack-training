@@ -31,6 +31,7 @@ final class Plugin {
 		'includes/taxonomies.php',
 		'includes/statuses.php',
 		'includes/admin/incident-columns.php',
+		'includes/admin/moderation-queue.php',
 		'includes/roles.php',
 		'includes/mail.php',
 		'includes/acf.php',

@@ -86,3 +86,31 @@ A flaky test is a broken test. It gets fixed or deleted in the pull request that
 never re-run until green, and never left with a comment saying it is known to be flaky. A
 suite that fails one run in forty teaches people to ignore red, which is worse than having no
 suite at all.
+
+## 7. The funnel spec (Lesson 16.4)
+
+`e2e/funnel.spec.ts` is one test that crosses both applications, two authentication systems, a
+cache and an email server. It is the most fragile spec in the suite and it is worth having anyway,
+because it is the only thing that answers "does the product work".
+
+| It controls        | How                                                                             |
+| ------------------ | ------------------------------------------------------------------------------- |
+| A fresh developer  | a per-run email, so `email_exists()` never makes the registration a no-op       |
+| Email verification | read from Mailpit's API; the link's origin is rebuilt against `baseURL`         |
+| A reporter session | the **seeded** `reporter`, because `registerDeveloper` never returns a password |
+| A predictable slug | derived from a run-id-bearing title, so WordPress never appends `-2`            |
+| An editor session  | `wp-login.php`, from `BTT_EDITOR_PASSWORD` in the invoking shell                |
+| Cleanup            | `e2e/global-setup.ts` with `E2E_MODE=1`. The spec deletes nothing itself        |
+
+**It asserts no counts.** It creates one incident and asserts on that one, so it cannot break when
+the seed set stops being exactly forty incidents.
+
+**It asserts the detail page, not the archive.** A never-rendered detail URL has no cache entry and
+renders on demand; the archive has one and stays stale until the revalidate window expires. Asserting
+the archive would mean sleeping, and a spec with a `sleep` in it is a spec that is slow _and_ flaky.
+Lesson 18.3 makes the archive assertable.
+
+**Storage state is deferred to Lesson 23.6.** Reusing a logged-in profile is faster and hides the
+login path this spec exists to prove, and it makes specs order-dependent. 23.6 introduces it with
+the least-privilege `e2e_agent` account, once enough authenticated specs exist to pay for the
+coupling. Until then the spec runs under `smoke`, the only project defined before Lesson 22.4.
