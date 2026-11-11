@@ -439,3 +439,19 @@ discriminated union `Credential` and not a `string`: substitution is a compile e
 
 `Credential { kind: 'app' }` carries no token. `src/lib/graphql/client.ts` reads WP_APP_TOKEN
 from the environment itself, so an app token cannot arrive from a call site.
+
+## Faust.js evaluation, evidence log (Lesson 17.1)
+
+Spike: `faust-spike/`, own `package.json`, own `node_modules`, port 3001, same WordPress on 8080.
+Deleted in Lesson 17.4; the commit is kept.
+
+| Scorecard row                   | What I ran                                                      | What I saw                                                              |
+| ------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| WP template hierarchy in React  | `curl :3001/incidents/incident-01`                              | rendered by `wp-templates/single-incident.js` with no route file — TRUE |
+| Data layer: Apollo, coupled     | `grep -rn '@apollo/client' faust-spike/`                        | the transport under every layer; not swappable                          |
+| `revalidateTag` / on-demand ISR | `grep -rn 'revalidateTag' faust-spike/`                         | no hits, and no call site to add one — measured properly in 17.3        |
+| App Router currency             | `npm view @faustwp/core version time.modified peerDependencies` | (write the version, the date and the peer ranges you saw)               |
+| Licence (Lesson 07.1 §9)        | `npm view @faustwp/core license`                                | (write exactly what it printed)                                         |
+
+Two round trips before first byte, because the seed query must resolve the URI before the
+template's own query can run. This app's routes answer the same question from the file system.

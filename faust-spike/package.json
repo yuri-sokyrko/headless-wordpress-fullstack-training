@@ -1,0 +1,21 @@
+{
+  "name": "faust-spike",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "DELETED IN LESSON 17.4. A time-boxed Faust.js evaluation. Not part of the product.",
+  "scripts": {
+    "dev": "PORT=3001 faust dev",
+    "build": "faust build",
+    "start": "PORT=3001 faust start"
+  },
+  "dependencies": {
+    "@apollo/client": "4.3.8",
+    "@faustwp/cli": "4.1.1",
+    "@faustwp/core": "4.1.1",
+    "graphql": "16.15.0",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}
