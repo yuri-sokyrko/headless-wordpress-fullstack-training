@@ -20,8 +20,8 @@ query IncidentsList($first: Int!, $after: String, $search: String) {
 }
 
 # `id: $slug, idType: SLUG`. A bare `id:` carrying a slug returns null — Lesson 05.3.
-query IncidentBySlug($slug: ID!) {
-  incident(id: $slug, idType: SLUG) {
+query IncidentBySlug($slug: ID!, $asPreview: Boolean) {
+  incident(id: $slug, idType: SLUG, asPreview: $asPreview) {
     ...IncidentDetailFields
   }
 }

@@ -1,7 +1,11 @@
 import { notFound } from 'next/navigation';
-import { fetchGraphQL } from '@/lib/graphql/client';
+import { draftMode } from 'next/headers';
+
+import { fetchGraphQL, fetchGraphQLAuthed } from '@/lib/graphql/client';
 import { PostBySlugDocument, PostsSlugDocument } from '@/gql/graphql';
 import { postTag, listTag } from '@/lib/graphql/tags';
+import { readPreviewToken } from '@/lib/auth/cookies';
+
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
 // Runs at build time. Both params, because [locale] is dynamic too.
@@ -19,11 +23,23 @@ export default async function PostPage({
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  const { post } = await fetchGraphQL(
-    PostBySlugDocument,
-    { slug },
-    { revalidate: 3600, tags: [postTag(slug), listTag('post')] }
-  );
+  const { isEnabled } = await draftMode();
+  const previewJwt = isEnabled ? await readPreviewToken() : null;
+
+  const data =
+    previewJwt === null
+      ? await fetchGraphQL(
+          PostBySlugDocument,
+          { slug },
+          { revalidate: 3600, tags: [postTag(slug), listTag('post')] }
+        )
+      : await fetchGraphQLAuthed(
+          PostBySlugDocument,
+          { slug, asPreview: true },
+          { kind: 'user', jwt: previewJwt }
+        );
+
+  const { post } = data;
 
   if (post == null) notFound();
 

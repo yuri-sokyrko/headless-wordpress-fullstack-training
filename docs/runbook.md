@@ -58,3 +58,28 @@ when you do it.
 whose `btt_verified` meta is not `1`. A seeded or pre-existing reporter has no such meta, so run
 `wp user meta update reporter btt_verified 1` once after a fresh seed, or the submit form refuses a
 correctly authenticated reporter with a permission error.
+
+## Rotating the preview shared secret (Lesson 17.2)
+
+**When:** a leaked copy of either env file, an offboarded engineer, or on a schedule.
+
+**Effect, stated before you do it:** every preview link already sitting in a browser tab or a
+Slack message stops working. No editor is signed out of anything — this secret signs preview
+tokens and nothing else. Worst case, an editor clicks Preview again.
+
+**Steps**
+
+1. `openssl rand -base64 48 | tr -d '\n=+/' | cut -c1-48`
+2. Write it to `BTT_PREVIEW_SHARED_SECRET` in `wordpress-headless/.env` **and**
+   `PREVIEW_SHARED_SECRET` in `next-app/.env.local`, in the same maintenance window. A mismatch
+   fails every preview with a 401 that looks exactly like an expired token.
+3. `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate wordpress`
+4. Assert without printing:
+   `diff <(grep -E '^BTT_PREVIEW_SHARED_SECRET=' wordpress-headless/.env | cut -d= -f2-) <(grep -E '^PREVIEW_SHARED_SECRET=' next-app/.env.local | cut -d= -f2-)`
+5. In production: `fly secrets set BTT_PREVIEW_SHARED_SECRET=…` and the Vercel environment
+   variable, then redeploy Next so the new value is in the running runtime.
+6. Success signal, from the outside, in under a minute: click Preview in wp-admin and land on the
+   draft with the banner showing.
+
+**What this does NOT fix:** a leaked `BTT_APP_TOKEN`. That is a separate rotation (Lesson 15.2),
+and `/preview/verify` fails closed until both sides match.

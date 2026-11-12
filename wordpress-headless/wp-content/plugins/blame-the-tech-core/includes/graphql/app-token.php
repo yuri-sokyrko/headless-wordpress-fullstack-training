@@ -43,6 +43,25 @@ function presented_app_token(): string {
 }
 
 /**
+ * Does the caller hold the application token? The DECISION, with no opinion
+ * about how to fail — because the failure differs per transport. Added in
+ * Lesson 17.2, when the same guard had to serve a REST route.
+ *
+ * hash_equals() still appears exactly once in this plugin, and it appears here.
+ */
+function app_token_matches(): bool {
+	$expected = expected_app_token();
+
+	// Fail CLOSED on a misconfigured server: no token set authenticates nobody.
+	// hash_equals( '', '' ) is true, which is why this branch exists at all.
+	if ( '' === $expected ) {
+		return false;
+	}
+
+	return hash_equals( $expected, presented_app_token() );
+}
+
+/**
  * Require a valid application token, or fail the mutation.
  *
  * hash_equals(), NOT == or ===. String comparison returns as soon as two bytes
@@ -55,19 +74,8 @@ function presented_app_token(): string {
  * @throws \GraphQL\Error\UserError If the token is missing, empty or wrong.
  */
 function require_app_token(): void {
-	$expected = expected_app_token();
-
-	// A misconfigured server must never authenticate everyone. If the
-	// environment variable is absent, every call fails closed.
-	if ( '' === $expected ) {
-		graphql_debug( 'BTT_APP_TOKEN is not set in the WordPress environment.' );
-
-		throw new UserError( __( 'Not authorized.', 'blame-the-tech-core' ) );
-	}
-
-	if ( ! hash_equals( $expected, presented_app_token() ) ) {
-		// Same message for missing, empty, short, long and wrong. A caller
-		// entitled to this mutation already holds the token.
+	if ( ! app_token_matches() ) {
+		// Same message for missing, empty, short, long and wrong.
 		throw new UserError( __( 'Not authorized.', 'blame-the-tech-core' ) );
 	}
 }

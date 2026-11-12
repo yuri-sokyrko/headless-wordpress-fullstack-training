@@ -5954,6 +5954,9 @@ type ContentType implements Node & UniformResourceIdentifiable {
   "Whether this content type should can be exported."
   canExport: Boolean
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the ContentType type and the Taxonomy type"
   connectedTaxonomies(
     "The number of items to return after the referenced \"after\" cursor"
@@ -6074,12 +6077,18 @@ type ContentType implements Node & UniformResourceIdentifiable {
   "Whether to generate and allow a UI for managing this content type in the admin."
   showUi: Boolean
 
+  ""
+  templates: [String]
+
   "The unique resource identifier path"
   uri: String
 }
 
 "An interface for content that can be accessed via a unique URI/URL path. Implemented by content types that have their own permalinks."
 interface UniformResourceIdentifiable implements Node {
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "The globally unique ID for the object"
   id: ID!
 
@@ -6098,8 +6107,80 @@ interface UniformResourceIdentifiable implements Node {
   "Whether the node is a Term"
   isTermNode: Boolean!
 
+  ""
+  templates: [String]
+
   "The unique resource identifier path"
   uri: String
+}
+
+"GraphQL representation of WordPress Conditional Tags."
+type ConditionalTags {
+  "Determines whether the query is for an existing archive page."
+  isArchive: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing attachment page."
+  isAttachment: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing author archive page."
+  isAuthor: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing category archive page."
+  isCategory: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing date archive."
+  isDate: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing day archive."
+  isDay: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for the front page of the site."
+  isFrontPage: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for the blog homepage."
+  isHome: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing month archive."
+  isMonth: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether this site has more than one author."
+  isMultiAuthor: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing single page."
+  isPage: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether currently in a page template."
+  isPageTemplate: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing post type archive page."
+  isPostTypeArchive: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for a post or page preview."
+  isPreview: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for the Privacy Policy page."
+  isPrivacyPolicy: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for a search."
+  isSearch: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing single post."
+  isSingle: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing single post of any post type (post, attachment, page, custom post types)."
+  isSingular: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether a post is sticky."
+  isSticky: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing tag archive page."
+  isTag: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing custom taxonomy archive page."
+  isTax: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
+  "Determines whether the query is for an existing year archive."
+  isYear: Boolean @deprecated(reason: "Deprecated in favor of using Next.js pages")
 }
 
 "Connection between the ContentType type and the Taxonomy type"
@@ -6764,6 +6845,9 @@ interface ContentNodeConnectionEdge implements Edge {
 
 "Base interface for content objects like posts, pages, and media items. Provides common fields available across these content types."
 interface ContentNode implements Node & UniformResourceIdentifiable {
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the ContentNode type and the ContentType type"
   contentType: ContentNodeToContentTypeConnectionEdge
 
@@ -6878,6 +6962,9 @@ interface ContentNode implements Node & UniformResourceIdentifiable {
   "The template assigned to a node of content"
   template: ContentTemplate
 
+  ""
+  templates: [String]
+
   "The unique resource identifier path"
   uri: String
 }
@@ -6952,6 +7039,9 @@ type User implements Node & UniformResourceIdentifiable & Commenter & DatabaseId
     "Arguments for filtering the connection"
     where: UserToCommentConnectionWhereArgs
   ): UserToCommentConnection
+
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
 
   "Identifies the primary key from the database."
   databaseId: Int!
@@ -7175,8 +7265,14 @@ type User implements Node & UniformResourceIdentifiable & Commenter & DatabaseId
   "Whether the Toolbar should be displayed when the user is viewing the site."
   shouldShowAdminToolbar: Boolean
 
+  ""
+  shouldShowFaustToolbar: Boolean
+
   "The url friendly identifier for the user."
   slug: String
+
+  ""
+  templates: [String]
 
   "The unique resource identifier path"
   uri: String
@@ -7403,6 +7499,9 @@ type Comment implements Node & DatabaseIdentifier & UniformResourceIdentifiable 
   "Connection between the Comment type and the ContentNode type"
   commentedOn: CommentToContentNodeConnectionEdge
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Content of the comment."
   content(
     "Format of the field output"
@@ -7477,6 +7576,9 @@ type Comment implements Node & DatabaseIdentifier & UniformResourceIdentifiable 
 
   "The approval status of the comment."
   status: CommentStatusEnum
+
+  ""
+  templates: [String]
 
   "Type of comment."
   type: String
@@ -8252,6 +8354,9 @@ type Incident implements Node & ContentNode & UniformResourceIdentifiable & Data
   "The inputs to blameScore. Null under exactly the same conditions as blameScore."
   blameScoreBreakdown: BlameScoreBreakdown
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "The content of the post."
   content(
     "Format of the field output"
@@ -8470,6 +8575,9 @@ type Incident implements Node & ContentNode & UniformResourceIdentifiable & Data
 
   "The template assigned to the node"
   template: ContentTemplate
+
+  ""
+  templates: [String]
 
   "Connection between the Incident type and the TermNode type"
   terms(
@@ -9068,6 +9176,9 @@ type Scapegoat implements Node & TermNode & UniformResourceIdentifiable & Databa
   "The unique numeric identifier for the term."
   scapegoatId: Int @deprecated(reason: "Deprecated in favor of databaseId")
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the Scapegoat type and the ContentNode type"
   contentNodes(
     "The number of items to return after the referenced \"after\" cursor"
@@ -9188,6 +9299,9 @@ type Scapegoat implements Node & TermNode & UniformResourceIdentifiable & Databa
   "The name of the taxonomy that the object is associated with"
   taxonomyName: String
 
+  ""
+  templates: [String]
+
   "The ID of the term group that this term object belongs to"
   termGroupId: Int
 
@@ -9200,6 +9314,9 @@ type Scapegoat implements Node & TermNode & UniformResourceIdentifiable & Databa
 
 "Base interface for taxonomy terms such as categories and tags. Terms are used to organize and classify content."
 interface TermNode implements Node & UniformResourceIdentifiable {
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "The number of objects connected to the object"
   count: Int
 
@@ -9277,6 +9394,9 @@ interface TermNode implements Node & UniformResourceIdentifiable {
 
   "The name of the taxonomy that the object is associated with"
   taxonomyName: String
+
+  ""
+  templates: [String]
 
   "The ID of the term group that this term object belongs to"
   termGroupId: Int
@@ -9494,6 +9614,9 @@ type MediaItem implements Node & ContentNode & UniformResourceIdentifiable & Dat
     where: MediaItemToCommentConnectionWhereArgs
   ): MediaItemToCommentConnection
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the ContentNode type and the ContentType type"
   contentType: ContentNodeToContentTypeConnectionEdge
 
@@ -9680,6 +9803,9 @@ type MediaItem implements Node & ContentNode & UniformResourceIdentifiable & Dat
   "The template assigned to a node of content"
   template: ContentTemplate
 
+  ""
+  templates: [String]
+
   "The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made."
   title(
     "Format of the field output"
@@ -9739,6 +9865,9 @@ interface HierarchicalContentNode implements Node & ContentNode & UniformResourc
     "Arguments for filtering the connection"
     where: HierarchicalContentNodeToContentNodeChildrenConnectionWhereArgs
   ): HierarchicalContentNodeToContentNodeChildrenConnection
+
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
 
   "Connection between the ContentNode type and the ContentType type"
   contentType: ContentNodeToContentTypeConnectionEdge
@@ -9862,6 +9991,9 @@ interface HierarchicalContentNode implements Node & ContentNode & UniformResourc
 
   "The template assigned to a node of content"
   template: ContentTemplate
+
+  ""
+  templates: [String]
 
   "The unique resource identifier path"
   uri: String
@@ -10631,6 +10763,9 @@ type Severity implements Node & TermNode & UniformResourceIdentifiable & Databas
     where: SeverityToSeverityConnectionWhereArgs
   ): SeverityToSeverityConnection
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the Severity type and the ContentNode type"
   contentNodes(
     "The number of items to return after the referenced \"after\" cursor"
@@ -10757,6 +10892,9 @@ type Severity implements Node & TermNode & UniformResourceIdentifiable & Databas
   "The name of the taxonomy that the object is associated with"
   taxonomyName: String
 
+  ""
+  templates: [String]
+
   "The ID of the term group that this term object belongs to"
   termGroupId: Int
 
@@ -10769,6 +10907,9 @@ type Severity implements Node & TermNode & UniformResourceIdentifiable & Databas
 
 "Term node with hierarchical (parent/child) relationships"
 interface HierarchicalTermNode implements Node & TermNode & UniformResourceIdentifiable & DatabaseIdentifier & HierarchicalNode {
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "The number of objects connected to the object"
   count: Int
 
@@ -10852,6 +10993,9 @@ interface HierarchicalTermNode implements Node & TermNode & UniformResourceIdent
 
   "The name of the taxonomy that the object is associated with"
   taxonomyName: String
+
+  ""
+  templates: [String]
 
   "The ID of the term group that this term object belongs to"
   termGroupId: Int
@@ -11375,6 +11519,9 @@ type TechStack implements Node & TermNode & UniformResourceIdentifiable & Databa
   "The unique numeric identifier for the term."
   techStackId: Int @deprecated(reason: "Deprecated in favor of databaseId")
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the TechStack type and the ContentNode type"
   contentNodes(
     "The number of items to return after the referenced \"after\" cursor"
@@ -11527,6 +11674,9 @@ type TechStack implements Node & TermNode & UniformResourceIdentifiable & Databa
     "Arguments for filtering the connection"
     where: TechStackToTechReviewConnectionWhereArgs
   ): TechStackToTechReviewConnection
+
+  ""
+  templates: [String]
 
   "The ID of the term group that this term object belongs to"
   termGroupId: Int
@@ -11960,6 +12110,9 @@ type Post implements Node & ContentNode & UniformResourceIdentifiable & Database
     where: PostToCommentConnectionWhereArgs
   ): PostToCommentConnection
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "The content of the post."
   content(
     "Format of the field output"
@@ -12203,6 +12356,9 @@ type Post implements Node & ContentNode & UniformResourceIdentifiable & Database
   "The template assigned to the node"
   template: ContentTemplate
 
+  ""
+  templates: [String]
+
   "Connection between the Post type and the TermNode type"
   terms(
     "The number of items to return after the referenced \"after\" cursor"
@@ -12287,6 +12443,9 @@ interface NodeWithTrackbacks implements Node {
 
 "Content that can be referenced by navigation menu items. Provides the essential fields needed to create links within navigation structures."
 interface MenuItemLinkable implements Node & UniformResourceIdentifiable & DatabaseIdentifier {
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "The unique identifier stored in the database"
   databaseId: Int!
 
@@ -12307,6 +12466,9 @@ interface MenuItemLinkable implements Node & UniformResourceIdentifiable & Datab
 
   "Whether the node is a Term"
   isTermNode: Boolean!
+
+  ""
+  templates: [String]
 
   "The unique resource identifier path"
   uri: String
@@ -12500,6 +12662,9 @@ type Category implements Node & TermNode & UniformResourceIdentifiable & Databas
     where: CategoryToCategoryConnectionWhereArgs
   ): CategoryToCategoryConnection
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the Category type and the ContentNode type"
   contentNodes(
     "The number of items to return after the referenced \"after\" cursor"
@@ -12625,6 +12790,9 @@ type Category implements Node & TermNode & UniformResourceIdentifiable & Databas
 
   "The name of the taxonomy that the object is associated with"
   taxonomyName: String
+
+  ""
+  templates: [String]
 
   "The ID of the term group that this term object belongs to"
   termGroupId: Int
@@ -13313,6 +13481,9 @@ interface PostFormatConnectionEdge implements Edge {
 
 "A standardized classification system for content presentation styles. These formats can be used to display content differently based on type, such as &quot;standard&quot;, &quot;gallery&quot;, &quot;video&quot;, etc."
 type PostFormat implements Node & TermNode & UniformResourceIdentifiable & DatabaseIdentifier {
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the PostFormat type and the ContentNode type"
   contentNodes(
     "The number of items to return after the referenced \"after\" cursor"
@@ -13432,6 +13603,9 @@ type PostFormat implements Node & TermNode & UniformResourceIdentifiable & Datab
 
   "The name of the taxonomy that the object is associated with"
   taxonomyName: String
+
+  ""
+  templates: [String]
 
   "The ID of the term group that this term object belongs to"
   termGroupId: Int
@@ -13982,6 +14156,9 @@ interface TagConnectionEdge implements Edge {
 
 "A taxonomy term used to organize and classify content. Tags do not have a hierarchy and are generally used for more specific classifications."
 type Tag implements Node & TermNode & UniformResourceIdentifiable & DatabaseIdentifier & MenuItemLinkable {
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "Connection between the Tag type and the ContentNode type"
   contentNodes(
     "The number of items to return after the referenced \"after\" cursor"
@@ -14101,6 +14278,9 @@ type Tag implements Node & TermNode & UniformResourceIdentifiable & DatabaseIden
 
   "The name of the taxonomy that the object is associated with"
   taxonomyName: String
+
+  ""
+  templates: [String]
 
   "The ID of the term group that this term object belongs to"
   termGroupId: Int
@@ -14828,6 +15008,9 @@ type TechReview implements Node & ContentNode & UniformResourceIdentifiable & Da
     before: String
   ): TechReviewToTechReviewConnection @deprecated(reason: "This content type is not hierarchical and typically will not have ancestors")
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "The content of the post."
   content(
     "Format of the field output"
@@ -15019,6 +15202,9 @@ type TechReview implements Node & ContentNode & UniformResourceIdentifiable & Da
 
   "The template assigned to the node"
   template: ContentTemplate
+
+  ""
+  templates: [String]
 
   "Connection between the TechReview type and the TermNode type"
   terms(
@@ -15959,6 +16145,9 @@ type Page implements Node & ContentNode & UniformResourceIdentifiable & Database
     where: PageToCommentConnectionWhereArgs
   ): PageToCommentConnection
 
+  ""
+  conditionalTags: ConditionalTags @deprecated(reason: "Deprecated in favor of using Next.js pages")
+
   "The content of the post."
   content(
     "Format of the field output"
@@ -16147,6 +16336,9 @@ type Page implements Node & ContentNode & UniformResourceIdentifiable & Database
 
   "The template assigned to a node of content"
   template: ContentTemplate
+
+  ""
+  templates: [String]
 
   "The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made."
   title(
@@ -22325,6 +22517,12 @@ type RootQuery implements WithAcfOptionsPageSiteSettings {
   "Fields of the &#039;GeneralSettings&#039; settings group"
   generalSettings: GeneralSettings
 
+  "Returns the stylesheet resulting of merging core, theme, and user data."
+  globalStylesheet(
+    "Types of styles to load."
+    types: [GlobalStylesheetTypesEnum]
+  ): String
+
   "An object of the Incident Type. A publicli submitted outage, moderated before publication."
   incident(
     "The globally unique identifier of the object."
@@ -23552,6 +23750,21 @@ type GeneralSettingsToMediaItemConnectionEdge implements OneToOneConnection & Ed
   node: MediaItem!
 }
 
+"Types of styles to load"
+enum GlobalStylesheetTypesEnum {
+  ""
+  BASE_LAYOUT_STYLES
+
+  ""
+  PRESETS
+
+  ""
+  STYLES
+
+  ""
+  VARIABLES
+}
+
 "Identifier types for retrieving a specific Incident. Specifies which unique attribute is used to find an exact Incident."
 enum IncidentIdType {
   "Identify a resource by the Database ID."
@@ -23869,6 +24082,9 @@ type Menu implements Node & DatabaseIdentifier {
 
 "Designated areas where navigation menus can be displayed. Represents the named regions in the interface where menus can be assigned."
 enum MenuLocationEnum {
+  "Put the menu in the footer location"
+  FOOTER
+
   "Put the menu in the primary location"
   PRIMARY
 }
@@ -26290,6 +26506,12 @@ type RootMutation {
     input: DeleteUserInput!
   ): DeleteUserPayload
 
+  "The generateAuthorizationCode mutation"
+  generateAuthorizationCode(
+    "Input for the generateAuthorizationCode mutation"
+    input: GenerateAuthorizationCodeInput!
+  ): GenerateAuthorizationCodePayload
+
   "Increase the count."
   increaseCount(
     "The count to increase"
@@ -27399,6 +27621,33 @@ type DeleteUserPayload {
 
   "The deleted user object"
   user: User
+}
+
+"Input for the generateAuthorizationCode mutation."
+input GenerateAuthorizationCodeInput {
+  "This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions."
+  clientMutationId: String
+
+  "Email for WordPress user"
+  email: String
+
+  "Password for WordPress user"
+  password: String
+
+  "Username for WordPress user"
+  username: String
+}
+
+"The payload for the generateAuthorizationCode mutation."
+type GenerateAuthorizationCodePayload {
+  "If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions."
+  clientMutationId: String
+
+  "Authorization code used for requesting refresh/access tokens"
+  code: String
+
+  "Error encountered during user authentication, if any"
+  error: String
 }
 
 "Input for the login mutation."

@@ -329,3 +329,25 @@ Add these rows to the entry-point matrix Lesson 15.5 put in `docs/quality-gates.
 | Entry point               | AuthN                                    | AuthZ                                                            | Validation                                          | Rate limit                                                        | CSRF                                          |
 | ------------------------- | ---------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------- |
 | `submitIncident` (action) | session cookie → `{ kind: 'user', jwt }` | `create_incidents` **in PHP**; the role read in the action is UX | `refineTerms(...).safeParse`, then PHP re-validates | Upstash per IP (fail closed) **plus** a per-user transient in PHP | Next Origin/Host on action POSTs + `SameSite` |
+
+## Preview (Lesson 17.2)
+
+`POST /wp-json/btt/v1/preview/verify` — server-to-server only.
+
+- Request: `{ "token": "<43 base64url chars>.<64 hex chars>" }`, header `X-BTT-App-Token`
+- 200: `{ "postId": 41, "previewJwt": "<jwt>" }`
+- 401 `btt_app_token_unset` / `btt_not_authorized` — the app token is unset or wrong
+- 401 `btt_preview_token_invalid` — expired, already redeemed, or never existed. One answer for
+  all three, on purpose
+- 403 `btt_preview_forbidden` — the stored user may not `edit_post` that post
+- No response body ever contains the token, the post title, or a reason.
+
+`GET /api/preview?token=&id=&next=` — 400 on a `next` that is not a same-origin path, 401 on a
+failed signature or a failed redemption, 307 to `next` on success. `id` is a logged hint and is
+never looked up. Sets `__prerender_bypass`, `__next_preview_data` and `btt_preview_jwt`.
+
+`GET /api/preview/exit?locale=` — 307 to `/{locale}` always. Clears all three cookies.
+
+Preview reads use `fetchGraphQLAuthed(doc, { …, asPreview: true }, { kind: 'user', jwt })`, which
+hard-codes `cache: 'no-store'` and the `strict` error policy. **No preview response is ever
+cached, tagged, or shared between visitors.**

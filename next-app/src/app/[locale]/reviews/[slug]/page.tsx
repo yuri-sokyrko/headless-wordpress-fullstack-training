@@ -1,7 +1,11 @@
 import { notFound } from 'next/navigation';
+import { draftMode } from 'next/headers';
+
 import { ReviewBySlugDocument, ReviewSlugsDocument } from '@/gql/graphql';
-import { fetchGraphQL } from '@/lib/graphql/client';
+import { fetchGraphQL, fetchGraphQLAuthed } from '@/lib/graphql/client';
 import { reviewTag, listTag } from '@/lib/graphql/tags';
+import { readPreviewToken } from '@/lib/auth/cookies';
+
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
@@ -18,11 +22,23 @@ export default async function ReviewsPage({
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
   const { slug, locale } = await params;
-  const { techReview } = await fetchGraphQL(
-    ReviewBySlugDocument,
-    { slug },
-    { revalidate: 3600, tags: [reviewTag(slug), listTag('review')] }
-  );
+  const { isEnabled } = await draftMode();
+  const previewJwt = isEnabled ? await readPreviewToken() : null;
+
+  const data =
+    previewJwt === null
+      ? await fetchGraphQL(
+          ReviewBySlugDocument,
+          { slug },
+          { revalidate: 3600, tags: [reviewTag(slug), listTag('review')] }
+        )
+      : await fetchGraphQLAuthed(
+          ReviewBySlugDocument,
+          { slug, asPreview: true },
+          { kind: 'user', jwt: previewJwt }
+        );
+
+  const { techReview } = data;
 
   if (!techReview) notFound();
 

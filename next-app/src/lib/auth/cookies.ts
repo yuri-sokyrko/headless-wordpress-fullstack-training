@@ -87,3 +87,40 @@ export async function readRefreshToken(): Promise<string | null> {
 
   return value === undefined || value === '' ? null : value;
 }
+
+/**
+ * The preview JWT, for the editor currently in draft mode. Appendix 04 §4.
+ *
+ * `Lax`, `Path=/`, 300 s — the same shape as `btt_at`, because it holds the same
+ * class of credential: a normal user JWT for one WordPress user. It is NOT
+ * `Strict`: the editor arrives from a 307 issued by /api/preview, and a Strict
+ * cookie set on that response would not be sent on the redirected navigation.
+ */
+export const PREVIEW_COOKIE = 'btt_preview_jwt';
+
+const PREVIEW_MAX_AGE = 300;
+
+const PREVIEW_ATTRS = {
+  httpOnly: true,
+  secure: SECURE,
+  sameSite: 'lax',
+  path: '/',
+  maxAge: PREVIEW_MAX_AGE,
+} as const;
+
+/** Called by /api/preview after WordPress redeems the token. */
+export async function setPreviewCookie(jwt: string): Promise<void> {
+  (await cookies()).set(PREVIEW_COOKIE, jwt, PREVIEW_ATTRS);
+}
+
+/** Called by /api/preview/exit. Full attribute set, or the deletion misses (§15.4). */
+export async function clearPreviewCookie(): Promise<void> {
+  (await cookies()).set(PREVIEW_COOKIE, '', { ...PREVIEW_ATTRS, maxAge: 0 });
+}
+
+/** `null` when absent or empty. The preview branch treats both the same way. */
+export async function readPreviewToken(): Promise<string | null> {
+  const value = (await cookies()).get(PREVIEW_COOKIE)?.value;
+
+  return value === undefined || value === '' ? null : value;
+}

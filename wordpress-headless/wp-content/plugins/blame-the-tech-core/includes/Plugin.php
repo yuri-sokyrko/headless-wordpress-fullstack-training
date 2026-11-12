@@ -36,6 +36,7 @@ final class Plugin {
 		'includes/mail.php',
 		'includes/acf.php',
 		'includes/Leads.php',
+		'includes/Preview.php',
 		'includes/graphql/enums.php',
 		'includes/graphql/fields.php',
 		'includes/graphql/app-token.php',

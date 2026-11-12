@@ -1,7 +1,12 @@
 import { notFound } from 'next/navigation';
+import { draftMode } from 'next/headers';
+
 import { IncidentBySlugDocument, IncidentSlugsDocument } from '@/gql/graphql';
-import { fetchGraphQL } from '@/lib/graphql/client';
+
+import { fetchGraphQL, fetchGraphQLAuthed } from '@/lib/graphql/client';
 import { incidentTag, listTag } from '@/lib/graphql/tags';
+import { readPreviewToken } from '@/lib/auth/cookies';
+
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
@@ -22,11 +27,36 @@ export default async function IncidentPage({
   readonly params: Promise<{ locale: string; slug: string }>;
 }) {
   const { slug, locale } = await params;
-  const { incident } = await fetchGraphQL(
-    IncidentBySlugDocument,
-    { slug },
-    { revalidate: 3600, tags: [incidentTag(slug), listTag('incident')] }
-  );
+
+  const { isEnabled } = await draftMode();
+  const previewJwt = isEnabled ? await readPreviewToken() : null;
+
+  // fetchGraphQLAuthed, and BOTH of its hard-coded policies are right here
+  // rather than incidentally:
+  //   cache: 'no-store' — a draft must never enter the shared Data Cache. One
+  //     editor's unpublished text served to the public is the highest-severity
+  //     bug this architecture can produce, and the client makes it
+  //     unrepresentable: there is no options parameter to pass a cache into.
+  //   'strict' — any `errors` entry throws. A refused preview is
+  //     `{ incident: null }` WITH an errors array, and silently rendering a 404
+  //     would hide a capability problem the editor needs to see.
+  //
+  // No `revalidate` and no `tags` on the preview path, and none can be passed:
+  // Next 16's fetch is uncached by default, so omitting the options IS the opt-out.
+  const data =
+    previewJwt === null
+      ? await fetchGraphQL(
+          IncidentBySlugDocument,
+          { slug },
+          { revalidate: 3600, tags: [incidentTag(slug), listTag('incident')] }
+        )
+      : await fetchGraphQLAuthed(
+          IncidentBySlugDocument,
+          { slug, asPreview: true },
+          { kind: 'user', jwt: previewJwt }
+        );
+
+  const { incident } = data;
 
   // Throws. Nothing below runs, and TypeScript narrows `incident` for the rest of the file.
   if (!incident) notFound();

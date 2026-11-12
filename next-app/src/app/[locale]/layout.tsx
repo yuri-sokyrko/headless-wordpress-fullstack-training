@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { draftMode } from 'next/headers';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { siteTag } from '@/lib/graphql/tags';
 import { getSession } from '@/lib/auth/session';
@@ -6,6 +7,7 @@ import { SiteChromeDocument } from '@/gql/graphql';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { SkipLink } from '@/components/layout/SkipLink';
+import { PreviewBanner } from '@/components/preview/PreviewBanner';
 
 import './globals.css';
 
@@ -25,6 +27,7 @@ export default async function LocaleLayout({
     revalidate: 3600,
     tags: [siteTag()],
   });
+  const { isEnabled: isPreview } = await draftMode();
 
   // Read the session ONCE, here, and pass a plain serialisable object down.
   // There is no session context in this application (Lesson 15.4 §8).
@@ -44,6 +47,8 @@ export default async function LocaleLayout({
         {/* FIRST child of <body>, before the header — so it is the first thing
             Tab reaches. Anything above it makes it useless. */}
         <SkipLink />
+
+        {isPreview ? <PreviewBanner locale={locale} /> : null}
 
         <Header
           locale={locale}
