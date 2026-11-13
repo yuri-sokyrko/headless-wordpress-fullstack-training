@@ -486,3 +486,11 @@ Step 6 checks 1-2, Step 3.
 | Server Actions                  | one catch-all `getStaticProps` route; nothing to post an action to                               |
 | App Router currency             | 17.1 Step 2: (write the version, date and peer ranges you saw)                                   |
 | Verdict                         | adopt the preview patterns only — argued and recorded in ADR 0009, Lesson 17.4                   |
+
+## Faust evaluation: outcome (Lesson 17.4)
+
+Decided in ADR 0009. `faust-spike/` deleted and the `faustwp` plugin uninstalled in Lesson 17.4;
+the spike survives as its own git commit. **The only output of Module 17 that ships is Lesson
+17.2's** — `src/app/api/preview/route.ts`, `preview/exit/route.ts`,
+`src/components/preview/PreviewBanner.tsx` and `includes/Preview.php` — and none of it is Faust.
+Verified after the deletion: the preview flow is unchanged.
