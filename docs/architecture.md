@@ -455,3 +455,34 @@ Deleted in Lesson 17.4; the commit is kept.
 
 Two round trips before first byte, because the seed query must resolve the URI before the
 template's own query can run. This app's routes answer the same question from the file system.
+
+## The same incident, rendered three ways (Lesson 17.3)
+
+Measured on production builds. Content: seeded `incident-01`, "Deployed on a Friday (#1)".
+
+|                                                   | Your route                                | Your route, in preview                                                               | Faust template                            |
+| ------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------- |
+| URL                                               | `:3000/en/incidents/incident-01`          | the same, with the preview cookies                                                   | `:3001/incidents/incident-01`             |
+| Title present at first byte                       | yes                                       | yes                                                                                  | yes                                       |
+| `__NEXT_DATA__` hydration payload                 | absent (RSC flight data instead)          | absent                                                                               | present — (write the byte count)          |
+| Client JS, sum of referenced chunks               | (bytes)                                   | (bytes)                                                                              | (bytes)                                   |
+| First Load JS, from the build manifests (09.2 §9) | (kB)                                      | (kB)                                                                                 | (kB)                                      |
+| Cacheable under a tag                             | yes — `incident:incident-01`, `incidents` | **no, deliberately** — `no-store`, and `fetchGraphQLAuthed` has no options parameter | no — no call site passes `next: { tags }` |
+| Where the auth token lives                        | httpOnly `btt_at`, unreadable from JS     | httpOnly `btt_preview_jwt`                                                           | (write what you found in Step 3)          |
+| Who gates the page                                | proxy + `requireSession()`, server-side   | a single-use token exchanged server-to-server                                        | `useAuth`, in the browser                 |
+
+Commands that produced each row: Step 4 (a)-(c), Step 5 `jsbytes` and the build summaries,
+Step 6 checks 1-2, Step 3.
+
+## Faust scorecard, evidenced (Lesson 17.3)
+
+| Scorecard row                   | Evidenced by                                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| WP template hierarchy in React  | 17.3 Step 2: removed the `single-incident` key, `index` rendered instead. No route file involved |
+| Editor preview                  | 17.2, working, and the whole of its Verification block                                           |
+| Login / auth flows              | 17.3 Step 1 and Step 4 (d): Faust's gate is client-side, `/en/account` is a 307 with no HTML     |
+| Data layer                      | 17.1: `@apollo/client` is the transport under every layer and is not swappable                   |
+| `revalidateTag` / on-demand ISR | 17.3 Step 6: positive control on our side, zero call sites on theirs                             |
+| Server Actions                  | one catch-all `getStaticProps` route; nothing to post an action to                               |
+| App Router currency             | 17.1 Step 2: (write the version, date and peer ranges you saw)                                   |
+| Verdict                         | adopt the preview patterns only — argued and recorded in ADR 0009, Lesson 17.4                   |
