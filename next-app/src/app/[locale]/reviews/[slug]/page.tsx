@@ -8,6 +8,9 @@ import { readPreviewToken } from '@/lib/auth/cookies';
 
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
   const data = await fetchGraphQL(ReviewSlugsDocument, { first: 20 });
 

@@ -3,6 +3,9 @@ import { ReviewsListDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { listTag } from '@/lib/graphql/tags';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 export default async function ReviewsPage({
   params,
 }: {

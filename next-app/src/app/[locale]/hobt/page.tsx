@@ -10,10 +10,14 @@ import { pageTag } from '@/lib/graphql/tags';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 import { LeadForm } from '@/components/hobt/LeadForm';
 
-// The ROUTE-SEGMENT cache: how long the rendered page may be reused. 60s because
-// `seatsLeft` drives a live badge — Lesson 10.3's policy table. Everything else
-// in the app is 3600.
-export const revalidate = 60;
+// STATIC, and the reason is commercial rather than technical (Key Concept 8).
+// Conversion is measured on this page, so it must change when an editor changes
+// it and at no other time. `false` means "cached until a tag drops it", and the
+// tag is dropped by the webhook in Lesson 18.3.
+//
+// This makes the webhook LOAD-BEARING: there is no timer behind it any more.
+// Lesson 18.4's runbook entry is the response to that, and it is not optional.
+export const revalidate = false;
 
 // From Step 1, read out of WordPress rather than assumed.
 const HOBT_URI = '/hobt/';
@@ -33,7 +37,7 @@ export default async function HobtPage({
     // The DATA cache: how long the GraphQL response may be reused. Matching the
     // segment value keeps the two honest — a long fetch cache under a short page
     // cache re-renders from stale data and looks like the page cache failing.
-    { revalidate: 60, tags: [pageTag('hobt')] }
+    { revalidate: false, tags: [pageTag('hobt')] }
   );
 
   const promo = data.page?.hobtPromo;

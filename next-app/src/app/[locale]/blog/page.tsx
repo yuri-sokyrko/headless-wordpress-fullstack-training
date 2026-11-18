@@ -3,6 +3,9 @@ import { fetchGraphQL } from '@/lib/graphql/client';
 import { PostsListDocument } from '@/gql/graphql';
 import { listTag } from '@/lib/graphql/tags';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 export default async function BlogPage({
   params,
 }: {

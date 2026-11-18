@@ -3,6 +3,9 @@ import { fetchGraphQL } from '@/lib/graphql/client';
 import { ScapegoatLeaderboardDocument } from '@/gql/graphql';
 import { listTag, taxonomyListTag } from '@/lib/graphql/tags';
 
+export const revalidate = 600;
+export const dynamicParams = true;
+
 export default async function ScapegoatsPage() {
   // The ten seeded terms from appendix 03 §2, ordered by wp_term_taxonomy.count.
   const { scapegoats } = await fetchGraphQL(

@@ -494,3 +494,47 @@ the spike survives as its own git commit. **The only output of Module 17 that sh
 17.2's** — `src/app/api/preview/route.ts`, `preview/exit/route.ts`,
 `src/components/preview/PreviewBanner.tsx` and `includes/Preview.php` — and none of it is Faust.
 Verified after the deletion: the preview flow is unchanged.
+
+## Rendering strategy, per route (Lesson 18.1)
+
+ISR is the default. Every departure from it is a decision with a reason.
+
+| Route                                             | Strategy                  | Segment export              | Why                                                                                       |
+| ------------------------------------------------- | ------------------------- | --------------------------- | ----------------------------------------------------------------------------------------- |
+| `/[locale]`                                       | ISR                       | `revalidate = 300`          | Mostly editorial, cheap to keep warm                                                      |
+| `/[locale]/hobt`                                  | static                    | `revalidate = false`        | **Webhook-only.** Conversion is measured here; it changes when an editor changes it       |
+| `/[locale]/incidents`                             | dynamic                   | `revalidate = 300`          | Reads `searchParams` for facets. The inner GraphQL fetch is still cached per variable-set |
+| `/[locale]/incidents/[slug]`                      | ISR + tags                | `revalidate = 3600`         | 100 newest pre-rendered; on-demand ISR covers the tail                                    |
+| `/[locale]/blog`, `/reviews`                      | ISR + tags                | `revalidate = 3600`         | Editorial lists                                                                           |
+| `/[locale]/blog/[slug]`                           | ISR + tags                | `revalidate = 3600`         | 50 newest pre-rendered                                                                    |
+| `/[locale]/reviews/[slug]`                        | ISR + tags                | `revalidate = 3600`         | 20 newest pre-rendered                                                                    |
+| `/[locale]/scapegoats`                            | ISR + tags                | `revalidate = 600`          | Reads term `count`, which changes on every publish                                        |
+| `/[locale]/scapegoats/[slug]`                     | ISR + tags                | `revalidate = 3600`         | 20 newest pre-rendered                                                                    |
+| `/[locale]/[...slug]`                             | ISR + tags                | `revalidate = 3600`         | Editor-composed WordPress pages, 50 newest                                                |
+| `/[locale]/account`, `/[locale]/incidents/submit` | `force-dynamic`, uncached | `dynamic = 'force-dynamic'` | Authenticated. **Never** in a shared cache                                                |
+| `/api/health`, `/api/auth/*`                      | `force-dynamic`           | `dynamic = 'force-dynamic'` | A cached health check is not a health check                                               |
+
+`generateStaticParams` is **bounded per content type**, never exhaustive: 100 incidents, 50 posts,
+50 pages, 20 reviews, 20 scapegoats. `dynamicParams` stays at its default `true`, so a slug
+outside the bound renders on demand and is static from then on. The bound decides who pays for the
+first render — the build, or the first visitor — and nothing else.
+
+The session read lives in `GET /api/auth/session` and not in the root layout, because reading
+`cookies()` there makes every route below it dynamic. `draftMode()` in the same layout is free:
+Next owns `__prerender_bypass` and can keep the page static while bypassing it per visitor.
+
+### `generateStaticParams` measurements (Lesson 18.1)
+
+Date: **18\11\2026** · Next version: **\_\_** · Machine: **\_\_**
+
+| Variant                               | Pages pre-rendered | GraphQL queries | `npm run build` real time |
+| ------------------------------------- | ------------------ | --------------- | ------------------------- |
+| unbounded (`PRERENDER_LIMIT = null`)  | **\_\_**           | **\_\_**        | **3.3s**                  |
+| bounded (`PRERENDER_LIMIT = 100`)     | **\_\_**           | **\_\_**        | **\_\_**                  |
+| `generateStaticParams` returning `[]` | 0                  | 0               | **\_\_**                  |
+
+Per-page cost = (bounded − empty) ÷ pages = **\_\_** ms.
+Projected unbounded build at 10,000 incidents = base + 10,000 × that, plus 200 sequential
+queries. **At 40 seeded incidents the two variants are indistinguishable, and the projection is
+arithmetic rather than an observation.** Lesson 21.1 may copy the per-page number into
+`docs/perf-baseline.md`.

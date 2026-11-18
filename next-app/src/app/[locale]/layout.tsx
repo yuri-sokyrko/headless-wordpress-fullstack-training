@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { draftMode } from 'next/headers';
 import { fetchGraphQL } from '@/lib/graphql/client';
 import { siteTag } from '@/lib/graphql/tags';
-import { getSession } from '@/lib/auth/session';
 import { SiteChromeDocument } from '@/gql/graphql';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -29,17 +28,6 @@ export default async function LocaleLayout({
   });
   const { isEnabled: isPreview } = await draftMode();
 
-  // Read the session ONCE, here, and pass a plain serialisable object down.
-  // There is no session context in this application (Lesson 15.4 §8).
-  //
-  // The cost, stated plainly: reading cookies() in the root layout makes EVERY
-  // route below it dynamic. `npm run build` will now mark them ƒ (Dynamic).
-  // The DATA is still cached — fetchGraphQL's revalidate and tags are
-  // untouched, so WordPress is queried once per window, not once per request —
-  // but the HTML is assembled per request. Module 18 is where that bill arrives
-  // and where a cached shell around a streamed personal region is the answer.
-  const session = await getSession();
-
   return (
     <html lang={locale}>
       {/* No className, no font import, no globals.css. Module 11 owns all three. */}
@@ -50,11 +38,7 @@ export default async function LocaleLayout({
 
         {isPreview ? <PreviewBanner locale={locale} /> : null}
 
-        <Header
-          locale={locale}
-          siteTitle={chrome.generalSettings?.title ?? 'Blame The Tech'}
-          session={session}
-        />
+        <Header locale={locale} siteTitle={chrome.generalSettings?.title ?? 'Blame The Tech'} />
 
         {/* tabIndex={-1} is the detail everyone misses. Without it, following
             href="#main" scrolls the page but does NOT move keyboard focus in

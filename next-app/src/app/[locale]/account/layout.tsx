@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+export const dynamic = 'force-dynamic';
+
 // Redundant in Next 16 for a route that reads cookies(), and written anyway:
 // a statement of intent that survives a future default change. Lesson 15.5 §10.
 import { requireSession } from '@/lib/auth/guards';

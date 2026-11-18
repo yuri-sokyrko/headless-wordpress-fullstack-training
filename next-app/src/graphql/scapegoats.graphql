@@ -31,3 +31,44 @@ query ScapegoatById($id: ID!) {
     }
   }
 }
+
+# generateStaticParams for /[locale]/scapegoats/[slug]. hideEmpty: false so a
+# term with no incidents yet still gets a page rather than a 404.
+query ScapegoatSlugs($first: Int!) {
+  scapegoats(first: $first, where: { hideEmpty: false }) {
+    nodes {
+      slug
+    }
+  }
+}
+
+# The term, its SCF term field group (appendix 03 §4.2), and its incidents.
+# `incidents` here is the term-to-post connection WPGraphQL generates because
+# `scapegoat` is registered for the `incident` post type — the same "the
+# taxonomy already knows" property that makes the leaderboard one indexed read
+# (Lesson 09.4 §8). Verification check 8 proves the field exists rather than
+# trusting this comment.
+#
+# `avatar` is deliberately not selected: it is an AcfMediaItemConnectionEdge and
+# rendering it well needs `mediaDetails` for next/image (Lesson 14.5). Out of
+# scope for a page whose job is the term and its incidents.
+query ScapegoatBySlug($slug: ID!, $first: Int!) {
+  scapegoat(id: $slug, idType: SLUG) {
+    id
+    name
+    slug
+    count
+    scapegoatProfile {
+      tagline
+      defensiveness
+      officialExcuse
+      firstBlamedOn
+      isSentient
+    }
+    incidents(first: $first, where: { status: PUBLISH }) {
+      nodes {
+        ...IncidentCardFields
+      }
+    }
+  }
+}

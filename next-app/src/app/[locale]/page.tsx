@@ -4,6 +4,9 @@ import { HomepageFeedsDocument } from '@/gql/graphql';
 import { listTag, siteTag } from '@/lib/graphql/tags';
 import { IncidentCard } from '@/components/incidents/IncidentCard';
 
+export const revalidate = 300;
+export const dynamicParams = true;
+
 // Deliberately ugly and deliberately temporary. Lesson 11.2 replaces this with the
 // shadcn `skeleton` component, at the same box dimensions as the real list.
 function FeedSkeleton() {

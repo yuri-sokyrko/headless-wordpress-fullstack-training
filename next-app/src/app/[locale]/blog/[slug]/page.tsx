@@ -8,6 +8,9 @@ import { readPreviewToken } from '@/lib/auth/cookies';
 
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 // Runs at build time. Both params, because [locale] is dynamic too.
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string }>> {
   const data = await fetchGraphQL(PostsSlugDocument, { first: 50 });
