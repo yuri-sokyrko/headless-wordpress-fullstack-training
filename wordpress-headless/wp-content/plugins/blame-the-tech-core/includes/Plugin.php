@@ -37,6 +37,7 @@ final class Plugin {
 		'includes/acf.php',
 		'includes/Leads.php',
 		'includes/Preview.php',
+		'includes/Revalidate.php',
 		'includes/graphql/enums.php',
 		'includes/graphql/fields.php',
 		'includes/graphql/app-token.php',

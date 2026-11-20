@@ -403,3 +403,64 @@ public tag: every public state change happens in WordPress, and WordPress is the
 knows it happened. `submitIncident` calls `revalidatePath('/{locale}/account')` — the account data
 is `no-store`, so what was stale was the browser's Router Cache — and deliberately leaves
 `incidents` alone, because a `pending` incident is invisible to every query that carries that tag.
+
+## POST /api/revalidate (Lesson 18.3)
+
+Cookieless, HMAC-signed, POST-only. **CSRF against it is structurally impossible** rather than
+blocked: there is no ambient credential to borrow and a browser cannot compute the HMAC.
+
+**Headers**
+
+| Header             | Value                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `Content-Type`     | `application/json`                                                                 |
+| `X-BTT-Timestamp`  | Unix seconds, as sent by `time()` in PHP                                           |
+| `X-BTT-Signature`  | `sha256=` + `hash_hmac('sha256', "<timestamp>.<raw body>", BTT_REVALIDATE_SECRET)` |
+| `X-BTT-E2E-Secret` | test-only alternative credential; see below                                        |
+
+**Body — a discriminated union on `type`.** WordPress sends **identifiers, never tag strings**;
+Next builds every tag with `src/lib/graphql/tags.ts`, so there is one tag builder in the system.
+
+| `type`    | Fields                                                                             | Tags Next emits                                                          |
+| --------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `post`    | `postType` (`incident` \| `post` \| `tech_review` \| `page`), `slug`, `locale`     | `<type>:<slug>`, the plural list tag                                     |
+| `term`    | `taxonomy` (`scapegoat` \| `severity` \| `tech_stack`), `slug`, `termId`, `locale` | `<tax>:<slug>`, **`<tax>:<termId>`**, the taxonomy list tag, `incidents` |
+| `options` | `locale`                                                                           | `site-settings`                                                          |
+
+`postType` is the WordPress `post_type` string and **not** the GraphQL type name or the tag
+prefix: `tech_review` → `TechReview` → `review:`. The mapping lives in
+`src/app/api/revalidate/route.ts` and nowhere else.
+
+`termId` is present because Lesson 14.4's `ScapegoatPicker` tags with
+`termTag('scapegoat', String(termId))` — the block stores a term ID and cannot know the slug before
+its own response arrives. Both forms are emitted for every term event.
+
+`locale` is parsed and **deliberately unused**. Module 18 emits locale-free tags; Module 20.4 is
+where the locale enters them.
+
+**Responses**
+
+| Order | Check                                        | Failure                                            |
+| ----- | -------------------------------------------- | -------------------------------------------------- |
+| 0     | `X-BTT-E2E-Secret` present → the test branch | `404` unless `E2E_MODE=1`; `401` on a wrong secret |
+| 1     | `\|now − ts\| <= 300`                        | `400`, with a reason                               |
+| 2     | `timingSafeEqual` over `ts + "." + raw body` | **`401`, with no reason echoed**                   |
+| 3     | `Zod.parse` of that same raw string          | `400`, with a reason                               |
+| 4     | `revalidateTag` per tag                      | `200 {"revalidated":[…]}`                          |
+
+**WordPress side.** `includes/Revalidate.php`, three hooks — `transition_post_status`,
+`saved_term`, `acf/save_post` (priority 20) — with `wp_remote_post( …, blocking => false,
+timeout => 2 )`. The editor's Publish never waits, **WordPress never sees the response**, and
+`wp_remote_post()`'s `WP_Error` return is therefore unobservable. The only WordPress-side trace is
+one `[btt] revalidate ->` line in `wp-content/debug.log` when `WP_DEBUG` is on.
+
+**Known gap: `menu:primary` is not invalidated by this webhook.** A menu change arrives on
+`saved_term` for the `nav_menu` taxonomy, but the tag is keyed on the theme _location_ rather than
+the menu's slug, which needs a reverse lookup through `get_nav_menu_locations()` and a fourth
+`type` value. `menu:primary` remains covered only by the 3600-second window from Lesson 11.3.
+
+**Test-only hook.** `X-BTT-E2E-Secret` compared with `timingSafeEqual` to `E2E_SECRET`, body
+`{"type":"all"}`, effect `revalidatePath('/', 'layout')`. **404 unless `E2E_MODE === '1'`**, so the
+branch does not exist in production. Called by `e2e/global-setup.ts` after a fixture restore,
+because Next has no way to know the database was replaced. `E2E_MODE`/`E2E_SECRET` reach this code
+from `next-app/.env.local`; the Playwright process reads them from the shell (Lesson 12.4 §9).
