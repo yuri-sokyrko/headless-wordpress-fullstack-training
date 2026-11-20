@@ -351,3 +351,55 @@ never looked up. Sets `__prerender_bypass`, `__next_preview_data` and `btt_previ
 Preview reads use `fetchGraphQLAuthed(doc, { …, asPreview: true }, { kind: 'user', jwt })`, which
 hard-codes `cache: 'no-store'` and the `strict` error policy. **No preview response is ever
 cached, tagged, or shared between visitors.**
+
+## Cache tag vocabulary (Lesson 18.2)
+
+**Two contracts, one table.** The tags are a contract between the code that **attaches** a tag and
+the code that **expires** it — both TypeScript, both going through
+`next-app/src/lib/graphql/tags.ts`, with the compiler between them. The identifiers are the
+contract with **PHP**, and nothing checks those at compile time — which is why the webhook route
+parses them with Zod, and why an identifier this app does not recognise is a `400` rather than a
+silent `200`. WordPress never builds a tag string.
+
+| Tag                                         | Builder                | WordPress identifier it is built from                                                               | Example                |
+| ------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------- | ---------------------- |
+| `incident:<slug>`                           | `incidentTag(slug)`    | `$post->post_name`, `post_type = incident`                                                          | `incident:incident-01` |
+| `post:<slug>`                               | `postTag(slug)`        | `post_type = post`                                                                                  | `post:blog-01`         |
+| `review:<slug>`                             | `reviewTag(slug)`      | `post_type = tech_review`                                                                           | `review:review-01`     |
+| `page:<slug>`                               | `pageTag(slug)`        | `post_type = page`                                                                                  | `page:hobt`            |
+| `incidents` / `posts` / `reviews` / `pages` | `listTag(type)`        | the post type of the saved post                                                                     | `incidents`            |
+| `scapegoats` / `severities` / `stacks`      | `taxonomyListTag(tax)` | the taxonomy of the saved term                                                                      | `scapegoats`           |
+| `scapegoat:<slug>`                          | `termTag(tax, slug)`   | `$term->slug`                                                                                       | `scapegoat:the-intern` |
+| `site-settings`                             | `siteTag()`            | `acf/save_post` on the options page                                                                 | `site-settings`        |
+| `menu:<location>`                           | `menuTag(location)`    | **nothing yet** — the webhook does not send menu events; see the gap note in Lesson 18.3's contract | `menu:primary`         |
+
+Rules that are not negotiable:
+
+- Lowercase, colon-separated. Singular for a node, plural for a list.
+- Locale is **infixed** on a node tag (`incident:de:incident-01`) and **appended** on a list tag
+  (`incidents:de`). Nothing passes a locale until Module 20.4; the shapes are already pinned by
+  `src/lib/graphql/tags.test.ts`.
+- A slug containing `:` or an empty slug **throws** rather than producing a tag PHP could not
+  reproduce.
+- **Never a hand-typed tag string outside `tags.ts`.** Enforced by `npm run lint:tags`.
+- **Never a tag on an authenticated fetch.** `fetchGraphQLAuthed` has no options parameter, so
+  there is nothing to pass. See below.
+
+### Why `fetchGraphQLAuthed` refuses cache options
+
+The Data Cache is keyed on the whole request, including the `Authorization` header, and shared
+across every visitor. A tagged authenticated response is a private response sitting in a shared
+store waiting for a coincidence — a retry, a background revalidation, a Server Action re-reading
+inside a request that already holds somebody's token. Then one user's page is served for another
+user's render, as two HTTP 200s with no error anywhere.
+
+It is not prevented by discipline. `fetchGraphQLAuthed(document, variables, credential)` has three
+parameters and no fourth. Changing that is a signature change, which is a diff a reviewer sees.
+
+### Who calls `revalidateTag`
+
+**Nothing in Next does, except the webhook route.** No Server Action in this application expires a
+public tag: every public state change happens in WordPress, and WordPress is the only system that
+knows it happened. `submitIncident` calls `revalidatePath('/{locale}/account')` — the account data
+is `no-store`, so what was stale was the browser's Router Cache — and deliberately leaves
+`incidents` alone, because a `pending` incident is invisible to every query that carries that tag.

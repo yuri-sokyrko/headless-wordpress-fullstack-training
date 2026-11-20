@@ -11,6 +11,9 @@ export default async function ScapegoatsPage() {
   const { scapegoats } = await fetchGraphQL(
     ScapegoatLeaderboardDocument,
     { first: 10 },
+    // TWO tags, both real dependencies. The set of terms changes when an editor
+    // adds or renames one; `count` changes on every incident publish. Lesson
+    // 10.3's policy table promised exactly these two strings.
     { revalidate: 600, tags: [taxonomyListTag('scapegoat'), listTag('incident')] }
   );
 

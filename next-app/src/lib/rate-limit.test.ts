@@ -24,14 +24,14 @@ describe('createRateLimiter', () => {
       backend(() => Promise.resolve({ success: true, remaining: 4, reset: Date.now() + 60_000 }))
     );
 
-    await expect(limit('incident:1.2.3.4')).resolves.toEqual({ ok: true, remaining: 4 });
+    await expect(limit('incident:1.2.3.4')).resolves.toEqual({ ok: true, remaining: 4 }); //not-a-cache-tag: rate limit success
   });
 
   it('refuses with a retry-after when the bucket is empty', async () => {
     const limit = createRateLimiter(
       backend(() => Promise.resolve({ success: false, remaining: 0, reset: Date.now() + 30_000 }))
     );
-    const verdict = await limit('incident:1.2.3.4');
+    const verdict = await limit('incident:1.2.3.4'); //not-a-cache-tag: rate limit success
 
     expect(verdict.ok).toBe(false);
     expect(verdict).toMatchObject({ reason: 'exceeded' });
@@ -44,7 +44,7 @@ describe('createRateLimiter', () => {
     const limit = createRateLimiter(
       backend(() => Promise.resolve({ success: false, remaining: 0, reset: Date.now() - 5_000 }))
     );
-    const verdict = await limit('incident:1.2.3.4');
+    const verdict = await limit('incident:1.2.3.4'); //not-a-cache-tag: rate limit success
 
     expect(verdict).toEqual({ ok: false, reason: 'exceeded', retryAfterSeconds: 1 });
   });
@@ -53,19 +53,19 @@ describe('createRateLimiter', () => {
   it('FAILS CLOSED when the backend rejects', async () => {
     const limit = createRateLimiter(backend(() => Promise.reject(new Error('fetch failed'))));
 
-    await expect(limit('incident:1.2.3.4')).resolves.toEqual({ ok: false, reason: 'unavailable' });
+    await expect(limit('incident:1.2.3.4')).resolves.toEqual({ ok: false, reason: 'unavailable' }); //not-a-cache-tag: rate limit success
   });
 
   it('fails closed when the backend rejects with a network error', async () => {
     const limit = createRateLimiter(backend(async () => Promise.reject(new Error('ECONNREFUSED'))));
 
-    await expect(limit('incident:1.2.3.4')).resolves.toEqual({ ok: false, reason: 'unavailable' });
+    await expect(limit('incident:1.2.3.4')).resolves.toEqual({ ok: false, reason: 'unavailable' }); //not-a-cache-tag: rate limit success
   });
 
   it('fails closed when there is NO backend, which is a missing env var', async () => {
     const limit = createRateLimiter(null);
 
-    await expect(limit('incident:1.2.3.4')).resolves.toEqual({ ok: false, reason: 'unavailable' });
+    await expect(limit('incident:1.2.3.4')).resolves.toEqual({ ok: false, reason: 'unavailable' }); //not-a-cache-tag: rate limit success
   });
 
   it('passes the key through unchanged, so one action cannot spend another action budget', async () => {
@@ -74,8 +74,8 @@ describe('createRateLimiter', () => {
     );
     const limit = createRateLimiter(backend(seen));
 
-    await limit('lead:1.2.3.4');
+    await limit('lead:1.2.3.4'); //not-a-cache-tag: rate limit success
 
-    expect(seen).toHaveBeenCalledWith('lead:1.2.3.4');
+    expect(seen).toHaveBeenCalledWith('lead:1.2.3.4'); //not-a-cache-tag: rate limit success
   });
 });

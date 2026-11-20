@@ -113,19 +113,28 @@ describe('term, site and menu tags', () => {
   });
 
   describe('the contract with Module 18', () => {
-    it('produces the exact five strings the PHP webhook must rebuild', () => {
-      // ONE structural assertion instead of five `toBe`s: five toBe's stop at the
-      // first failure, this prints every difference at once. Key Concept 2.
+    it('produces the exact strings Module 18.3 makes the webhook route expire', () => {
+      // ONE structural assertion instead of seven `toBe`s: seven toBe's stop at
+      // the first failure, this prints every difference at once (Lesson 12.2 §2).
       expect({
         node: incidentTag('incident-01'),
         list: listTag('incident'),
         term: termTag('severity', 's1-catastrophic'),
+        taxonomyList: taxonomyListTag('scapegoat'),
+        // THE ID-KEYED TERM TAG. Lesson 14.4's ScapegoatPicker tags its fetch
+        // with termTag('scapegoat', String(termId)), because the block stores a
+        // term ID and cannot know the slug before its own response arrives. The
+        // webhook therefore sends BOTH forms of every term event, and until now
+        // nothing asserted that an integer survives segment() unchanged.
+        termById: termTag('scapegoat', String(4)),
         site: siteTag(),
         menu: menuTag('primary'),
       }).toEqual({
         node: 'incident:incident-01',
         list: 'incidents',
         term: 'severity:s1-catastrophic',
+        taxonomyList: 'scapegoats',
+        termById: 'scapegoat:4',
         site: 'site-settings',
         menu: 'menu:primary',
       });

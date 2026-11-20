@@ -1,5 +1,5 @@
 // Reads its filters from context instead of being handed them by two ancestors.
-// The `incidents` prop stays: the DATA is genuinely the caller's business, and
+// The `incidents` prop stays : the DATA is genuinely the caller's business, and //not-a-cache-tag: comment
 // Lesson 09.3 swaps that one prop from fixtures to a live WPGraphQL query.
 import type { IncidentCardFieldsFragment } from '@/gql/graphql';
 

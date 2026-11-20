@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { IncidentCard } from '@/components/incidents/IncidentCard';
 import { ScapegoatBySlugDocument, ScapegoatSlugsDocument } from '@/gql/graphql';
 import { fetchGraphQL } from '@/lib/graphql/client';
-import { listTag, termTag } from '@/lib/graphql/tags';
+import { listTag, termTag, taxonomyListTag } from '@/lib/graphql/tags';
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -18,14 +18,9 @@ export async function generateStaticParams(): Promise<Array<{ locale: string; sl
   const data = await fetchGraphQL(
     ScapegoatSlugsDocument,
     { first: PRERENDER_LIMIT },
-    // A FIRST APPROXIMATION, and a deliberate one. `incidents` is roughly
-    // right — a new scapegoat term usually arrives attached to a newly
-    // published incident — but it is not what this query depends on. The set of
-    // scapegoat SLUGS changes when a TERM changes, which is a different
-    // WordPress hook and a different tag. Lesson 18.2's tag audit is where
-    // every read in the app gets the tag it actually depends on; this lesson is
-    // about rendering strategy, and mixing the two passes would hide both.
-    { revalidate: 3600, tags: [listTag('incident')] }
+    // The set of scapegoat SLUGS now has a tag of its own. It changes when a
+    // term is created, renamed or deleted, and at no other time.
+    { revalidate: 3600, tags: [taxonomyListTag('scapegoat')] }
   );
 
   const params = (data.scapegoats?.nodes ?? []).flatMap((node) =>

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { notFound } from 'next/navigation';
 import { draftMode } from 'next/headers';
 
@@ -52,16 +51,13 @@ export async function generateStaticParams(): Promise<Array<{ locale: string; sl
     const info = data.incidents?.pageInfo;
 
     if (
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       info?.hasNextPage !== true ||
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       typeof info.endCursor !== 'string' ||
       (PRERENDER_LIMIT !== null && slugs.length >= PRERENDER_LIMIT)
     ) {
       break;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     after = info.endCursor;
   }
 

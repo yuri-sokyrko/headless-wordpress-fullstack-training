@@ -27,7 +27,7 @@ export async function Header({
     // reach the options argument — the same idiom Lesson 10.5 used for SiteChrome.
     undefined,
     // The cache policy from Lesson 10.3's table. A menu changes when an editor
-    // changes it, which the `menu:primary` tag handles on demand in Module 18 —
+    // changes it, which the `menu:primary` tag handles on demand in Module 18 — not-a-cache-tag: menu
     // the hour is the fallback for when the webhook does not fire.
     { revalidate: 3600, tags: [menuTag('primary')] }
   );

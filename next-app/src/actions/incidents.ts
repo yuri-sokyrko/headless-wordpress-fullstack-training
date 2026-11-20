@@ -112,7 +112,7 @@ export async function submitIncident(
   // ── 1. RATE LIMIT ──────────────────────────────────────────────────
   // Before parsing, because parsing eleven fields is real CPU on an endpoint
   // anybody can reach. Fails CLOSED (§5).
-  const verdict = await limit(`incident:${await clientIp()}`);
+  const verdict = await limit(`incident:${await clientIp()}`); //not-a-cache-tag: rate limit request
 
   if (!verdict.ok) {
     return {

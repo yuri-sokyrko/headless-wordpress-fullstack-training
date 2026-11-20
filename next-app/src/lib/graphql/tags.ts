@@ -1,19 +1,22 @@
-// The ONLY place cache tag strings are constructed. Two call sites have to agree
-// on every string: the `fetch` that ATTACHES the tag, and the revalidation route
-// Module 18 builds that EXPIRES it. `incident:dns` in one and `incident-dns` in
-// the other invalidates nothing, returns 200 and logs nothing — a bug that looks
-// exactly like a caching problem for as long as you are willing to stare at it.
-// Module 12 unit-tests the exact output of every function below.
+// The ONLY place cache tag strings are constructed. The two call sites that
+// must agree are both here in TypeScript, with `tsc` between them: the fetch
+// that ATTACHES a tag (src/app/**/page.tsx) and the route handler that
+// EXPIRES it (src/app/api/revalidate/route.ts).
 //
-// WordPress never builds a tag string. Module 18's webhook sends IDENTIFIERS —
-// type, post type, slug, locale — and the Next route turns them into tags with
-// the functions here. That is deliberate: the cross-language contract is then a
-// short enumerated vocabulary that Zod validates, so a drifted identifier is a
-// loud 400 rather than a silent success.
+// WordPress never builds a tag string. Module 18.3's webhook sends IDENTIFIERS
+// — type, post type, taxonomy, slug, term id, locale — and the Next route
+// turns them into tags with the functions below. That is deliberate: the
+// cross-language contract is then a short enumerated vocabulary that Zod
+// validates, so a drifted identifier is a loud 400 rather than a silent
+// success. `incident:dns` here versus `incident-dns` rebuilt in PHP is the bug
+// that design makes unrepresentable, by having no PHP.
 //
-// No `import 'server-only'` here, deliberately: this file is pure string manipulation
-// with no secret and no I/O, and Module 12 runs its tests in a plain Node process where
-// the `server-only` module throws on purpose.
+// Lesson 12.2 unit-tests the exact output of every function below, and Lesson
+// 18.2 §3 is why those tests are not optional.
+//
+// No `import 'server-only'` here, deliberately: this file is pure string
+// manipulation with no secret and no I/O, and Module 12 runs its tests in a
+// plain Node process where the `server-only` module throws on purpose.
 
 /** The four content types that get their own tags. Singular — see `listTag`. */
 export type ContentType = 'incident' | 'post' | 'review' | 'page';

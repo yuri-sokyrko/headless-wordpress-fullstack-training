@@ -99,7 +99,7 @@ function upstashBackend(): RateLimitBackend | null {
   return resolved;
 }
 
-/** What every action calls. One key namespace per action, e.g. `incident:1.2.3.4`. */
+/** What every action calls. One key namespace per action, e.g. `incident:1.2.3.4`. */ //not-a-cache-tag: comment
 export function limit(key: string): Promise<LimitVerdict> {
   return createRateLimiter(upstashBackend())(key);
 }

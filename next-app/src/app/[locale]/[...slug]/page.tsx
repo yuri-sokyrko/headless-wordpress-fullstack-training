@@ -18,7 +18,7 @@ export const revalidate = 3600;
  * unreachable through this route — excluding them here stops
  * generateStaticParams claiming to pre-render something it cannot. Key Concept 7.
  */
-const RESERVED = new Set(['hobt', 'blog', 'incidents', 'reviews', 'scapegoats']);
+const RESERVED = new Set(['hobt', 'blog', 'incidents', 'reviews', 'scapegoats']); // not-a-cache-tag:  route segments
 
 export async function generateStaticParams(): Promise<Array<{ locale: string; slug: string[] }>> {
   const data = await fetchGraphQL(
